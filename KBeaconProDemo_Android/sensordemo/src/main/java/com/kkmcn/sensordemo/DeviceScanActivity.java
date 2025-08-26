@@ -92,9 +92,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private String mFilterName = "";
     private LinearLayout mLayoutFilterName, mLayoutFilterRssi;
     
-    // Phase 1 UI 추가 요소들
-    private TextView mTvDeviceListTitle;
-    private Button mBtnScanStart, mBtnScanStop;
+    // 하단 폰 알람 버튼들만 유지
     private Button mBtnPhoneAlarm, mBtnPhoneAlarmStop;
 
     @Override
@@ -188,16 +186,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mEditFltDevName.addTextChangedListener(new EditChangedListener());
         mBtnRmvNameFilter = (Button)findViewById(R.id.btmRemoveFilterName);
 
-        // Phase 1 UI 요소 찾기
-        mTvDeviceListTitle = (TextView) findViewById(R.id.tv_device_list_title);
-        mBtnScanStart = (Button) findViewById(R.id.btn_scan_start);
-        mBtnScanStop = (Button) findViewById(R.id.btn_scan_stop);
+        // 하단 폰 알람 버튼만 유지
         mBtnPhoneAlarm = (Button) findViewById(R.id.btn_phone_alarm);
         mBtnPhoneAlarmStop = (Button) findViewById(R.id.btn_phone_alarm_stop);
         
-        // TODO: Phase 2-3에서 버튼 클릭 로직 연결
-        // mBtnScanStart.setOnClickListener() - 스캔 시작
-        // mBtnScanStop.setOnClickListener() - 스캔 정지
+        // TODO: Phase 2-3에서 폰 알람 로직 연결
         // mBtnPhoneAlarm.setOnClickListener() - 폰 알람 시작
         // mBtnPhoneAlarmStop.setOnClickListener() - 폰 알람 중지
 
@@ -492,10 +485,18 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         Log.e(TAG, "click id:" + id );
         KBeacon beacon = getBeaconDevice(position);
         if (beacon != null) {
-            final Intent intent = new Intent(DeviceScanActivity.this, DevicePannelActivity.class);
-            intent.putExtra(DevicePannelActivity.DEVICE_MAC_ADDRESS, beacon.getMac());
-            startActivity(intent);
+            // 단일 화면 전환: DevicePannelActivity 대신 이름 변경 다이얼로그 표시
+            showDeviceNameChangeDialog(beacon);
         }
+    }
+    
+    // 이름 변경 다이얼로그 표시 메서드
+    private void showDeviceNameChangeDialog(KBeacon beacon) {
+        // TODO: Phase 2에서 구현
+        // - EditText가 포함된 AlertDialog 생성
+        // - 최대 18자, 한글 입력 지원
+        // - 확인 시 beacon.setName() 호출
+        toastShow("이름 변경 - TODO");
     }
 
     @Override

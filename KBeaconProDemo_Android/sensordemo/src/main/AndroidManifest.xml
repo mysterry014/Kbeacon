@@ -56,13 +56,6 @@ limitations under the License.
         </activity>
 
         <activity
-            android:name="com.kkmcn.sensordemo.DevicePannelActivity"
-            android:launchMode="singleInstance"
-            android:label="@string/activity_beacon_detail_title"
-            android:screenOrientation="portrait" />
-
-
-        <activity
             android:name="com.kkmcn.sensordemo.dfulibrary.NotificationActivity"
             android:launchMode="singleInstance"
             android:label="@string/DEVICE_DFU_TITLE"
