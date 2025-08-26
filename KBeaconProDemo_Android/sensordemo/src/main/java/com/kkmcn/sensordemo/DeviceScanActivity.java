@@ -91,6 +91,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private EditText mEditFltDevName;
     private String mFilterName = "";
     private LinearLayout mLayoutFilterName, mLayoutFilterRssi;
+    
+    // Phase 1 UI 추가 요소들
+    private TextView mTvDeviceListTitle;
+    private Button mBtnScanStart, mBtnScanStop;
+    private Button mBtnPhoneAlarm, mBtnPhoneAlarmStop;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -182,6 +187,19 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mEditFltDevName = (EditText) findViewById(R.id.editFilterName);
         mEditFltDevName.addTextChangedListener(new EditChangedListener());
         mBtnRmvNameFilter = (Button)findViewById(R.id.btmRemoveFilterName);
+
+        // Phase 1 UI 요소 찾기
+        mTvDeviceListTitle = (TextView) findViewById(R.id.tv_device_list_title);
+        mBtnScanStart = (Button) findViewById(R.id.btn_scan_start);
+        mBtnScanStop = (Button) findViewById(R.id.btn_scan_stop);
+        mBtnPhoneAlarm = (Button) findViewById(R.id.btn_phone_alarm);
+        mBtnPhoneAlarmStop = (Button) findViewById(R.id.btn_phone_alarm_stop);
+        
+        // TODO: Phase 2-3에서 버튼 클릭 로직 연결
+        // mBtnScanStart.setOnClickListener() - 스캔 시작
+        // mBtnScanStop.setOnClickListener() - 스캔 정지
+        // mBtnPhoneAlarm.setOnClickListener() - 폰 알람 시작
+        // mBtnPhoneAlarmStop.setOnClickListener() - 폰 알람 중지
 
         swipeRefreshLayout = (SwipeRefreshLayout)findViewById(R.id.swipe_container);
         //设置刷新时动画的颜色，可以设置4个

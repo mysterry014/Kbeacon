@@ -272,4 +272,38 @@
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
+    
+    <!-- 하단 부저 알람 버튼 바 추가 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@android:color/darker_gray"/>
+        
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/white"
+        android:orientation="horizontal"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+        
+        <Button
+            android:id="@+id/btn_ring_alarm_detail"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="부저 알람"
+            android:textSize="16sp"/>
+            
+        <Button
+            android:id="@+id/btn_ring_alarm_stop_detail"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="부저 중지"
+            android:textSize="16sp"/>
+    </LinearLayout>
 </LinearLayout>

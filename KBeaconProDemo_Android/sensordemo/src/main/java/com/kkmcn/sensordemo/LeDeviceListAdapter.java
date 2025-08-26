@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -60,6 +61,18 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		{
 			view = LayoutInflater.from(mContext).inflate(R.layout.listitem_device, null);
 			viewHolder = new ViewHolder();
+			
+			// Phase 1 새로운 UI 요소들
+			viewHolder.tvBeaconName = view.findViewById(R.id.tv_beacon_name);
+			viewHolder.tvRssi = view.findViewById(R.id.tv_rssi);
+			viewHolder.tvBattery = view.findViewById(R.id.tv_battery);
+			viewHolder.tvDistance = view.findViewById(R.id.tv_distance);
+			viewHolder.btnRingAlarm = view.findViewById(R.id.btn_ring_alarm);
+			viewHolder.btnRingAlarmStop = view.findViewById(R.id.btn_ring_alarm_stop);
+			viewHolder.btnDistanceSetting = view.findViewById(R.id.btn_distance_setting);
+			viewHolder.btnCalibration = view.findViewById(R.id.btn_calibration);
+			
+			// 기존 UI 요소들 (숨김 처리된 레이아웃용)
 			viewHolder.deviceName = view
 					.findViewById(R.id.beacon_name);
 
@@ -115,11 +128,31 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			return null;
 		}
 
+		// Phase 1 새로운 UI 업데이트
 		if (device.getName() != null && device.getName().length() > 0) {
+			viewHolder.tvBeaconName.setText(device.getName());
+			// 기존 UI도 업데이트 (숨김 처리된 레이아웃용)
 			viewHolder.deviceName.setText(device.getName());
 		}
+		
+		// RSSI 표시
+		String rssiText = String.format("%.1f dBm", (float)device.getRssi());
+		viewHolder.tvRssi.setText(rssiText);
+		
+		// 배터리 표시
+		String batteryText = "배터리: " + device.getBatteryPercent() + "%";
+		viewHolder.tvBattery.setText(batteryText);
+		
+		// 거리 표시 (Phase 2에서 실제 계산 추가)
+		viewHolder.tvDistance.setText("거리: 0.0m");  // TODO: Phase 2에서 실제 거리 계산
+		
+		// TODO: Phase 2-3에서 버튼 클릭 리스너 추가
+		// viewHolder.btnRingAlarm.setOnClickListener()
+		// viewHolder.btnRingAlarmStop.setOnClickListener()
+		// viewHolder.btnDistanceSetting.setOnClickListener()
+		// viewHolder.btnCalibration.setOnClickListener()
 
-		//common field
+		// 기존 UI 업데이트 (숨김 처리된 레이아웃용)
 		String strMacAddress = mContext.getString(R.string.BEACON_MAC_ADDRESS) + device.getMac();
 		viewHolder.deviceMacAddr.setText(strMacAddress);
 
@@ -255,6 +288,17 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	}
 
 	class ViewHolder {
+		// Phase 1 새로운 UI 요소들
+		TextView tvBeaconName;
+		TextView tvRssi;
+		TextView tvBattery;
+		TextView tvDistance;
+		Button btnRingAlarm;
+		Button btnRingAlarmStop;
+		Button btnDistanceSetting;
+		Button btnCalibration;
+		
+		// 기존 UI 요소들 (숨김 처리된 레이아웃용)
 		TextView deviceName;      //名称
 
 		TextView rssiState;     //状态

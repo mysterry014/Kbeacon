@@ -20,10 +20,114 @@
     android:layout_height="match_parent"
     android:id="@+id/listLayout">
 
+    <!-- 새로운 레이아웃으로 교체: 2행 구조 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- 첫번째 행: 비콘 정보 표시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+            
+            <!-- 왼쪽: 이름과 거리 -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                
+                <TextView
+                    android:id="@+id/tv_beacon_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="비콘 이름"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/black"/>
+                    
+                <TextView
+                    android:id="@+id/tv_distance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="거리: 0.0m"
+                    android:textSize="14sp"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+            
+            <!-- 중간: RSSI -->
+            <TextView
+                android:id="@+id/tv_rssi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="-0.0dBm"
+                android:textSize="14sp"
+                android:layout_marginEnd="16dp"/>
+                
+            <!-- 오른쪽: 배터리 -->
+            <TextView
+                android:id="@+id/tv_battery"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_vertical"
+                android:text="배터리: 0%"
+                android:textSize="14sp"/>
+        </LinearLayout>
+        
+        <!-- 두번째 행: 버튼들 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            
+            <Button
+                android:id="@+id/btn_ring_alarm"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="알람"
+                android:textSize="12sp"
+                android:layout_marginEnd="4dp"/>
+                
+            <Button
+                android:id="@+id/btn_ring_alarm_stop"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="알람 중지"
+                android:textSize="12sp"
+                android:layout_marginEnd="4dp"/>
+                
+            <Button
+                android:id="@+id/btn_distance_setting"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="거리설정"
+                android:textSize="12sp"
+                android:layout_marginEnd="4dp"/>
+                
+            <Button
+                android:id="@+id/btn_calibration"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="거리보정"
+                android:textSize="12sp"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 기존 레이아웃은 숨김 처리 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
 
         <LinearLayout
             android:layout_width="match_parent"

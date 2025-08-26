@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(claude auth status)",
+      "Bash(claude --version)",
+      "Bash(claude auth logout)",
+      "Bash(claude auth login)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

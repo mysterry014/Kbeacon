@@ -101,6 +101,9 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
     private Button mRingButton;
     private String mNewPassword;
     SharePreferenceMgr mPref;
+    
+    // Phase 1 UI 추가 요소들
+    private Button mBtnRingAlarmDetail, mBtnRingAlarmStopDetail;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -155,7 +158,12 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
         mRingButton = (Button) findViewById(R.id.ringDevice);
         mRingButton.setOnClickListener(this);
         findViewById(R.id.dfuDevice).setOnClickListener(this);
-
+        
+        // Phase 1 UI 요소 찾기 및 리스너 연결
+        mBtnRingAlarmDetail = (Button) findViewById(R.id.btn_ring_alarm_detail);
+        mBtnRingAlarmStopDetail = (Button) findViewById(R.id.btn_ring_alarm_stop_detail);
+        mBtnRingAlarmDetail.setOnClickListener(this);
+        mBtnRingAlarmStopDetail.setOnClickListener(this);
 
     }
 
@@ -247,6 +255,17 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
                 Log.v(LOG_TAG, "rssi value:" + rssi);
             });
              */
+        }else if (id == R.id.btn_ring_alarm_detail) {
+            // TODO: Phase 3에서 부저 반복 알람 로직 연결
+            // - 연결 확인
+            // - ringDevice 호출
+            // - 스케줄러로 반복 설정
+            toastShow("부저 알람 - TODO");
+        }else if (id == R.id.btn_ring_alarm_stop_detail) {
+            // TODO: Phase 3에서 부저 중지 로직 연결
+            // - 스케줄러 중지
+            // - 중지 명령 송신
+            toastShow("부저 중지 - TODO");
         }
     }
 
