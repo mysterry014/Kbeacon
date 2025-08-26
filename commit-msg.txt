@@ -1,0 +1,7 @@
+  feat(data): Phase 2-1 데이터 처리 유틸 및 상태 모델 구현
+
+  - RssiWindow: N=10 윈도우, 중앙값±7dB 이상치 제거
+  - RssiFilter: EMA α=0.25로 rssiFiltered 산출
+  - DistanceEstimator: RSSI→거리 변환, EMA β=0.30 적용
+  - BeaconState: 비콘별 상태 정보 모델 (MAC 기반 식별)
+  - BeaconDataStore: 스레드 안전 싱글톤 저장소
