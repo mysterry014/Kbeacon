@@ -1,9 +1,16 @@
-  feat(stability): 클릭매핑/별칭시스템/부저체인 안정화 - 리스트재활용 대응
+  feat(phase4): 사용자 피드백 반영한 UI 안정화 및 인증 연결 개선
 
-  - LeDeviceListAdapter: MAC 태깅 기반 안정적 클릭 매핑, 별칭 우선 표시
-  - BeaconState: aliasName 필드 + getDisplayName() 메서드 추가
-  - Prefs: 별칭 저장/조회 API (getAlias, setAlias) 구현
-  - DeviceScanActivity: 광고이름과 분리된 별칭 저장 체계
-  - RingManager: Android 12+ 권한체크, 연결상태 검증, 예외처리 강화
-  - listitem_device.xml: 버튼 focusable=false로 클릭 간섭 방지
-  - ids.xml: MAC 태깅용 tag_mac 리소스 추가
+   • 클릭 매핑 안정화
+    - ListView View.setTag() 방식을 클로저 기반 MAC 캡처로 대체
+    - 500ms UI 갱신 주기에서 View 재활용 시 클릭 오동작 해결
+    - LeDeviceListAdapter에서 final captureMac으로 안정적 매핑
+
+  • 비콘 이름 관리 개선
+    - 별칭 시스템 강화로 광고 이름과 분리된 표시 이름 지원
+    - Prefs.setAlias(), BeaconState.getDisplayName() API 활용
+    - 18자 이하 한글 입력 지원 및 실시간 UI 반영
+
+  • 부저 연결 체인 강화
+    - RingManager에서 패스워드 기반 인증 연결로 전환
+    - beacon.connect("0000000000000000", timeout) 사용
+    - 연결 실패 시 상세 로깅 및 백오프 재시도 개선

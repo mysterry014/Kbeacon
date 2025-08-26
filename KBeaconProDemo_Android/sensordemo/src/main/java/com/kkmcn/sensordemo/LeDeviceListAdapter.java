@@ -203,55 +203,43 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			String.format("%.1f m", distanceFiltered) : "–";
 		viewHolder.tvDistance.setText(distanceText);
 		
-		// Phase 3: MAC 기반 클릭 매핑 안정화
-		String mac = beaconState.getMac();
+		// Phase 4: 클로저 기반 MAC 캡처 (태그 방식 대체)
+		final String captureMac = beaconState.getMac();  // 클로저 캡처용
 		
-		// MAC 태깅으로 클릭 매핑 고정 (리스트 재활용 대응)
-		viewHolder.tvBeaconName.setTag(R.id.tag_mac, mac);
-		viewHolder.btnRingAlarm.setTag(R.id.tag_mac, mac);
-		viewHolder.btnRingAlarmStop.setTag(R.id.tag_mac, mac);
-		viewHolder.btnDistanceSetting.setTag(R.id.tag_mac, mac);
-		viewHolder.btnCalibration.setTag(R.id.tag_mac, mac);
-		
-		// 이름 TextView 클릭 리스너 (직접 진입점)
+		// 이름 TextView 클릭 리스너 (클로저로 MAC 캡처)
 		viewHolder.tvBeaconName.setOnClickListener(v -> {
-			String clickedMac = (String) v.getTag(R.id.tag_mac);
-			if (mOnRowActionListener != null && clickedMac != null) {
+			if (mOnRowActionListener != null && captureMac != null) {
 				// 현재 이름을 DataStore에서 직접 조회 (안정적)
-				String currentName = getCurrentDisplayName(clickedMac);
-				mOnRowActionListener.onNameEdit(clickedMac, currentName);
+				String currentName = getCurrentDisplayName(captureMac);
+				mOnRowActionListener.onNameEdit(captureMac, currentName);
 			}
 		});
 		
 		// 부저 알람 시작 버튼
 		viewHolder.btnRingAlarm.setOnClickListener(v -> {
-			String clickedMac = (String) v.getTag(R.id.tag_mac);
-			if (mOnRowActionListener != null && clickedMac != null) {
-				mOnRowActionListener.onRingStart(clickedMac);
+			if (mOnRowActionListener != null && captureMac != null) {
+				mOnRowActionListener.onRingStart(captureMac);
 			}
 		});
 		
 		// 부저 알람 중지 버튼
 		viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
-			String clickedMac = (String) v.getTag(R.id.tag_mac);
-			if (mOnRowActionListener != null && clickedMac != null) {
-				mOnRowActionListener.onRingStop(clickedMac);
+			if (mOnRowActionListener != null && captureMac != null) {
+				mOnRowActionListener.onRingStop(captureMac);
 			}
 		});
 		
-		// 거리 설정 버튼 (TODO: Phase 3 후속 단계에서 다이얼로그 구현)
+		// 거리 설정 버튼
 		viewHolder.btnDistanceSetting.setOnClickListener(v -> {
-			String clickedMac = (String) v.getTag(R.id.tag_mac);
-			if (mOnRowActionListener != null && clickedMac != null) {
-				mOnRowActionListener.onDistanceSetting(clickedMac);
+			if (mOnRowActionListener != null && captureMac != null) {
+				mOnRowActionListener.onDistanceSetting(captureMac);
 			}
 		});
 		
-		// 캘리브레이션 버튼 (TODO: Phase 3 후속 단계에서 구현)
+		// 캘리브레이션 버튼
 		viewHolder.btnCalibration.setOnClickListener(v -> {
-			String clickedMac = (String) v.getTag(R.id.tag_mac);
-			if (mOnRowActionListener != null && clickedMac != null) {
-				mOnRowActionListener.onCalibration(clickedMac);
+			if (mOnRowActionListener != null && captureMac != null) {
+				mOnRowActionListener.onCalibration(captureMac);
 			}
 		});
 

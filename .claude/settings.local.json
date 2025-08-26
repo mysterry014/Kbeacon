@@ -8,7 +8,8 @@
       "Bash(claude auth login)",
       "Bash(./gradlew:*)",
       "Bash(gradlew.bat sensordemo:build)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],

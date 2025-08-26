@@ -46,6 +46,7 @@ import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyUID;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyURL;
 // iBeacon import removed - using KBeacon protocol only
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor;
+import com.kkmcn.kbeaconlib2.KBConnState;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvType;
 import com.kkmcn.kbeaconlib2.KBeacon;
@@ -663,7 +664,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         final android.widget.EditText editText = new android.widget.EditText(this);
         editText.setText(currentName);
         editText.setSelection(currentName.length()); // 커서를 끝으로
-        editText.setHint("새 이름 입력 (1-20자)");
+        editText.setHint("새 이름 입력 (1-18자)");
         editText.setSingleLine(true);
         
         // 다이얼로그에 EditText 추가
@@ -679,8 +680,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 return;
             }
             
-            if (newName.length() > 20) {
-                toastShow("이름은 20자 이하로 입력해주세요");
+            if (newName.length() > 18) {
+                toastShow("이름은 18자 이하로 입력해주세요 (KBeacon 제한)");
                 return;
             }
             
@@ -690,11 +691,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 return;
             }
             
-            // 별칭 저장 (광고 이름과 분리)
+            // 별칭 저장 (광고 이름과 분리) - API 호환성을 위해 우선 별칭 방식 사용
             String oldName = currentName;
             saveAlias(mac, newName);
             
-            Log.d("NAME", "rename mac=" + mac + " old=" + oldName + " new=" + newName);
+            Log.d("NAME", "alias change: mac=" + mac + " old=" + oldName + " new=" + newName);
             Toast.makeText(this, "이름 변경: " + oldName + " → " + newName, Toast.LENGTH_SHORT).show();
         });
         
@@ -731,6 +732,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         // UI는 500ms 주기 갱신에서 자동으로 반영됨 (별도 invalidate 불필요)
     }
+
 
     /**
      * 500ms 주기로 BeaconDataStore에서 데이터를 가져와 UI 갱신

@@ -253,24 +253,29 @@ public class RingManager {
             }
             if (DEBUG) Log.d(TAG, "[DEBUG] Beacon found: " + beacon.getName() + ", state=" + beacon.getState());
             
-            // 연결 상태 확인 및 연겴 시도
+            // Phase 4: connectEnhanced로 인증된 연결 사용
             if (!isBeaconReadyForCommand(beacon)) {
-                Log.d("RING", "connect attempt mac=" + session.mac + " currentState=" + beacon.getState());
-                Log.d(TAG, "Connecting to beacon: " + session.name);
+                Log.d("RING", "connectEnhanced attempt mac=" + session.mac + " currentState=" + beacon.getState());
+                Log.d(TAG, "Connecting to beacon with auth: " + session.name);
                 
-                // TODO: 연결 타임아웃/패스워드 설정이 필요하면 여기서 처리
-                beacon.connect(null, 10000, new KBeacon.ConnStateDelegate() {
+                // 패스워드를 사용한 인증된 연결 (default password "0000000000000000")
+                beacon.connect("0000000000000000", 20000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
-                        Log.i(TAG, "[DEBUG] Connection state changed: " + state + ", reason: " + nReason);
+                        Log.i(TAG, "[DEBUG] connect with password state changed: " + state + ", reason: " + nReason);
                         if (state == KBConnState.Connected) {
-                            Log.i(TAG, "[SUCCESS] Connected to beacon, sending ring command: " + session.name);
+                            Log.i(TAG, "[SUCCESS] Connected with auth to beacon, sending ring command: " + session.name);
                             sendRingCommand(session, beacon);
                         } else if (state == KBConnState.Disconnected && nReason != 0) {
                             Log.e(TAG, "[ERROR] Connection failed: " + session.name + ", reason: " + nReason);
+                            // 연결 실패 상세 로깅 (코드 기반)
+                            Log.e(TAG, "[CONNECTION_ERROR] nReason: " + nReason);
+                            if (nReason != 0) {
+                                Log.e(TAG, "[CONNECTION_DETAIL] Authentication or timeout error (code: " + nReason + ")");
+                            }
                             scheduleRetryWithBackoff(session);
                         } else if (state == KBConnState.Connecting) {
-                            Log.d(TAG, "[DEBUG] Connecting in progress...");
+                            Log.d(TAG, "[DEBUG] Connecting with auth in progress...");
                         }
                     }
                 });
@@ -409,7 +414,7 @@ public class RingManager {
     private boolean isBeaconReadyForCommand(KBeacon beacon) {
         if (beacon == null) return false;
         
-        // 연결 상태 체크
+        // KBConnState.Connected 체크 (API 호환성 유지)
         if (beacon.getState() != KBConnState.Connected) {
             return false;
         }
