@@ -1,11 +1,5 @@
-  fix: 컴파일 에러 해결 - @NonNull import 및 메서드 시그니처 통일
+  fix(ui): 스캔 버튼 크래시 수정 - TextView background 속성 호환성 개선
 
-  컴파일 에러 5건 모두 해결:
-  • @NonNull 어노테이션 import 누락 해결
-  • showDeviceNameChangeDialog 메서드 호출/선언 통일 (1개 인자)
-  • BeaconState 변수 중복 선언 제거
-  • InputFilter, TextUtils import 추가
-
-  변경사항:
-  • DeviceScanActivity: androidx.annotation.NonNull import, 메서드 호출 수정
-  • LeDeviceListAdapter: androidx.annotation.NonNull import
+  - listitem_device.xml의 selectableItemBackground 속성을 android 네임스페이스로 수정
+  - IosTheme에서 정의되지 않은 커스텀 속성으로 인한 XML inflation 오류 해결
+  - 스캔 시작 후 ListView 아이템 생성 시 발생하던 크래시 해결

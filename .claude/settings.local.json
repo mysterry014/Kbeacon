@@ -10,7 +10,10 @@
       "Bash(gradlew.bat sensordemo:build)",
       "Bash(git add:*)",
       "Bash(find:*)",
-      "Bash(gradlew :sensordemo:compileDebugJava:*)"
+      "Bash(gradlew :sensordemo:compileDebugJava:*)",
+      "Bash(adb logcat:*)",
+      "Bash(adb:*)",
+      "Bash(gradlew:*)"
     ],
     "deny": [],
     "ask": [],

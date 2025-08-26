@@ -48,7 +48,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
                 
-                <!-- [수정3] 이름 TextView만 클릭 허용 + 색금 효과 -->
+                <!-- [수정3] 이름 TextView만 클릭 허용 + 터치 피드백 -->
                 <TextView
                     android:id="@+id/tv_beacon_name"
                     android:layout_width="wrap_content"
@@ -59,7 +59,7 @@
                     android:textColor="@android:color/black"
                     android:clickable="true"
                     android:focusable="false"
-                    android:foreground="?attr/selectableItemBackground"/>
+                    android:background="?android:attr/selectableItemBackground"/>
                     
                 <TextView
                     android:id="@+id/tv_distance"
