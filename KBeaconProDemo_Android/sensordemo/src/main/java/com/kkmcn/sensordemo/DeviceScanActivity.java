@@ -50,6 +50,7 @@ import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvType;
 import com.kkmcn.kbeaconlib2.KBeacon;
 import com.kkmcn.kbeaconlib2.KBeaconsMgr;
 import com.kkmcn.sensordemo.data.BeaconDataStore;
+import com.kkmcn.sensordemo.data.Prefs;
 import com.kkmcn.sensordemo.model.BeaconState;
 import com.kkmcn.sensordemo.utils.RssiFilter;
 import com.kkmcn.sensordemo.utils.DistanceEstimator;
@@ -106,6 +107,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private ConcurrentHashMap<String, RssiFilter> mRssiFilters;
     private ConcurrentHashMap<String, DistanceEstimator> mDistanceEstimators;
     
+    // Phase 2 Part 3: 영속화 컴포넌트
+    private Prefs mPrefs;
+    
     // 500ms UI 갱신용
     private Handler mUiUpdateHandler;
     private Runnable mUiUpdateRunnable;
@@ -146,6 +150,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mBeaconDataStore = BeaconDataStore.getInstance();
         mRssiFilters = new ConcurrentHashMap<>();
         mDistanceEstimators = new ConcurrentHashMap<>();
+        
+        // Phase 2 Part 3: 영속화 컴포넌트 초기화
+        mPrefs = new Prefs(getApplicationContext());
         
         // 500ms UI 갱신 시스템 초기화
         mUiUpdateHandler = new Handler();
@@ -384,7 +391,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 
                 // (b) BeaconDataStore에서 BeaconState 조회/생성
                 BeaconState beaconState = mBeaconDataStore.get(mac);
-                if (beaconState == null) {
+                boolean isNewBeacon = (beaconState == null);
+                if (isNewBeacon) {
                     beaconState = new BeaconState(beaconName, mac);
                 }
                 
@@ -399,17 +407,42 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 // (d) DistanceEstimator로 distanceFiltered 산출
                 DistanceEstimator distanceEstimator = mDistanceEstimators.get(mac);
                 if (distanceEstimator == null) {
-                    // 기본값 사용: txPowerAt1m=-59, n=2.0
-                    distanceEstimator = new DistanceEstimator();
-                    // TODO: 캘리브레이션 값이 있으면 추후 적용
+                    // Phase 2 Part 3: 저장된 캘리브레이션 값 복원
+                    double txPowerAt1m = mPrefs.getTxPowerAt1m(mac, beaconName, Prefs.getDefaultTxPowerAt1m());
+                    double pathLossExponent = mPrefs.getN(mac, beaconName, Prefs.getDefaultPathLossExponent());
+                    
+                    distanceEstimator = new DistanceEstimator(txPowerAt1m, pathLossExponent, 0.30);
                     mDistanceEstimators.put(mac, distanceEstimator);
+                    
+                    Log.d(TAG, "Restored calibration for " + beaconName + ": txPower=" + txPowerAt1m + ", n=" + pathLossExponent);
                 }
                 double distanceFiltered = distanceEstimator.estimate(rssiFiltered);
                 
-                // (e) BeaconState 갱신 후 BeaconDataStore에 저장
+                // (e) Phase 2 Part 3: 신규 비콘 시 거리 임계값과 배터리 복원
+                if (isNewBeacon) {
+                    // 거리 임계값 복원
+                    double threshold = mPrefs.getDistanceThreshold(mac, beaconName, Prefs.getDefaultDistanceThreshold());
+                    beaconState.setDistanceThreshold(threshold);
+                    
+                    // 배터리 값 복원 (이전에 저장된 값이 있다면)
+                    Integer savedBattery = mPrefs.getBatteryPct(mac, beaconName, null);
+                    if (savedBattery != null) {
+                        beaconState.setBatteryPercent(savedBattery);
+                        Log.d(TAG, "Restored settings for " + beaconName + ": threshold=" + threshold + ", battery=" + savedBattery + "%");
+                    } else {
+                        Log.d(TAG, "Restored threshold for " + beaconName + ": " + threshold + " m");
+                    }
+                }
+                
+                // (f) BeaconState 갱신 후 BeaconDataStore에 저장
                 beaconState.setName(beaconName);
                 beaconState.updateSignalState(rawRssi, rssiFiltered, distanceFiltered);
-                beaconState.setBatteryPercent(beacon.getBatteryPercent());
+                
+                // 현재 비콘에서 배터리 정보가 있다면 업데이트
+                int currentBattery = beacon.getBatteryPercent();
+                if (currentBattery > 0) {
+                    beaconState.setBatteryPercent(currentBattery);
+                }
                 
                 mBeaconDataStore.upsert(beaconState);
                 
@@ -731,6 +764,52 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             return 0;
         }else{
             return mBeaconsArray.length;
+        }
+    }
+    
+    // Phase 2 Part 3: SharedPreferences 저장 훅 메서드들
+    // (UI 핸들러에서 설정값 변경 시 호출됨)
+    
+    /**
+     * 거리 임계값 저장 훅
+     * @param mac 비콘 MAC 주소
+     * @param name 비콘 이름
+     * @param value 거리 임계값 (미터)
+     */
+    public void saveDistanceThreshold(String mac, String name, double value) {
+        if (mPrefs != null) {
+            mPrefs.setDistanceThreshold(mac, name, value);
+            Log.d(TAG, "Saved distance threshold: " + name + " = " + value + " m");
+        }
+        // TODO Phase 3: BeaconState의 임계값도 동시 업데이트
+    }
+    
+    /**
+     * 캘리브레이션 결과 저장 훅
+     * @param mac 비콘 MAC 주소
+     * @param name 비콘 이름
+     * @param txPowerAt1m 1미터 기준 송신 파워 (dBm)
+     * @param pathLossExponent 경로손실지수
+     */
+    public void saveCalibration(String mac, String name, double txPowerAt1m, double pathLossExponent) {
+        if (mPrefs != null) {
+            mPrefs.setTxPowerAt1m(mac, name, txPowerAt1m);
+            mPrefs.setN(mac, name, pathLossExponent);
+            Log.d(TAG, "Saved calibration: " + name + " txPower=" + txPowerAt1m + ", n=" + pathLossExponent);
+        }
+        // TODO Phase 3: 기존 DistanceEstimator 갱신 (새로운 캘리브레이션 값 적용)
+    }
+    
+    /**
+     * 배터리 상태 저장 훅
+     * @param mac 비콘 MAC 주소
+     * @param name 비콘 이름
+     * @param batteryPct 배터리 % (0-100)
+     */
+    public void saveBatteryPct(String mac, String name, int batteryPct) {
+        if (mPrefs != null) {
+            mPrefs.setBatteryPct(mac, name, batteryPct);
+            Log.d(TAG, "Saved battery: " + name + " = " + batteryPct + "%");
         }
     }
 }

@@ -1,0 +1,359 @@
+package com.kkmcn.sensordemo.data;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.util.Log;
+
+/**
+ * 비콘별 설정/보정치/배터리 정보 영속화 래퍼
+ * - SharedPreferences 기반
+ * - MAC/이름 키 병행 저장 (MAC 우선 매칭)
+ * - 거리 임계값, 캘리브레이션 매개변수, 배터리 상태 관리
+ * 
+ * 키 스킴:
+ * - beacon.{MAC}.thr / beacon.{NAME}.thr (거리 임계값, 기본 50.0)
+ * - beacon.{MAC}.tx1m / beacon.{NAME}.tx1m (txPowerAt1m, 기본 -59.0)
+ * - beacon.{MAC}.n / beacon.{NAME}.n (경로손실지수, 기본 2.0)
+ * - beacon.{MAC}.batt / beacon.{NAME}.batt (배터리 %)
+ * 
+ * Note: 광고 RSSI 기준으로 설계됨, 연결 중 RSSI 미사용
+ */
+public class Prefs {
+    private static final String TAG = "Prefs";
+    private static final String PREF_NAME = "beacon_settings";
+    
+    // 기본값 상수들
+    private static final double DEFAULT_DISTANCE_THRESHOLD = 50.0;
+    private static final double DEFAULT_TX_POWER_AT_1M = -59.0;
+    private static final double DEFAULT_PATH_LOSS_EXPONENT = 2.0;
+    
+    // 키 접두사
+    private static final String KEY_PREFIX_BEACON = "beacon.";
+    private static final String KEY_SUFFIX_THRESHOLD = ".thr";
+    private static final String KEY_SUFFIX_TX_POWER = ".tx1m";
+    private static final String KEY_SUFFIX_N = ".n";
+    private static final String KEY_SUFFIX_BATTERY = ".batt";
+    
+    private final SharedPreferences mPrefs;
+    
+    /**
+     * Prefs 인스턴스 생성
+     * @param context Application context 권장
+     */
+    public Prefs(Context context) {
+        mPrefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+    }
+    
+    /**
+     * MAC 주소 정규화 (대문자 + 콜론 제거)
+     * @param mac 원본 MAC 주소
+     * @return 정규화된 MAC (예: "ABCD12345678")
+     */
+    private String normalizeMac(String mac) {
+        if (mac == null || mac.isEmpty()) {
+            return "";
+        }
+        return mac.toUpperCase().replaceAll(":", "");
+    }
+    
+    /**
+     * 거리 임계값 조회 (MAC 우선 → 이름 → 기본값)
+     * @param mac MAC 주소
+     * @param name 비콘 이름
+     * @param defaultValue 기본값
+     * @return 거리 임계값 (미터)
+     */
+    public double getDistanceThreshold(String mac, String name, double defaultValue) {
+        // MAC 키 우선 시도
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_THRESHOLD;
+            String value = mPrefs.getString(macKey, null);
+            if (value != null) {
+                try {
+                    double result = Double.parseDouble(value);
+                    Log.d(TAG, "Load threshold by MAC: " + normalizeMac(mac) + " = " + result);
+                    return result;
+                } catch (NumberFormatException e) {
+                    Log.d(TAG, "Invalid threshold value for MAC: " + value);
+                }
+            }
+        }
+        
+        // 이름 키 시도
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_THRESHOLD;
+            String value = mPrefs.getString(nameKey, null);
+            if (value != null) {
+                try {
+                    double result = Double.parseDouble(value);
+                    Log.d(TAG, "Load threshold by name: " + name + " = " + result);
+                    return result;
+                } catch (NumberFormatException e) {
+                    Log.d(TAG, "Invalid threshold value for name: " + value);
+                }
+            }
+        }
+        
+        return defaultValue;
+    }
+    
+    /**
+     * 거리 임계값 저장 (MAC/이름 둘 다 저장)
+     * @param mac MAC 주소
+     * @param name 비콘 이름
+     * @param value 거리 임계값 (미터)
+     */
+    public void setDistanceThreshold(String mac, String name, double value) {
+        SharedPreferences.Editor editor = mPrefs.edit();
+        String valueStr = String.valueOf(value);
+        
+        // MAC 키로 저장
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_THRESHOLD;
+            editor.putString(macKey, valueStr);
+            Log.d(TAG, "Save threshold by MAC: " + normalizeMac(mac) + " = " + value);
+        }
+        
+        // 이름 키로 저장
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_THRESHOLD;
+            editor.putString(nameKey, valueStr);
+            Log.d(TAG, "Save threshold by name: " + name + " = " + value);
+        }
+        
+        editor.apply();
+    }
+    
+    /**
+     * txPowerAt1m 조회 (MAC 우선 → 이름 → 기본값)
+     * Note: 광고 RSSI 기준으로 설계됨, 연결 중 RSSI 미사용
+     */
+    public double getTxPowerAt1m(String mac, String name, double defaultValue) {
+        // MAC 키 우선 시도
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_TX_POWER;
+            String value = mPrefs.getString(macKey, null);
+            if (value != null) {
+                try {
+                    double result = Double.parseDouble(value);
+                    Log.d(TAG, "Load txPower by MAC: " + normalizeMac(mac) + " = " + result);
+                    return result;
+                } catch (NumberFormatException e) {
+                    Log.d(TAG, "Invalid txPower value for MAC: " + value);
+                }
+            }
+        }
+        
+        // 이름 키 시도
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_TX_POWER;
+            String value = mPrefs.getString(nameKey, null);
+            if (value != null) {
+                try {
+                    double result = Double.parseDouble(value);
+                    Log.d(TAG, "Load txPower by name: " + name + " = " + result);
+                    return result;
+                } catch (NumberFormatException e) {
+                    Log.d(TAG, "Invalid txPower value for name: " + value);
+                }
+            }
+        }
+        
+        return defaultValue;
+    }
+    
+    /**
+     * txPowerAt1m 저장 (MAC/이름 둘 다 저장)
+     * Note: 광고 RSSI 기준으로 설계됨, 연결 중 RSSI 미사용
+     */
+    public void setTxPowerAt1m(String mac, String name, double value) {
+        SharedPreferences.Editor editor = mPrefs.edit();
+        String valueStr = String.valueOf(value);
+        
+        // MAC 키로 저장
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_TX_POWER;
+            editor.putString(macKey, valueStr);
+            Log.d(TAG, "Save txPower by MAC: " + normalizeMac(mac) + " = " + value);
+        }
+        
+        // 이름 키로 저장
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_TX_POWER;
+            editor.putString(nameKey, valueStr);
+            Log.d(TAG, "Save txPower by name: " + name + " = " + value);
+        }
+        
+        editor.apply();
+    }
+    
+    /**
+     * 경로손실지수(n) 조회 (MAC 우선 → 이름 → 기본값)
+     * Note: 광고 RSSI 기준으로 설계됨, 연결 중 RSSI 미사용
+     */
+    public double getN(String mac, String name, double defaultValue) {
+        // MAC 키 우선 시도
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_N;
+            String value = mPrefs.getString(macKey, null);
+            if (value != null) {
+                try {
+                    double result = Double.parseDouble(value);
+                    Log.d(TAG, "Load pathLoss by MAC: " + normalizeMac(mac) + " = " + result);
+                    return result;
+                } catch (NumberFormatException e) {
+                    Log.d(TAG, "Invalid pathLoss value for MAC: " + value);
+                }
+            }
+        }
+        
+        // 이름 키 시도
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_N;
+            String value = mPrefs.getString(nameKey, null);
+            if (value != null) {
+                try {
+                    double result = Double.parseDouble(value);
+                    Log.d(TAG, "Load pathLoss by name: " + name + " = " + result);
+                    return result;
+                } catch (NumberFormatException e) {
+                    Log.d(TAG, "Invalid pathLoss value for name: " + value);
+                }
+            }
+        }
+        
+        return defaultValue;
+    }
+    
+    /**
+     * 경로손실지수(n) 저장 (MAC/이름 둘 다 저장)
+     * Note: 광고 RSSI 기준으로 설계됨, 연결 중 RSSI 미사용
+     */
+    public void setN(String mac, String name, double value) {
+        SharedPreferences.Editor editor = mPrefs.edit();
+        String valueStr = String.valueOf(value);
+        
+        // MAC 키로 저장
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_N;
+            editor.putString(macKey, valueStr);
+            Log.d(TAG, "Save pathLoss by MAC: " + normalizeMac(mac) + " = " + value);
+        }
+        
+        // 이름 키로 저장
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_N;
+            editor.putString(nameKey, valueStr);
+            Log.d(TAG, "Save pathLoss by name: " + name + " = " + value);
+        }
+        
+        editor.apply();
+    }
+    
+    /**
+     * 배터리 % 조회 (MAC 우선 → 이름 → 기본값)
+     * @param mac MAC 주소
+     * @param name 비콘 이름
+     * @param defaultValue 기본값 (null 허용)
+     * @return 배터리 % (null이면 값 없음)
+     */
+    public Integer getBatteryPct(String mac, String name, Integer defaultValue) {
+        // MAC 키 우선 시도
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_BATTERY;
+            int value = mPrefs.getInt(macKey, -1);
+            if (value >= 0) {
+                Log.d(TAG, "Load battery by MAC: " + normalizeMac(mac) + " = " + value + "%");
+                return value;
+            }
+        }
+        
+        // 이름 키 시도
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_BATTERY;
+            int value = mPrefs.getInt(nameKey, -1);
+            if (value >= 0) {
+                Log.d(TAG, "Load battery by name: " + name + " = " + value + "%");
+                return value;
+            }
+        }
+        
+        return defaultValue;
+    }
+    
+    /**
+     * 배터리 % 저장 (MAC/이름 둘 다 저장)
+     * @param mac MAC 주소
+     * @param name 비콘 이름
+     * @param value 배터리 % (0-100)
+     */
+    public void setBatteryPct(String mac, String name, int value) {
+        SharedPreferences.Editor editor = mPrefs.edit();
+        
+        // MAC 키로 저장
+        if (mac != null && !mac.isEmpty()) {
+            String macKey = KEY_PREFIX_BEACON + normalizeMac(mac) + KEY_SUFFIX_BATTERY;
+            editor.putInt(macKey, value);
+            Log.d(TAG, "Save battery by MAC: " + normalizeMac(mac) + " = " + value + "%");
+        }
+        
+        // 이름 키로 저장
+        if (name != null && !name.isEmpty()) {
+            String nameKey = KEY_PREFIX_BEACON + name + KEY_SUFFIX_BATTERY;
+            editor.putInt(nameKey, value);
+            Log.d(TAG, "Save battery by name: " + name + " = " + value + "%");
+        }
+        
+        editor.apply();
+    }
+    
+    /**
+     * 기본값 상수들 반환
+     */
+    public static double getDefaultDistanceThreshold() {
+        return DEFAULT_DISTANCE_THRESHOLD;
+    }
+    
+    public static double getDefaultTxPowerAt1m() {
+        return DEFAULT_TX_POWER_AT_1M;
+    }
+    
+    public static double getDefaultPathLossExponent() {
+        return DEFAULT_PATH_LOSS_EXPONENT;
+    }
+    
+    /**
+     * 특정 비콘의 모든 설정 제거
+     * @param mac MAC 주소
+     * @param name 비콘 이름
+     */
+    public void clearBeaconSettings(String mac, String name) {
+        SharedPreferences.Editor editor = mPrefs.edit();
+        
+        if (mac != null && !mac.isEmpty()) {
+            String macPrefix = KEY_PREFIX_BEACON + normalizeMac(mac);
+            editor.remove(macPrefix + KEY_SUFFIX_THRESHOLD);
+            editor.remove(macPrefix + KEY_SUFFIX_TX_POWER);
+            editor.remove(macPrefix + KEY_SUFFIX_N);
+            editor.remove(macPrefix + KEY_SUFFIX_BATTERY);
+            Log.d(TAG, "Clear settings by MAC: " + normalizeMac(mac));
+        }
+        
+        if (name != null && !name.isEmpty()) {
+            String namePrefix = KEY_PREFIX_BEACON + name;
+            editor.remove(namePrefix + KEY_SUFFIX_THRESHOLD);
+            editor.remove(namePrefix + KEY_SUFFIX_TX_POWER);
+            editor.remove(namePrefix + KEY_SUFFIX_N);
+            editor.remove(namePrefix + KEY_SUFFIX_BATTERY);
+            Log.d(TAG, "Clear settings by name: " + name);
+        }
+        
+        editor.apply();
+    }
+    
+    // TODO: 추후 확장 포인트
+    // - 배치 저장/로드 최적화
+    // - JSON 기반 백업/복원
+    // - 통계 정보 추가 (최근 업데이트 시간 등)
+    // - 마이그레이션 지원
+}

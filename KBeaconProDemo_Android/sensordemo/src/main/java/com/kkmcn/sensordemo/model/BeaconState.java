@@ -185,6 +185,11 @@ public class BeaconState {
         return distanceThresholdMeters;
     }
     
+    public void setDistanceThreshold(double distanceThresholdMeters) {
+        this.distanceThresholdMeters = distanceThresholdMeters;
+        this.updatedAt = System.currentTimeMillis();
+    }
+    
     public void setDistanceThresholdMeters(double distanceThresholdMeters) {
         this.distanceThresholdMeters = distanceThresholdMeters;
         this.updatedAt = System.currentTimeMillis();

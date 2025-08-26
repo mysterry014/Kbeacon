@@ -1,9 +1,7 @@
-refactor(adapter): 기존 iBeacon/EddyTLM/Sensor 처리 코드 제거
+  feat(persistence): SharedPreferences 기반 per-device 설정 영속화 구현
 
-  - LeDeviceListAdapter: device 변수 참조 오류 수정
-  - KSensor 프로토콜 외 패킷 처리 로직 완전 제거
-  - BeaconState 기반 단일 데이터 표시로 일원화
-  - 6자리 필터 적용으로 불필요한 패킷 처리 정리
-  - 컴파일 오류 해결 및 빌드 성공 확인
-
-  BREAKING CHANGE: iBeacon/EddyTLM 정보 표시 기능 제거됨
+  - Prefs.java: MAC/이름 dual-key 저장소 구현 완료
+  - DeviceScanActivity: 신규 비콘 탐지 시 자동 설정 복원 로직 추가
+  - 저장 훅 메서드 3개 구현 (거리임계값/캘리브레이션/배터리)
+  - BeaconState: setDistanceThreshold() 편의 메서드 추가
+  - 빌드 검증 완료, Phase 3 UI 연동 준비 완료

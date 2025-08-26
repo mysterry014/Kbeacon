@@ -6,9 +6,13 @@
       "Bash(claude --version)",
       "Bash(claude auth logout)",
       "Bash(claude auth login)",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(gradlew.bat sensordemo:build)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\mnt\\c\\work_DJ\\KBeacon"
+    ]
   }
 }
