@@ -43,7 +43,7 @@ import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEBeacon;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyTLM;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyUID;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyURL;
-import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketIBeacon;
+// iBeacon import removed - using KBeacon protocol only
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvType;
@@ -495,13 +495,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             //get adv packet
             for (KBAdvPacketBase advPacket : beacon.allAdvPackets()) {
                 switch (advPacket.getAdvType()) {
-                    case KBAdvType.IBeacon: {
-                        KBAdvPacketIBeacon advIBeacon = (KBAdvPacketIBeacon) advPacket;
-                        Log.v(LOG_TAG, "iBeacon uuid:" + advIBeacon.getUuid());
-                        Log.v(LOG_TAG, "iBeacon major:" + advIBeacon.getMajorID());
-                        Log.v(LOG_TAG, "iBeacon minor:" + advIBeacon.getMinorID());
-                        break;
-                    }
+                    // iBeacon case removed - KBeacon protocol only
 
                     case KBAdvType.EddyTLM: {
                         KBAdvPacketEddyTLM advTLM = (KBAdvPacketEddyTLM) advPacket;

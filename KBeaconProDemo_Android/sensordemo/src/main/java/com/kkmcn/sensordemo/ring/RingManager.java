@@ -278,18 +278,20 @@ public class RingManager {
                 return;
             }
             
-            // 비콘이 beep 기능을 지원하는지 확인 (선택적 검증) - 스킵
-            // Note: KBCfgCommon 클래스가 현재 프로젝트에서 접근 불가능하므로 생략
-            
-            // JSON 명령 생성
+            // JSON 명령 생성 - KBeacon 프로토콜 준수
             JSONObject cmdPara = new JSONObject();
             try {
                 cmdPara.put("msg", "ring");
                 cmdPara.put("ringTime", session.ringMs);   // 비콘을 울릴 시간 (ms)
-                cmdPara.put("ringType", 0x1);            // 0x1: beep alert only
-                // LED 필요시 추가: ledOn, ledOff
                 
-                Log.d(TAG, "Sending ring command to " + session.name + ": ringTime=" + session.ringMs + "ms, ringType=0x1");
+                // KBeacon 표준 ringType: 0x0=LED only, 0x1=beep only, 0x2=LED+beep combined
+                // CLAUDE.md 명세: 부저만 사용하므로 0x1 (beep only)
+                int ringType = 0x1;  // beep alert only
+                cmdPara.put("ringType", ringType);
+                
+                // LED 관련 파라미터는 ringType=0x1에서 불필요하므로 생략
+                
+                Log.d(TAG, "Sending KBeacon ring command to " + session.name + ": ringTime=" + session.ringMs + "ms, ringType=0x1");
                 
             } catch (JSONException e) {
                 Log.e(TAG, "Error creating ring command JSON: " + e.getMessage());

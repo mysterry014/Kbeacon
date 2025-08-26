@@ -12,7 +12,7 @@ import android.widget.TextView;
 
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAccSensorValue;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyTLM;
-import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketIBeacon;
+// iBeacon import removed - using KBeacon protocol only
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvType;
 import com.kkmcn.kbeaconlib2.KBeacon;
@@ -128,17 +128,7 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder.deviceEddyTLM = view
 					.findViewById(R.id.tv_tlm_beacon);
 
-			//iBeacon uuid
-			viewHolder.lliBeaconUUID= view
-					.findViewById(R.id.ll_iBeacon_uuid);
-			viewHolder.deviceIBeaconUUID = view
-					.findViewById(R.id.tv_ibeacon_uuid);
-
-			//iBeacon major
-			viewHolder.lliBeaconMajor= view
-					.findViewById(R.id.ll_iBeacon_major);
-			viewHolder.deviceIBeaconMajor = view
-					.findViewById(R.id.tv_iBeacon_major);
+			// iBeacon UI elements removed - using KBeacon protocol only
 
 
 			//sensor 1
@@ -256,12 +246,7 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		if (viewHolder.llEddyTLM != null) {
 			viewHolder.llEddyTLM.setVisibility(View.GONE);
 		}
-		if (viewHolder.lliBeaconUUID != null) {
-			viewHolder.lliBeaconUUID.setVisibility(View.GONE);
-		}
-		if (viewHolder.lliBeaconMajor != null) {
-			viewHolder.lliBeaconMajor.setVisibility(View.GONE);
-		}
+		// iBeacon UI hide code removed - fields no longer exist
 		if (viewHolder.llSensorItem1 != null) {
 			viewHolder.llSensorItem1.setVisibility(View.GONE);
 		}
@@ -290,14 +275,8 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		TextView deviceBatteryPercent;
 		TextView deviceMacAddr;
 
-		LinearLayout lliBeaconUUID;
-		LinearLayout lliBeaconMajor;
-
-
+		// iBeacon fields removed - using KBeacon protocol only
 		LinearLayout llEddyTLM;
-
-		TextView deviceIBeaconUUID;
-		TextView deviceIBeaconMajor;
 
 		TextView deviceEddyTLM;
 
