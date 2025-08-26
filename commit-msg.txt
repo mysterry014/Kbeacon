@@ -1,7 +1,6 @@
-  feat(ui): 터치 인식 정확도 대폭 개선 및 UI 정리
+   feat(touch): 터치 디바운스 시스템으로 버튼 반응성 대폭 개선
 
-  • ListView 하이라이트 완전 제거 (selector=transparent, cacheColorHint=transparent)
-  • 자식 우선 포커스 설정 (setItemsCanFocus=true, descendantFocusability=afterDescendants)
-  • 버튼 터치 영역 확대 (40dp→48dp, 패딩 추가)
-  • XML 레이아웃 터치 전파 차단 (clickable=false, 부모→자식 순)
-  • 거리설정 다이얼로그 "(별칭)" 텍스트 제거로 UI 깔끔화
+  • UI 갱신 디바운스: 터치 중/후 200ms + 클릭 후 250ms UI 갱신 중단
+  • 리스너 최적화: MAC 변경 시에만 조건부 재설정으로 레이스 컨디션 해결
+  • ViewHolder.boundMac 추적으로 불필요한 리스너 재설정 제거
+  • 500ms UI 갱신과 버튼 클릭 간 레이스 컨디션 완전 차단

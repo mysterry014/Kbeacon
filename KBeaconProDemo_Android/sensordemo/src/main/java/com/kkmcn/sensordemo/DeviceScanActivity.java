@@ -20,6 +20,8 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.widget.Toast;
+import android.os.SystemClock;
+import android.view.MotionEvent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -132,6 +134,10 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private Handler mUiUpdateHandler;
     private Runnable mUiUpdateRunnable;
     private static final int UI_UPDATE_INTERVAL_MS = 500;
+    
+    // [터치디바운스] UI 갱신 제어 플래그
+    private volatile boolean userTouchingList = false;
+    private volatile long uiFreezeUntilMs = 0L;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -177,7 +183,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mUiUpdateRunnable = new Runnable() {
             @Override
             public void run() {
-                updateUiFromDataStore();
+                // [터치디바운스] 사용자 터치 중이거나 프리즈 기간에는 UI 갱신 스킵
+                final long now = SystemClock.uptimeMillis();
+                if (!userTouchingList && now >= uiFreezeUntilMs) {
+                    updateUiFromDataStore();
+                } else {
+                    Log.v("UI_UPDATE", String.format("Skipping UI update - touching=%s, frozen=%s", 
+                        userTouchingList, (now < uiFreezeUntilMs)));
+                }
                 mUiUpdateHandler.postDelayed(this, UI_UPDATE_INTERVAL_MS);
             }
         };
@@ -202,6 +215,22 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mListView.setSelector(android.R.color.transparent);
         mListView.setCacheColorHint(android.R.color.transparent);
         mListView.setItemsCanFocus(true);   // 자식 뷰(버튼/텍스트)가 먼저 터치 받도록
+        
+        // [터치디바운스] 터치 중에는 UI 갱신 중단
+        mListView.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    userTouchingList = true;
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    // 손 뗀 직후 200ms 동안도 프리즈 유지 (다운/업 사이 리바인딩 충돌 방지)
+                    uiFreezeUntilMs = SystemClock.uptimeMillis() + 200;
+                    userTouchingList = false;
+                    break;
+            }
+            return false; // 터치 이벤트를 자식으로 계속 전파
+        });
 
 
         //total filter information
@@ -784,6 +813,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private void updateUiFromDataStore() {
         try {
             List<BeaconState> beaconStates = mBeaconDataStore.getValidBeacons();
+            Log.v("UI_UPDATE", String.format("updateUiFromDataStore: beacons=%d", beaconStates.size()));
             
             // [D1] 500ms 렌더 전 스냅샷 정렬: (6자리, displayName, mac) 순
             beaconStates.sort((a, b) -> {
@@ -1019,11 +1049,23 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     
     @Override
     public void onRingStart(String mac) {
-        Log.d("RING", "UI onRingStart mac=" + mac);
-        Toast.makeText(this, "부저 시작: " + mac, Toast.LENGTH_SHORT).show();
+        // [디버깅] 비콘 정보와 함께 상세 로깅
+        BeaconState beaconState = mBeaconDataStore.get(mac);
+        String displayName = (beaconState != null) ? beaconState.getDisplayName() : "Unknown";
+        Log.d("RING", String.format("UI onRingStart: MAC=%s, name=%s, beaconExists=%s", 
+            mac, displayName, (beaconState != null)));
+        Toast.makeText(this, "부저 알람: " + displayName, Toast.LENGTH_SHORT).show();
+        
+        // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
+        
         if (mRingManager != null) {
+            Log.d("RING", String.format("Before RingManager.start: MAC=%s, manager=%s", mac, mRingManager.getClass().getSimpleName()));
             boolean started = mRingManager.start(mac, 2000);
-            Log.i("RING", "RingManager.start result: " + started);
+            Log.i("RING", String.format("RingManager.start result: %s for MAC=%s", started, mac));
+            if (!started) {
+                Log.w("RING", "RingManager.start failed - already running or busy?");
+            }
         } else {
             Log.e("RING", "RingManager is null!");
         }
@@ -1031,12 +1073,15 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     
     @Override
     public void onRingStop(String mac) {
-        Log.d("RING", "UI onRingStop mac=" + mac);
-        
-        // [C] 별칭 기준 토스트 메시지
+        // [디버깅] 비콘 정보와 함께 상세 로깅
         BeaconState beaconState = mBeaconDataStore.get(mac);
-        String displayName = (beaconState != null) ? beaconState.getDisplayName() : mac;
+        String displayName = (beaconState != null) ? beaconState.getDisplayName() : "Unknown";
+        Log.d("RING", String.format("UI onRingStop: MAC=%s, name=%s, beaconExists=%s", 
+            mac, displayName, (beaconState != null)));
         Toast.makeText(this, "부저 중지 요청: " + displayName, Toast.LENGTH_SHORT).show();
+        
+        // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
         
         if (mRingManager != null) {
             boolean stopped = mRingManager.stop(mac);

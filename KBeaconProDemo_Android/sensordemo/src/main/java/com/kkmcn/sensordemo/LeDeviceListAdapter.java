@@ -18,6 +18,7 @@ import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvType;
 import com.kkmcn.kbeaconlib2.KBeacon;
 import com.kkmcn.sensordemo.model.BeaconState;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -230,48 +231,85 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		// [B] 클릭 대상 혼동 제거: 매 바인딩마다 리스너 완전 재설정
 		final String captureMac = beaconState.getMac();  // 클로저 MAC 캡처 (안정적)
 		
-		// [B] 리스너 완전 재설정: 재활용된 View의 이전 리스너 제거 후 새로 설정
-		viewHolder.tvBeaconName.setOnClickListener(null);  // 기존 리스너 제거
-		viewHolder.btnRingAlarm.setOnClickListener(null);
-		viewHolder.btnRingAlarmStop.setOnClickListener(null);
-		viewHolder.btnDistanceSetting.setOnClickListener(null);
-		viewHolder.btnCalibration.setOnClickListener(null);
+		// [디버깅] 뷰 바인딩 정보 로깅
+		Log.d("LeDeviceListAdapter", 
+			String.format("getView: position=%d, MAC=%s, name=%s, viewType=%s", 
+				i, captureMac, beaconState.getDisplayName(), 
+				(view == null ? "NEW" : "RECYCLED")));
 		
-		// [수정1] 이름 TextView 클릭 리스너 - MAC만 전달 (Activity에서 별칭 재조회)
-		viewHolder.tvBeaconName.setOnClickListener(v -> {
-			if (mOnRowActionListener != null && captureMac != null) {
-				// MAC만 넘김; 이름은 Activity에서 재조회
-				mOnRowActionListener.onNameEdit(captureMac, null);
-			}
-		});
+		// [터치디바운스] 리스너는 MAC이 바뀔 때만 재설정 (리스너-재설정/클릭 레이스 감소)
+		if (viewHolder.boundMac == null || !viewHolder.boundMac.equalsIgnoreCase(captureMac)) {
+			Log.d("LeDeviceListAdapter", String.format("MAC changed, resetting listeners: position=%d, oldMAC=%s, newMAC=%s", 
+				i, viewHolder.boundMac, captureMac));
 		
-		// 부저 알람 시작 버튼
-		viewHolder.btnRingAlarm.setOnClickListener(v -> {
-			if (mOnRowActionListener != null && captureMac != null) {
-				mOnRowActionListener.onRingStart(captureMac);
-			}
-		});
+			// [수정1] 이름 TextView 클릭 리스너 - MAC만 전달 (Activity에서 별칭 재조회)
+			viewHolder.tvBeaconName.setOnClickListener(v -> {
+				if (mOnRowActionListener != null && captureMac != null) {
+					// MAC만 넘김; 이름은 Activity에서 재조회
+					mOnRowActionListener.onNameEdit(captureMac, null);
+				}
+			});
 		
-		// 부저 알람 중지 버튼
-		viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
-			if (mOnRowActionListener != null && captureMac != null) {
-				mOnRowActionListener.onRingStop(captureMac);
-			}
-		});
-		
-		// 거리 설정 버튼
-		viewHolder.btnDistanceSetting.setOnClickListener(v -> {
-			if (mOnRowActionListener != null && captureMac != null) {
-				mOnRowActionListener.onDistanceSetting(captureMac);
-			}
-		});
-		
-		// 캘리브레이션 버튼
-		viewHolder.btnCalibration.setOnClickListener(v -> {
-			if (mOnRowActionListener != null && captureMac != null) {
-				mOnRowActionListener.onCalibration(captureMac);
-			}
-		});
+			// 부저 알람 시작 버튼
+			Log.d("LeDeviceListAdapter", String.format("Setting RingAlarm listener for position=%d, MAC=%s", i, captureMac));
+			viewHolder.btnRingAlarm.setOnClickListener(v -> {
+				Log.d("RingAlarm", String.format("CLICK: position=%d, MAC=%s, name=%s, enabled=%s, clickable=%s", 
+					i, captureMac, beaconState.getDisplayName(), v.isEnabled(), v.isClickable()));
+				
+				// 버튼 상태 체크
+				if (!v.isEnabled() || !v.isClickable()) {
+					Log.w("RingAlarm", "Button is not enabled or clickable, ignoring click");
+					return;
+				}
+				
+				if (mOnRowActionListener != null && captureMac != null) {
+					Log.d("RingAlarm", "Calling onRingStart for MAC: " + captureMac);
+					mOnRowActionListener.onRingStart(captureMac);
+				} else {
+					Log.w("RingAlarm", "Listener or MAC is null: listener=" + mOnRowActionListener + ", mac=" + captureMac);
+				}
+			});
+			
+			// 부저 알람 중지 버튼
+			Log.d("LeDeviceListAdapter", String.format("Setting RingStop listener for position=%d, MAC=%s", i, captureMac));
+			viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
+				Log.d("RingStop", String.format("CLICK: position=%d, MAC=%s, name=%s, enabled=%s, clickable=%s", 
+					i, captureMac, beaconState.getDisplayName(), v.isEnabled(), v.isClickable()));
+				
+				// 버튼 상태 체크
+				if (!v.isEnabled() || !v.isClickable()) {
+					Log.w("RingStop", "Button is not enabled or clickable, ignoring click");
+					return;
+				}
+				
+				if (mOnRowActionListener != null && captureMac != null) {
+					Log.d("RingStop", "Calling onRingStop for MAC: " + captureMac);
+					mOnRowActionListener.onRingStop(captureMac);
+				} else {
+					Log.w("RingStop", "Listener or MAC is null: listener=" + mOnRowActionListener + ", mac=" + captureMac);
+				}
+			});
+			
+			// 거리 설정 버튼
+			viewHolder.btnDistanceSetting.setOnClickListener(v -> {
+				if (mOnRowActionListener != null && captureMac != null) {
+					mOnRowActionListener.onDistanceSetting(captureMac);
+				}
+			});
+			
+			// 캘리브레이션 버튼
+			viewHolder.btnCalibration.setOnClickListener(v -> {
+				if (mOnRowActionListener != null && captureMac != null) {
+					mOnRowActionListener.onCalibration(captureMac);
+				}
+			});
+			
+			// boundMac 업데이트
+			viewHolder.boundMac = captureMac;
+		} else {
+			// MAC이 같을 때는 리스너 재설정 스킵
+			Log.v("LeDeviceListAdapter", String.format("MAC unchanged, skipping listener reset: position=%d, MAC=%s", i, captureMac));
+		}
 
 		// 기존 UI 업데이트 (호환성 유지, 숨김 처리된 레이아웃용)
 		if (viewHolder.deviceName != null) {
@@ -318,6 +356,9 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		Button btnRingAlarmStop;
 		Button btnDistanceSetting;
 		Button btnCalibration;
+		
+		// [터치디바운스] 마지막으로 리스너를 바인딩했던 MAC
+		String boundMac;
 		
 		// 기존 UI 요소들 (숨김 처리된 레이아웃용)
 		TextView deviceName;      //名称
