@@ -1,6 +1,10 @@
 package com.kkmcn.sensordemo.ring;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.util.Log;
+import androidx.core.app.ActivityCompat;
 
 import com.kkmcn.kbeaconlib2.KBConnState;
 import com.kkmcn.kbeaconlib2.KBeacon;
@@ -55,6 +59,7 @@ public class RingManager {
         }
     }
     
+    private final Context mContext;
     private final ScheduledExecutorService mExecutor;
     private final KBeaconsMgr mBeaconsMgr;
     private final BeaconDataStore mDataStore;
@@ -68,10 +73,12 @@ public class RingManager {
     
     /**
      * RingManager 생성자
+     * @param context Context (권한 체크용)
      * @param beaconsMgr KBeaconsMgr 인스턴스
      * @param dataStore BeaconDataStore 인스턴스
      */
-    public RingManager(KBeaconsMgr beaconsMgr, BeaconDataStore dataStore) {
+    public RingManager(Context context, KBeaconsMgr beaconsMgr, BeaconDataStore dataStore) {
+        mContext = context;
         mExecutor = Executors.newScheduledThreadPool(2);
         mBeaconsMgr = beaconsMgr;
         mDataStore = dataStore;
@@ -97,6 +104,12 @@ public class RingManager {
     public boolean start(String mac, int ringMs) {
         if (mac == null || mac.isEmpty()) {
             Log.w(TAG, "Invalid MAC for ring start");
+            return false;
+        }
+        
+        // Android 12+ BLUETOOTH_CONNECT 권한 체크
+        if (!checkBluetoothPermission()) {
+            Log.e("RING", "BLUETOOTH_CONNECT permission denied for MAC: " + mac);
             return false;
         }
         
@@ -241,7 +254,7 @@ public class RingManager {
             if (DEBUG) Log.d(TAG, "[DEBUG] Beacon found: " + beacon.getName() + ", state=" + beacon.getState());
             
             // 연결 상태 확인 및 연겴 시도
-            if (beacon.getState() != KBConnState.Connected) {
+            if (!isBeaconReadyForCommand(beacon)) {
                 Log.d("RING", "connect attempt mac=" + session.mac + " currentState=" + beacon.getState());
                 Log.d(TAG, "Connecting to beacon: " + session.name);
                 
@@ -280,7 +293,13 @@ public class RingManager {
      */
     private void sendRingCommand(RingSession session, KBeacon beacon) {
         try {
+            if (session.state == RingState.STOPPED) {
+                Log.d("RING", "Session stopped during command prep: " + session.mac);
+                return;
+            }
+            
             session.state = RingState.RUNNING;
+            Log.d("RING", "session state transition: STARTING → RUNNING");
             
             // 실제 KBeacon API 호출 - sendCommand로 ring 명령 전송
             if (!beacon.isConnected()) {
@@ -349,7 +368,10 @@ public class RingManager {
             });
             
         } catch (Exception e) {
-            Log.e(TAG, "Error sending ring command for " + session.mac + ": " + e.getMessage());
+            Log.e("RING", "Exception in sendRingCommand for " + session.mac + ": " + e.getMessage());
+            if (DEBUG) {
+                Log.e("RING", "Stack trace: ", e);
+            }
             scheduleRetryWithBackoff(session);
         }
     }
@@ -377,5 +399,39 @@ public class RingManager {
             session.backoffSeconds, 
             TimeUnit.SECONDS
         );
+    }
+    
+    /**
+     * 비콘이 명령 수신 가능한 상태인지 확인
+     * @param beacon KBeacon 인스턴스
+     * @return true if 연결됨 + 서비스 준비됨
+     */
+    private boolean isBeaconReadyForCommand(KBeacon beacon) {
+        if (beacon == null) return false;
+        
+        // 연결 상태 체크
+        if (beacon.getState() != KBConnState.Connected) {
+            return false;
+        }
+        
+        // KBeacon은 연결되면 바로 명령 수신 가능한 것으로 가정
+        // (서비스 디스커버리 따로 체크하지 않음)
+        return true;
+    }
+    
+    /**
+     * Bluetooth 연결 권한 체크 (Android 12+)
+     * @return true if 권한 있음
+     */
+    private boolean checkBluetoothPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ (API 31+)
+            return ActivityCompat.checkSelfPermission(mContext, android.Manifest.permission.BLUETOOTH_CONNECT) 
+                == PackageManager.PERMISSION_GRANTED;
+        } else {
+            // Android 11 이하는 BLUETOOTH_ADMIN 권한 체크
+            return ActivityCompat.checkSelfPermission(mContext, android.Manifest.permission.BLUETOOTH_ADMIN) 
+                == PackageManager.PERMISSION_GRANTED;
+        }
     }
 }

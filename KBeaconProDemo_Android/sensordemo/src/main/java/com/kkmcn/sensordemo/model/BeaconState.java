@@ -13,7 +13,8 @@ import java.util.Objects;
  */
 public class BeaconState {
     // 식별 정보
-    private String name;
+    private String name;        // 광고 이름 (비콘에서 브로드캠스트된 이름)
+    private String aliasName;   // 별칭 (사용자 로컬 이름, nullable)
     private String mac;
     
     // RSSI/거리 상태
@@ -112,6 +113,30 @@ public class BeaconState {
     // Getter/Setter 메서드들
     public String getName() {
         return name;
+    }
+    
+    /**
+     * 표시용 이름 (별칭 우선, 없으면 광고 이름)
+     * @return 표시할 이름
+     */
+    public String getDisplayName() {
+        return aliasName != null ? aliasName : name;
+    }
+    
+    /**
+     * 별칭 조회
+     * @return 별칭 (null 가능)
+     */
+    public String getAliasName() {
+        return aliasName;
+    }
+    
+    /**
+     * 별칭 설정
+     * @param alias 별칭 (빈 문자열이면 null로 설정)
+     */
+    public void setAliasName(String alias) {
+        this.aliasName = (alias != null && alias.trim().isEmpty()) ? null : alias;
     }
     
     public void setName(String name) {

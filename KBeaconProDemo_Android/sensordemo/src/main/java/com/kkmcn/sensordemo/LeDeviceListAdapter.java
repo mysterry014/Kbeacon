@@ -71,6 +71,17 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	public void setOnRowActionListener(OnRowActionListener listener) {
 		this.mOnRowActionListener = listener;
 	}
+	
+	// 클릭 시점에 안정적인 이름 조회 (리스트 재활용 대응)
+	private String getCurrentDisplayName(String mac) {
+		for (int i = 0; i < getCount(); i++) {
+			KBeacon beacon = mDataSource.getBeaconDevice(i);
+			if (beacon != null && mac.equals(beacon.getMac())) {
+				return beacon.getName();
+			}
+		}
+		return "Unknown";  // 기본값
+	}
 
 	@Override
 	public int getCount() {
@@ -162,8 +173,8 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		}
 
 		// Phase 2 새로운 UI 업데이트 (BeaconState 기반)
-		// 1. 이름 표시
-		String displayName = beaconState.getName();
+		// 1. 이름 표시 (별칭 우선, 없으면 광고 이름)
+		String displayName = beaconState.getDisplayName();
 		if (displayName == null || displayName.isEmpty()) {
 			// 이름이 없으면 MAC 일부로 대체
 			String mac = beaconState.getMac();
@@ -192,42 +203,55 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			String.format("%.1f m", distanceFiltered) : "–";
 		viewHolder.tvDistance.setText(distanceText);
 		
-		// Phase 3: 버튼 클릭 리스너 연결
-		final String mac = beaconState.getMac();
-		final String currentName = displayName;  // lambda에서 사용할 final 변수
+		// Phase 3: MAC 기반 클릭 매핑 안정화
+		String mac = beaconState.getMac();
+		
+		// MAC 태깅으로 클릭 매핑 고정 (리스트 재활용 대응)
+		viewHolder.tvBeaconName.setTag(R.id.tag_mac, mac);
+		viewHolder.btnRingAlarm.setTag(R.id.tag_mac, mac);
+		viewHolder.btnRingAlarmStop.setTag(R.id.tag_mac, mac);
+		viewHolder.btnDistanceSetting.setTag(R.id.tag_mac, mac);
+		viewHolder.btnCalibration.setTag(R.id.tag_mac, mac);
 		
 		// 이름 TextView 클릭 리스너 (직접 진입점)
 		viewHolder.tvBeaconName.setOnClickListener(v -> {
-			if (mOnRowActionListener != null) {
-				mOnRowActionListener.onNameEdit(mac, currentName);
+			String clickedMac = (String) v.getTag(R.id.tag_mac);
+			if (mOnRowActionListener != null && clickedMac != null) {
+				// 현재 이름을 DataStore에서 직접 조회 (안정적)
+				String currentName = getCurrentDisplayName(clickedMac);
+				mOnRowActionListener.onNameEdit(clickedMac, currentName);
 			}
 		});
 		
 		// 부저 알람 시작 버튼
 		viewHolder.btnRingAlarm.setOnClickListener(v -> {
-			if (mOnRowActionListener != null) {
-				mOnRowActionListener.onRingStart(mac);
+			String clickedMac = (String) v.getTag(R.id.tag_mac);
+			if (mOnRowActionListener != null && clickedMac != null) {
+				mOnRowActionListener.onRingStart(clickedMac);
 			}
 		});
 		
 		// 부저 알람 중지 버튼
 		viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
-			if (mOnRowActionListener != null) {
-				mOnRowActionListener.onRingStop(mac);
+			String clickedMac = (String) v.getTag(R.id.tag_mac);
+			if (mOnRowActionListener != null && clickedMac != null) {
+				mOnRowActionListener.onRingStop(clickedMac);
 			}
 		});
 		
 		// 거리 설정 버튼 (TODO: Phase 3 후속 단계에서 다이얼로그 구현)
 		viewHolder.btnDistanceSetting.setOnClickListener(v -> {
-			if (mOnRowActionListener != null) {
-				mOnRowActionListener.onDistanceSetting(mac);
+			String clickedMac = (String) v.getTag(R.id.tag_mac);
+			if (mOnRowActionListener != null && clickedMac != null) {
+				mOnRowActionListener.onDistanceSetting(clickedMac);
 			}
 		});
 		
 		// 캘리브레이션 버튼 (TODO: Phase 3 후속 단계에서 구현)
 		viewHolder.btnCalibration.setOnClickListener(v -> {
-			if (mOnRowActionListener != null) {
-				mOnRowActionListener.onCalibration(mac);
+			String clickedMac = (String) v.getTag(R.id.tag_mac);
+			if (mOnRowActionListener != null && clickedMac != null) {
+				mOnRowActionListener.onCalibration(clickedMac);
 			}
 		});
 

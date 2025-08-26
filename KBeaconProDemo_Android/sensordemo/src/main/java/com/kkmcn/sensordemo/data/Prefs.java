@@ -32,6 +32,7 @@ public class Prefs {
     private static final String KEY_SUFFIX_THRESHOLD = ".thr";
     private static final String KEY_SUFFIX_TX_POWER = ".tx1m";
     private static final String KEY_SUFFIX_N = ".n";
+    private static final String KEY_SUFFIX_ALIAS = ".alias";  // 별칭 저장용
     private static final String KEY_SUFFIX_BATTERY = ".batt";
     
     private final SharedPreferences mPrefs;
@@ -320,6 +321,45 @@ public class Prefs {
     
     public static double getDefaultPathLossExponent() {
         return DEFAULT_PATH_LOSS_EXPONENT;
+    }
+    
+    /**
+     * 별칭(alias) 조회 - 광고 이름과 분리된 로컬 이름
+     * @param mac MAC 주소
+     * @return 별칭 (null이면 별칭 없음)
+     */
+    public String getAlias(String mac) {
+        if (mac == null || mac.isEmpty()) {
+            return null;
+        }
+        
+        String normalizedMac = mac.toUpperCase().replaceAll(":", "");
+        String key = KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_ALIAS;
+        return mPrefs.getString(key, null);
+    }
+    
+    /**
+     * 별칭(alias) 저장
+     * @param mac MAC 주소
+     * @param alias 별칭 (빈 문자열이면 삭제)
+     */
+    public void setAlias(String mac, String alias) {
+        if (mac == null || mac.isEmpty()) {
+            return;
+        }
+        
+        String normalizedMac = mac.toUpperCase().replaceAll(":", "");
+        String key = KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_ALIAS;
+        
+        SharedPreferences.Editor editor = mPrefs.edit();
+        if (alias == null || alias.trim().isEmpty()) {
+            editor.remove(key);
+            Log.d(TAG, "Remove alias for MAC: " + mac);
+        } else {
+            editor.putString(key, alias.trim());
+            Log.d(TAG, "Save alias for MAC: " + mac + " = " + alias.trim());
+        }
+        editor.apply();
     }
     
     /**

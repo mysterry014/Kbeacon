@@ -237,8 +237,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mEditFltDevName.addTextChangedListener(new EditChangedListener());
         mBtnRmvNameFilter = (Button)findViewById(R.id.btmRemoveFilterName);
 
-        // Phase 3: 기능 컴포넌트 초기화
-        mRingManager = new RingManager(mBeaconsMgr, mBeaconDataStore);
+        // Phase 3: 기능 컴포넌트 초기화 (Context 추가)
+        mRingManager = new RingManager(this, mBeaconsMgr, mBeaconDataStore);
         mBatteryScheduler = new BatteryScheduler(mBeaconsMgr, mBeaconDataStore, this);
         
         // 하단 폰 알람 버튼 초기화 및 연결
@@ -411,6 +411,16 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 boolean isNewBeacon = (beaconState == null);
                 if (isNewBeacon) {
                     beaconState = new BeaconState(beaconName, mac);
+                    
+                    // 별칭 로딩 (최초 탐지 시에만)
+                    String savedAlias = mPrefs.getAlias(mac);
+                    if (savedAlias != null) {
+                        beaconState.setAliasName(savedAlias);
+                        Log.d("ALIAS", "Loaded alias for " + mac + ": " + savedAlias);
+                    }
+                } else {
+                    // 기존 비콘: 광고 이름만 업데이트, 별칭은 유지
+                    beaconState.setName(beaconName);
                 }
                 
                 // (c) RssiFilter로 rssiFiltered 산출
@@ -680,9 +690,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 return;
             }
             
-            // 이름 변경 저장
+            // 별칭 저장 (광고 이름과 분리)
             String oldName = currentName;
-            saveBeaconName(mac, newName);
+            saveAlias(mac, newName);
             
             Log.d("NAME", "rename mac=" + mac + " old=" + oldName + " new=" + newName);
             Toast.makeText(this, "이름 변경: " + oldName + " → " + newName, Toast.LENGTH_SHORT).show();
@@ -696,32 +706,28 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     }
     
     /**
-     * 비콘 이름을 BeaconState와 Prefs에 저장
+     * 별칭을 BeaconState와 Prefs에 저장 (광고 이름과 분리)
      * @param mac 비콘 MAC 주소
-     * @param newName 새 이름
+     * @param alias 새 별칭
      */
-    private void saveBeaconName(String mac, String newName) {
+    private void saveAlias(String mac, String alias) {
+        // Prefs에 별칭 저장
+        mPrefs.setAlias(mac, alias);
+        
         // BeaconState 업데이트
         BeaconState beaconState = mBeaconDataStore.get(mac);
         if (beaconState != null) {
-            beaconState.setName(newName);
+            beaconState.setAliasName(alias);
             mBeaconDataStore.upsert(beaconState);
         } else {
             // 새로운 BeaconState 생성 (일반적으로는 발생하지 않음)
-            beaconState = new BeaconState(newName, mac);
+            beaconState = new BeaconState("Unknown", mac);
+            beaconState.setAliasName(alias);
             mBeaconDataStore.upsert(beaconState);
         }
         
-        // Prefs에 MAC/이름 dual-key로 저장 (기존 저장 훅과 동일한 방식)
-        if (mPrefs != null) {
-            // 이름 키로 저장 (이전 이름도 동기화하기 위함)
-            mPrefs.setDistanceThreshold(mac, newName, beaconState.getDistanceThresholdMeters());
-            mPrefs.setBatteryPct(mac, newName, beaconState.getBatteryPercent());
-            mPrefs.setTxPowerAt1m(mac, newName, beaconState.getTxPowerAt1m());
-            mPrefs.setN(mac, newName, beaconState.getPathLossExponent());
-            
-            Log.d(TAG, "Saved beacon name to prefs: " + mac + " -> " + newName);
-        }
+        // 별칭 저장 완료 로깅
+        Log.d("ALIAS", "Saved alias for MAC: " + mac + " -> " + alias);
         
         // UI는 500ms 주기 갱신에서 자동으로 반영됨 (별도 invalidate 불필요)
     }
