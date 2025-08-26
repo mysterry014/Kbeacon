@@ -26,7 +26,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.text.InputFilter;
+import android.text.TextUtils;
 import android.util.Log;
+import androidx.annotation.NonNull;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -650,7 +653,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             displayName = beaconState.getDisplayName(); // 별칭 우선, 없으면 광고 이름
         }
         
-        showDeviceNameChangeDialog(mac, displayName);
+        showDeviceNameChangeDialog(mac);
     }
     
     /**
@@ -711,7 +714,6 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             String oldDisplay = !android.text.TextUtils.isEmpty(oldAlias) ? oldAlias : "";
             
             mPrefs.setAlias(mac, newName);
-            BeaconState st = mBeaconDataStore.get(mac);
             if (st != null) {
                 st.setAliasName(newName);
             }

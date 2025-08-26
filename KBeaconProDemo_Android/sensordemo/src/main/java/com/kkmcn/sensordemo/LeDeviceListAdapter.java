@@ -9,6 +9,7 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
 
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAccSensorValue;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyTLM;

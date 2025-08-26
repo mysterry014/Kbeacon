@@ -1,11 +1,11 @@
-  fix(ui): ListView 클릭 혼동 문제 해결 및 별칭 시스템 안정화
+  fix: 컴파일 에러 해결 - @NonNull import 및 메서드 시그니처 통일
 
-  3가지 주요 문제 해결:
-  • 별칭 대신 광고이름 표시 문제
-  • 리스트 빈 영역 클릭시 다이얼로그 노출 문제
-  • 잘못된 비콘의 다이얼로그 표시 문제
+  컴파일 에러 5건 모두 해결:
+  • @NonNull 어노테이션 import 누락 해결
+  • showDeviceNameChangeDialog 메서드 호출/선언 통일 (1개 인자)
+  • BeaconState 변수 중복 선언 제거
+  • InputFilter, TextUtils import 추가
 
   변경사항:
-  • LeDeviceListAdapter: KBeacon 참조 제거, BeaconState만 사용
-  • DeviceScanActivity: 행 클릭 비활성화, 별칭 우선 다이얼로그
-  • listitem_device.xml: 루트 클릭 금지, 이름 TextView만 허용
+  • DeviceScanActivity: androidx.annotation.NonNull import, 메서드 호출 수정
+  • LeDeviceListAdapter: androidx.annotation.NonNull import
