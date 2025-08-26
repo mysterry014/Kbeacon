@@ -205,126 +205,24 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder.deviceBatteryPercent.setText(strBattPercent);
 		}
 
-		String strNA = "N/A";
-
-		//ibeacon data
-		KBAdvPacketIBeacon iBeaconAdv = (KBAdvPacketIBeacon) device.getAdvPacketByType(KBAdvType.IBeacon);
-		if (iBeaconAdv != null)
-		{
-			viewHolder.lliBeaconMajor.setVisibility(View.VISIBLE);
-			viewHolder.deviceIBeaconUUID.setVisibility(View.VISIBLE);
-
-			//battery percent
-			String strUUID = mContext.getString(R.string.BEACON_UUID) + iBeaconAdv.getUuid();
-
-			String strMajor2Minor = mContext.getString(R.string.BEACON_MAJOR) + iBeaconAdv.getMajorID() +
-					", " + mContext.getString(R.string.BEACON_MINOR) + iBeaconAdv.getMinorID();
-
-			viewHolder.deviceIBeaconUUID.setText(strUUID);
-			viewHolder.deviceIBeaconMajor.setText(strMajor2Minor);
-		}
-		else
-		{
-			viewHolder.lliBeaconMajor.setVisibility(View.GONE);
-			viewHolder.deviceIBeaconUUID.setVisibility(View.GONE);
-		}
-
-		//tlm info
-		KBAdvPacketEddyTLM eddyTLMAdv = (KBAdvPacketEddyTLM) device.getAdvPacketByType(KBAdvType.EddyTLM);
-		if (eddyTLMAdv != null)
-		{
-			StringBuffer strTLMInfo = new StringBuffer(50);
-
-			//battery voltage
-			strTLMInfo.append(mContext.getString(R.string.BEACON_VOLTAGE))
-					.append(eddyTLMAdv.getBatteryLevel())
-					.append("mV, ");
-
-			//temperature
-			strTLMInfo.append(mContext.getString(R.string.BEACON_TEMPERATURE))
-					.append(eddyTLMAdv.getTemperature())
-					.append("℃, ");
-
-			//adv count
-			strTLMInfo.append("advCount:")
-					.append(eddyTLMAdv.getAdvCount())
-					.append(", ");
-
-			//elapse 10 ms
-			strTLMInfo.append("elapse:")
-					.append(eddyTLMAdv.getSecCount());
-
-			viewHolder.llEddyTLM.setVisibility(View.VISIBLE);
-			viewHolder.deviceEddyTLM.setText(strTLMInfo.toString());
-		}
-		else
-		{
+		// Phase 2: 기존 iBeacon/EddyTLM/Sensor 처리 코드 제거
+		// - 6자리 필터로 인해 KSensor 프로토콜 비콘만 처리
+		// - BeaconState 기반으로 데이터 표시 완료
+		// - 기존 숨김 처리된 레이아웃 요소들도 비표시 처리
+		if (viewHolder.llEddyTLM != null) {
 			viewHolder.llEddyTLM.setVisibility(View.GONE);
 		}
-
-		//KBSensor info
-		KBAdvPacketSensor kSensor = (KBAdvPacketSensor) device.getAdvPacketByType(KBAdvType.Sensor);
-		if (kSensor != null)
-		{
-			//humidity and temp info
-			StringBuffer strHTInfo = new StringBuffer(50);
-			if (kSensor.getTemperature() != null)
-			{
-				strHTInfo.append(mContext.getString(R.string.BEACON_TEMPERATURE))
-						.append(kSensor.getTemperature())
-						.append("℃, ");
-			}
-			if (kSensor.getHumidity() != null)
-			{
-				strHTInfo.append(mContext.getString(R.string.BEACON_HUM))
-						.append(kSensor.getHumidity())
-						.append("%");
-			}
-			if (strHTInfo.length() > 1) {
-				viewHolder.llSensorItem1.setVisibility(View.VISIBLE);
-				viewHolder.txtDeviceItem1.setText(strHTInfo.toString());
-			}else{
-				viewHolder.llSensorItem1.setVisibility(View.GONE);
-			}
-
-			//acc sensor info
-			KBAccSensorValue accSensorValue = kSensor.getAccSensor();
-			if (accSensorValue != null)
-			{
-				String strAccAxis = mContext.getString(R.string.BEACON_ACC_POS) + "x=" + accSensorValue.xAis
-						+ ",y=" + accSensorValue.yAis + ",z=" + accSensorValue.zAis;
-				viewHolder.llSensorItem2.setVisibility(View.VISIBLE);
-				viewHolder.txtDeviceItem2.setText(strAccAxis);
-			}
-			else
-			{
-				viewHolder.llSensorItem2.setVisibility(View.GONE);
-			}
-
-			//co2 sensor info
-			Integer co2SensorValue = kSensor.getCo2();
-			Integer vocSensorValue = kSensor.getVoc();
-			if (co2SensorValue != null || vocSensorValue != null)
-			{
-				String strCO2Level = "";
-				if (co2SensorValue != null) {
-					strCO2Level = mContext.getString(R.string.BEACON_ACC_CO2) + co2SensorValue + "   ";
-				}
-				if (vocSensorValue != null){
-					strCO2Level = strCO2Level + mContext.getString(R.string.BEACON_ACC_VOC) + vocSensorValue + "   ";
-				}
-				viewHolder.llSensorItem2.setVisibility(View.VISIBLE);
-				viewHolder.txtDeviceItem2.setText(strCO2Level);
-			}
-			else
-			{
-				viewHolder.llSensorItem2.setVisibility(View.GONE);
-			}
+		if (viewHolder.lliBeaconUUID != null) {
+			viewHolder.lliBeaconUUID.setVisibility(View.GONE);
 		}
-		else
-		{
-			viewHolder.llSensorItem2.setVisibility(View.GONE);
+		if (viewHolder.lliBeaconMajor != null) {
+			viewHolder.lliBeaconMajor.setVisibility(View.GONE);
+		}
+		if (viewHolder.llSensorItem1 != null) {
 			viewHolder.llSensorItem1.setVisibility(View.GONE);
+		}
+		if (viewHolder.llSensorItem2 != null) {
+			viewHolder.llSensorItem2.setVisibility(View.GONE);
 		}
 
 		return view;

@@ -5,7 +5,8 @@
       "Bash(claude auth status)",
       "Bash(claude --version)",
       "Bash(claude auth logout)",
-      "Bash(claude auth login)"
+      "Bash(claude auth login)",
+      "Bash(./gradlew:*)"
     ],
     "deny": [],
     "ask": []
