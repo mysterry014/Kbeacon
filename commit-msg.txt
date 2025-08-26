@@ -1,16 +1,6 @@
-● feat(phase4-partial): 부저알람/이름변경/거리설정 다이얼로그 구현
+  fix(protocol): KBeacon 전용 프로토콜로 수정 - iBeacon 오염 제거
 
-  - 부저 알람: 실제 KBeacon API 연결 (sendCommand JSON 방식)
-    * RingManager에서 beacon.sendCommand() 호출로 실제 비콘 부저 동작
-    * JSON 포맷: {"msg": "ring", "ringTime": ms, "ringType": 0x1}
-    * 연결 확인 후 2초 반복 알람, 지수 백오프 적용
-
-  - 이름 변경: 리스트 아이템 클릭 시 AlertDialog 표시
-    * 1-20자 제한, 한글 입력 지원, 제어문자 검증
-    * BeaconState + Prefs dual-key 저장 (MAC/이름 동기화)
-    * 500ms UI 갱신 주기에서 자동 반영
-
-  - 거리 설정: 거리설정 버튼 클릭 시 숫자 입력 다이얼로그
-    * 0.5~200.0m 범위 검증, 소수점 입력 지원
-    * saveDistanceThreshold() 훅 연결, BeaconState 즉시 갱신
-    * Toast 피드백: "거리 임계값 X.Xm로 저장됨"
+  - RingManager: 올바른 KBeacon sendCommand API 적용 (ringType=0x1 beep only)
+  - DeviceScanActivity: KBAdvPacketIBeacon import 및 switch case 제거
+  - LeDeviceListAdapter: iBeacon UI 필드/초기화 코드 정리
+  - 프로토콜 순수성: sensordemo는 com.kkmcn.kbeaconlib2.* 전용 사용
