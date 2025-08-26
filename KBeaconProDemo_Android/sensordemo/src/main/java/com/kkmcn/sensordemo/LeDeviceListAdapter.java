@@ -72,15 +72,17 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		this.mOnRowActionListener = listener;
 	}
 	
-	// 클릭 시점에 안정적인 이름 조회 (리스트 재활용 대응)
-	private String getCurrentDisplayName(String mac) {
-		for (int i = 0; i < getCount(); i++) {
-			KBeacon beacon = mDataSource.getBeaconDevice(i);
-			if (beacon != null && mac.equals(beacon.getMac())) {
-				return beacon.getName();
+	// [수정1] BeaconState에서 별칭 우선 반환 (KBeacon 참조 제거)
+	private @NonNull String getDisplayNameByMac(@NonNull String mac) {
+		if (mBeaconStates != null) {
+			for (BeaconState s : mBeaconStates) {
+				if (mac.equalsIgnoreCase(s.getMac())) {
+					String dn = s.getDisplayName(); // alias 우선, 없으면 광고명
+					return dn != null ? dn : s.getMac();
+				}
 			}
 		}
-		return "Unknown";  // 기본값
+		return mac; // fallback
 	}
 
 	@Override
@@ -234,12 +236,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		viewHolder.btnDistanceSetting.setOnClickListener(null);
 		viewHolder.btnCalibration.setOnClickListener(null);
 		
-		// 이름 TextView 클릭 리스너 (클로저로 MAC 캡처)
+		// [수정1] 이름 TextView 클릭 리스너 - MAC만 전달 (Activity에서 별칭 재조회)
 		viewHolder.tvBeaconName.setOnClickListener(v -> {
 			if (mOnRowActionListener != null && captureMac != null) {
-				// 현재 이름을 DataStore에서 직접 조회 (안정적)
-				String currentName = getCurrentDisplayName(captureMac);
-				mOnRowActionListener.onNameEdit(captureMac, currentName);
+				// MAC만 넘김; 이름은 Activity에서 재조회
+				mOnRowActionListener.onNameEdit(captureMac, null);
 			}
 		});
 		

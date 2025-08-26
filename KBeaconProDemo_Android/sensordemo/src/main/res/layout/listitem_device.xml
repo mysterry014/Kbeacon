@@ -14,18 +14,25 @@
      limitations under the License.
 -->
 
+<!-- [수정3] 루트 레이아웃: 클릭/포커스 금지 -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_gravity="center_horizontal"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/listLayout">
+    android:id="@+id/listLayout"
+    android:clickable="false"
+    android:focusable="false"
+    android:longClickable="false">
 
-    <!-- 새로운 레이아웃으로 교체: 2행 구조 -->
+    <!-- [수정3] 새로운 레이아웃: 2행 구조, 클릭 금지 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="8dp">
+        android:padding="8dp"
+        android:clickable="false"
+        android:focusable="false"
+        android:longClickable="false">
 
         <!-- 첫번째 행: 비콘 정보 표시 -->
         <LinearLayout
@@ -41,6 +48,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
                 
+                <!-- [수정3] 이름 TextView만 클릭 허용 + 색금 효과 -->
                 <TextView
                     android:id="@+id/tv_beacon_name"
                     android:layout_width="wrap_content"
@@ -48,7 +56,10 @@
                     android:text="비콘 이름"
                     android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/black"/>
+                    android:textColor="@android:color/black"
+                    android:clickable="true"
+                    android:focusable="false"
+                    android:foreground="?attr/selectableItemBackground"/>
                     
                 <TextView
                     android:id="@+id/tv_distance"

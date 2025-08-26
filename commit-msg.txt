@@ -1,11 +1,11 @@
-  refactor(ui): ListView 안정성 개선 및 정렬 최적화
+  fix(ui): ListView 클릭 혼동 문제 해결 및 별칭 시스템 안정화
 
-  - ListView stable ID 구현으로 View 재활용 문제 해결
-  - 6자리 숫자 기준 비콘 목록 정렬 안정화
-  - 클로저 기반 MAC 캡처로 클릭 이벤트 정확성 향상
-  - 500ms UI 갱신 주기에서 올바른 비콘 선택 보장
+  3가지 주요 문제 해결:
+  • 별칭 대신 광고이름 표시 문제
+  • 리스트 빈 영역 클릭시 다이얼로그 노출 문제
+  • 잘못된 비콘의 다이얼로그 표시 문제
 
   변경사항:
-  • LeDeviceListAdapter: MAC→Long ID 변환, hasStableIds() 활성화
-  • BeaconDataStore: getValidBeacons() 정렬 로직 강화
-  • 클릭 리스너 완전 재설정으로 혼동 방지
+  • LeDeviceListAdapter: KBeacon 참조 제거, BeaconState만 사용
+  • DeviceScanActivity: 행 클릭 비활성화, 별칭 우선 다이얼로그
+  • listitem_device.xml: 루트 클릭 금지, 이름 TextView만 허용

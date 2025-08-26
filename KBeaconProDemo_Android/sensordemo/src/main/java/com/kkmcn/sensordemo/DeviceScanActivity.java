@@ -192,7 +192,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mDevListAdapter = new LeDeviceListAdapter(this, getApplicationContext());
         mDevListAdapter.setOnRowActionListener(this); // Phase 3: 콜백 리스너 연결
         mListView.setAdapter(mDevListAdapter);
-        mListView.setOnItemClickListener(this);
+        // [수정2] 행 전체 클릭 비활성화 - 오직 이름 TextView 클릭만 허용
+        mListView.setOnItemClickListener(null);
 
 
         //total filter information
@@ -657,18 +658,29 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
      * @param mac 비콘 MAC 주소
      * @param currentName 현재 이름
      */
-    private void showDeviceNameChangeDialog(String mac, String currentName) {
-        Log.d("NAME", "showDeviceNameChangeDialog mac=" + mac + " current=" + currentName);
+    // [수정2] 별칭 우선 다이얼로그 초기화
+    private void showDeviceNameChangeDialog(@NonNull String mac) {
+        // alias → name → "" 순서로 초기값 설정
+        String alias = mPrefs.getAlias(mac);
+        BeaconState st = mBeaconDataStore.get(mac);
+        String initial = !android.text.TextUtils.isEmpty(alias)
+                ? alias
+                : (st != null && !android.text.TextUtils.isEmpty(st.getName()) ? st.getName() : "");
+        
+        Log.d("NAME", "showDeviceNameChangeDialog mac=" + mac + " initial=" + initial);
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("별칭 설정"); // 별칭 용어 사용으로 혼동 방지
         
         // EditText 설정
         final android.widget.EditText editText = new android.widget.EditText(this);
-        editText.setText(currentName);
-        editText.setSelection(currentName.length()); // 커서를 끝으로
+        editText.setText(initial);
+        if (!android.text.TextUtils.isEmpty(initial)) {
+            editText.setSelection(initial.length()); // 커서를 끝으로
+        }
         editText.setHint("별칭 입력 (1-18자)"); // 별칭 용어로 일관화
         editText.setSingleLine(true);
+        editText.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(18)});
         
         // 다이얼로그에 EditText 추가
         builder.setView(editText);
@@ -694,12 +706,23 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 return;
             }
             
-            // 별칭 저장 (광고 이름과 분리) - API 호환성을 위해 우선 별칭 방식 사용
-            String oldName = currentName;
-            saveAlias(mac, newName);
+            // [수정2] 별칭 저장 및 즉시 반영
+            String oldAlias = mPrefs.getAlias(mac);
+            String oldDisplay = !android.text.TextUtils.isEmpty(oldAlias) ? oldAlias : "";
             
-            Log.d("NAME", "alias change: mac=" + mac + " old=" + oldName + " new=" + newName);
-            Toast.makeText(this, "별칭 설정: " + oldName + " → " + newName, Toast.LENGTH_SHORT).show();
+            mPrefs.setAlias(mac, newName);
+            BeaconState st = mBeaconDataStore.get(mac);
+            if (st != null) {
+                st.setAliasName(newName);
+            }
+            
+            // 즉시 반영
+            if (mDevListAdapter != null) {
+                mDevListAdapter.notifyDataSetChanged();
+            }
+            
+            Log.d("NAME", "alias change: mac=" + mac + " old=" + oldDisplay + " new=" + newName);
+            Toast.makeText(this, "별칭 변경: " + oldDisplay + " → " + newName, Toast.LENGTH_SHORT).show();
         });
         
         // 취소 버튼
@@ -980,10 +1003,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     
     // Phase 3: LeDeviceListAdapter.OnRowActionListener 콜백 구현
     
+    // [수정2] 별칭 우선 다이얼로그 초기화 (currentName 사용 안함)
     @Override
     public void onNameEdit(String mac, String currentName) {
-        Log.d("NAME", "onNameEdit mac=" + mac + " current=" + currentName);
-        showDeviceNameChangeDialog(mac, currentName);
+        Log.d("NAME", "onNameEdit mac=" + mac);
+        showDeviceNameChangeDialog(mac);
     }
     
     @Override
