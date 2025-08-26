@@ -19,6 +19,7 @@ package com.kkmcn.sensordemo;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.widget.Toast;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -643,6 +644,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
      * @param currentName 현재 이름
      */
     private void showDeviceNameChangeDialog(String mac, String currentName) {
+        Log.d("NAME", "showDeviceNameChangeDialog mac=" + mac + " current=" + currentName);
+        
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("비콘 이름 변경");
         
@@ -678,10 +681,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
             
             // 이름 변경 저장
+            String oldName = currentName;
             saveBeaconName(mac, newName);
             
-            Log.d(TAG, "Beacon name changed: " + mac + " -> " + newName);
-            toastShow("이름이 변경되었습니다: " + newName);
+            Log.d("NAME", "rename mac=" + mac + " old=" + oldName + " new=" + newName);
+            Toast.makeText(this, "이름 변경: " + oldName + " → " + newName, Toast.LENGTH_SHORT).show();
         });
         
         // 취소 버튼
@@ -934,18 +938,32 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     // Phase 3: LeDeviceListAdapter.OnRowActionListener 콜백 구현
     
     @Override
+    public void onNameEdit(String mac, String currentName) {
+        Log.d("NAME", "onNameEdit mac=" + mac + " current=" + currentName);
+        showDeviceNameChangeDialog(mac, currentName);
+    }
+    
+    @Override
     public void onRingStart(String mac) {
+        Log.d("RING", "UI onRingStart mac=" + mac);
+        Toast.makeText(this, "부저 시작: " + mac, Toast.LENGTH_SHORT).show();
         if (mRingManager != null) {
-            boolean started = mRingManager.start(mac);
-            Log.d(TAG, "Ring start requested for MAC: " + mac + ", result: " + started);
+            boolean started = mRingManager.start(mac, 2000);
+            Log.i("RING", "RingManager.start result: " + started);
+        } else {
+            Log.e("RING", "RingManager is null!");
         }
     }
     
     @Override
     public void onRingStop(String mac) {
+        Log.d("RING", "UI onRingStop mac=" + mac);
+        Toast.makeText(this, "부저 중지: " + mac, Toast.LENGTH_SHORT).show();
         if (mRingManager != null) {
             boolean stopped = mRingManager.stop(mac);
-            Log.d(TAG, "Ring stop requested for MAC: " + mac + ", result: " + stopped);
+            Log.i("RING", "RingManager.stop result: " + stopped);
+        } else {
+            Log.e("RING", "RingManager is null!");
         }
     }
     

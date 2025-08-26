@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RingManager {
     private static final String TAG = "RING";
+    private static final boolean DEBUG = true; // 디버깅 상세 로그 활성화
     
     // 링 세션 상태
     public enum RingState {
@@ -121,7 +122,8 @@ public class RingManager {
         session.state = RingState.STARTING;
         mSessions.put(mac, session);
         
-        Log.d(TAG, "Starting ring for " + name + " (" + mac + "), ringMs=" + ringMs);
+        Log.d("RING", "start mac=" + mac + " ringMs=" + ringMs);
+        Log.d("RING", "session state transition: IDLE → STARTING");
         
         // TODO Phase 3: BeaconState에 ringActive=true 반영 (500ms 렌더에서 상태 표시용)
         
@@ -229,30 +231,39 @@ public class RingManager {
             // KBeacon 인스턴스 조회
             KBeacon beacon = mBeaconsMgr.getBeacon(session.mac);
             if (beacon == null) {
-                Log.w(TAG, "Beacon not found: " + session.mac);
+                Log.e(TAG, "[ERROR] Beacon not found in manager: " + session.mac);
+                if (DEBUG) {
+                    Log.d(TAG, "[DEBUG] Beacon not found - will retry with backoff");
+                }
                 scheduleRetryWithBackoff(session);
                 return;
             }
+            if (DEBUG) Log.d(TAG, "[DEBUG] Beacon found: " + beacon.getName() + ", state=" + beacon.getState());
             
-            // 연결 상태 확인 및 연결 시도
+            // 연결 상태 확인 및 연겴 시도
             if (beacon.getState() != KBConnState.Connected) {
+                Log.d("RING", "connect attempt mac=" + session.mac + " currentState=" + beacon.getState());
                 Log.d(TAG, "Connecting to beacon: " + session.name);
                 
                 // TODO: 연결 타임아웃/패스워드 설정이 필요하면 여기서 처리
                 beacon.connect(null, 10000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
+                        Log.i(TAG, "[DEBUG] Connection state changed: " + state + ", reason: " + nReason);
                         if (state == KBConnState.Connected) {
-                            Log.d(TAG, "Connected, sending ring command: " + session.name);
+                            Log.i(TAG, "[SUCCESS] Connected to beacon, sending ring command: " + session.name);
                             sendRingCommand(session, beacon);
                         } else if (state == KBConnState.Disconnected && nReason != 0) {
-                            Log.w(TAG, "Connection failed: " + session.name + ", reason: " + nReason);
+                            Log.e(TAG, "[ERROR] Connection failed: " + session.name + ", reason: " + nReason);
                             scheduleRetryWithBackoff(session);
+                        } else if (state == KBConnState.Connecting) {
+                            Log.d(TAG, "[DEBUG] Connecting in progress...");
                         }
                     }
                 });
             } else {
                 // 이미 연결됨, 바로 링 명령 전송
+                Log.i(TAG, "[DEBUG] Beacon already connected, sending ring command directly");
                 sendRingCommand(session, beacon);
             }
             
@@ -273,10 +284,11 @@ public class RingManager {
             
             // 실제 KBeacon API 호출 - sendCommand로 ring 명령 전송
             if (!beacon.isConnected()) {
-                Log.w(TAG, "Beacon not connected for ring: " + session.name);
+                Log.e(TAG, "[ERROR] Beacon not connected for ring (double-check): " + session.name + ", state: " + beacon.getState());
                 scheduleRetryWithBackoff(session);
                 return;
             }
+            Log.i(TAG, "[DEBUG] Beacon connection verified, proceeding with ring command");
             
             // JSON 명령 생성 - KBeacon 프로토콜 준수
             JSONObject cmdPara = new JSONObject();
@@ -291,7 +303,8 @@ public class RingManager {
                 
                 // LED 관련 파라미터는 ringType=0x1에서 불필요하므로 생략
                 
-                Log.d(TAG, "Sending KBeacon ring command to " + session.name + ": ringTime=" + session.ringMs + "ms, ringType=0x1");
+                Log.i(TAG, "[COMMAND] Sending KBeacon ring command to " + session.name + ": ringTime=" + session.ringMs + "ms, ringType=0x1");
+                if (DEBUG) Log.d(TAG, "[DEBUG] JSON command: " + cmdPara.toString());
                 
             } catch (JSONException e) {
                 Log.e(TAG, "Error creating ring command JSON: " + e.getMessage());
@@ -300,11 +313,13 @@ public class RingManager {
             }
             
             // 비콘에 명령 전송
+            Log.i(TAG, "[DEBUG] Calling beacon.sendCommand()...");
             beacon.sendCommand(cmdPara, new KBeacon.ActionCallback() {
                 @Override
                 public void onActionComplete(boolean bConfigSuccess, KBException error) {
+                    Log.i(TAG, "[CALLBACK] sendCommand callback - success: " + bConfigSuccess + ", error: " + (error != null ? error.errorCode : "none"));
                     if (bConfigSuccess) {
-                        Log.d(TAG, "Ring command sent successfully: " + session.name);
+                        Log.i(TAG, "[SUCCESS] Ring command sent successfully: " + session.name);
                         
                         // 백오프 초기화
                         session.backoffSeconds = 0;
@@ -320,8 +335,11 @@ public class RingManager {
                         }
                         
                     } else {
-                        Log.w(TAG, "Ring command failed: " + session.name + ", error: " + 
+                        Log.e(TAG, "[ERROR] Ring command failed: " + session.name + ", error: " + 
                               (error != null ? error.errorCode : "unknown"));
+                        if (DEBUG && error != null) {
+                            Log.d(TAG, "[DEBUG] Error details - code: " + error.errorCode);
+                        }
                         scheduleRetryWithBackoff(session);
                     }
                     
@@ -352,7 +370,7 @@ public class RingManager {
             session.backoffSeconds = Math.min(session.backoffSeconds * 2, BACKOFF_MAX_SEC);
         }
         
-        Log.d(TAG, "Retrying ring in " + session.backoffSeconds + "s for: " + session.name);
+        Log.w(TAG, "[RETRY] Retrying ring in " + session.backoffSeconds + "s for: " + session.name + " (attempt " + (session.backoffSeconds/BACKOFF_MIN_SEC) + ")");
         
         session.scheduledTask = mExecutor.schedule(
             () -> executeRingOnce(session), 

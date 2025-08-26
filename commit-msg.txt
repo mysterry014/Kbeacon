@@ -1,6 +1,7 @@
-  fix(protocol): KBeacon 전용 프로토콜로 수정 - iBeacon 오염 제거
+  feat(debug): 이름변경/부저알람 직관적 UI + 상세 디버깅 로그 구현
 
-  - RingManager: 올바른 KBeacon sendCommand API 적용 (ringType=0x1 beep only)
-  - DeviceScanActivity: KBAdvPacketIBeacon import 및 switch case 제거
-  - LeDeviceListAdapter: iBeacon UI 필드/초기화 코드 정리
-  - 프로토콜 순수성: sensordemo는 com.kkmcn.kbeaconlib2.* 전용 사용
+  - LeDeviceListAdapter: 비콘 이름 TextView 직접 클릭으로 다이얼로그 진입점 개선
+  - DeviceScanActivity: 실제 이름변경 다이얼로그 구현, Toast 피드백 추가
+  - RingManager: UI→Manager→KBeacon 호출체인 상세 로깅 (RING 태그)
+  - listitem_device.xml: 버튼 focusable=false로 row 클릭 간섭 방지
+  - 디버깅 가이드: adb logcat -s RING:V NAME:V 명령어 지원

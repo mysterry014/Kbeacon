@@ -33,6 +33,7 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	
 	// Phase 3: 리스트 항목 버튼 액션 콜백 인터페이스
 	public interface OnRowActionListener {
+		void onNameEdit(String mac, String currentName);  // 이름 클릭 진입점
 		void onRingStart(String mac);
 		void onRingStop(String mac);
 		void onDistanceSetting(String mac);
@@ -192,7 +193,15 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		viewHolder.tvDistance.setText(distanceText);
 		
 		// Phase 3: 버튼 클릭 리스너 연결
-		String mac = beaconState.getMac();
+		final String mac = beaconState.getMac();
+		final String currentName = displayName;  // lambda에서 사용할 final 변수
+		
+		// 이름 TextView 클릭 리스너 (직접 진입점)
+		viewHolder.tvBeaconName.setOnClickListener(v -> {
+			if (mOnRowActionListener != null) {
+				mOnRowActionListener.onNameEdit(mac, currentName);
+			}
+		});
 		
 		// 부저 알람 시작 버튼
 		viewHolder.btnRingAlarm.setOnClickListener(v -> {
