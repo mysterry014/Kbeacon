@@ -1,8 +1,16 @@
-  feat(phase3): 부저 반복알람/배터리 스케줄러/폰알람 구현
+● feat(phase4-partial): 부저알람/이름변경/거리설정 다이얼로그 구현
 
-  - RingManager: 여러 비콘 동시 부저 반복 알람 관리 (스케줄 재트리거/백오프)
-  - BatteryScheduler: 1시간 주기 자동 배터리 조회 (신규 즉시 + 백오프 지원)
-  - LeDeviceListAdapter: OnRowActionListener 콜백 인터페이스 및 onClick 연결
-  - DeviceScanActivity: 폰 알람 start/stop, 전체 콜백 구현
-  - KBeacon API 호환성: KBConnState 수정, getBatteryPercent 직접 사용
-  - TODO: ringDevice 실제 API 연결, 거리설정/캘리브레이션 다이얼로그
+  - 부저 알람: 실제 KBeacon API 연결 (sendCommand JSON 방식)
+    * RingManager에서 beacon.sendCommand() 호출로 실제 비콘 부저 동작
+    * JSON 포맷: {"msg": "ring", "ringTime": ms, "ringType": 0x1}
+    * 연결 확인 후 2초 반복 알람, 지수 백오프 적용
+
+  - 이름 변경: 리스트 아이템 클릭 시 AlertDialog 표시
+    * 1-20자 제한, 한글 입력 지원, 제어문자 검증
+    * BeaconState + Prefs dual-key 저장 (MAC/이름 동기화)
+    * 500ms UI 갱신 주기에서 자동 반영
+
+  - 거리 설정: 거리설정 버튼 클릭 시 숫자 입력 다이얼로그
+    * 0.5~200.0m 범위 검증, 소수점 입력 지원
+    * saveDistanceThreshold() 훅 연결, BeaconState 즉시 갱신
+    * Toast 피드백: "거리 임계값 X.Xm로 저장됨"

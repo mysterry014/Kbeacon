@@ -5,6 +5,10 @@ import android.util.Log;
 import com.kkmcn.kbeaconlib2.KBConnState;
 import com.kkmcn.kbeaconlib2.KBeacon;
 import com.kkmcn.kbeaconlib2.KBeaconsMgr;
+import com.kkmcn.kbeaconlib2.KBException;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 import com.kkmcn.sensordemo.data.BeaconDataStore;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * - 장치별 독립적인 알람 상태 관리
  * - 연결 실패 시 지수 백오프 적용
  * 
- * Note: KBeacon ringDevice() API 사용, 광고 RSSI 기반 설계
+ * Note: KBeacon sendCommand(JSON) API 사용, 광고 RSSI 기반 설계
  */
 public class RingManager {
     private static final String TAG = "RING";
@@ -267,34 +271,62 @@ public class RingManager {
         try {
             session.state = RingState.RUNNING;
             
-            // TODO: 실제 KBeacon API에서 ringDevice 메서드 시그니처 확인 후 수정 필요
-            // 임시로 로그만 출력하고 성공 처리
-            Log.d(TAG, "Ring command would be sent to: " + session.name + ", duration: " + session.ringMs + "ms");
-            
-            // 시뮬레이션: 사용자 카디거나 버튼 클릭시 메시지 표시
-            Log.d(TAG, "Ring command sent successfully: " + session.name);
-            
-            // 백오프 초기화
-            session.backoffSeconds = 0;
-            
-            // 다음 링을 위한 스케줄 (ringTime + 가드 인터벌 후)
-            if (session.state == RingState.RUNNING) {
-                long nextDelayMs = session.ringMs + GUARD_INTERVAL_MS;
-                session.scheduledTask = mExecutor.schedule(
-                    () -> executeRingOnce(session), 
-                    nextDelayMs, 
-                    TimeUnit.MILLISECONDS
-                );
+            // 실제 KBeacon API 호출 - sendCommand로 ring 명령 전송
+            if (!beacon.isConnected()) {
+                Log.w(TAG, "Beacon not connected for ring: " + session.name);
+                scheduleRetryWithBackoff(session);
+                return;
             }
             
-            // TODO 실제 버전:
-            /*
-            beacon.ringDevice("ring", session.ringMs, 0x1, 0, 0, new KBeacon.ActionCallback() {
+            // 비콘이 beep 기능을 지원하는지 확인 (선택적 검증) - 스킵
+            // Note: KBCfgCommon 클래스가 현재 프로젝트에서 접근 불가능하므로 생략
+            
+            // JSON 명령 생성
+            JSONObject cmdPara = new JSONObject();
+            try {
+                cmdPara.put("msg", "ring");
+                cmdPara.put("ringTime", session.ringMs);   // 비콘을 울릴 시간 (ms)
+                cmdPara.put("ringType", 0x1);            // 0x1: beep alert only
+                // LED 필요시 추가: ledOn, ledOff
+                
+                Log.d(TAG, "Sending ring command to " + session.name + ": ringTime=" + session.ringMs + "ms, ringType=0x1");
+                
+            } catch (JSONException e) {
+                Log.e(TAG, "Error creating ring command JSON: " + e.getMessage());
+                scheduleRetryWithBackoff(session);
+                return;
+            }
+            
+            // 비콘에 명령 전송
+            beacon.sendCommand(cmdPara, new KBeacon.ActionCallback() {
                 @Override
-                public void onActionComplete(boolean bConfigSuccess, KBeacon.ActionError error) {
+                public void onActionComplete(boolean bConfigSuccess, KBException error) {
+                    if (bConfigSuccess) {
+                        Log.d(TAG, "Ring command sent successfully: " + session.name);
+                        
+                        // 백오프 초기화
+                        session.backoffSeconds = 0;
+                        
+                        // 다음 링을 위한 스케줄 (ringTime + 가드 인터벌 후)
+                        if (session.state == RingState.RUNNING) {
+                            long nextDelayMs = session.ringMs + GUARD_INTERVAL_MS;
+                            session.scheduledTask = mExecutor.schedule(
+                                () -> executeRingOnce(session), 
+                                nextDelayMs, 
+                                TimeUnit.MILLISECONDS
+                            );
+                        }
+                        
+                    } else {
+                        Log.w(TAG, "Ring command failed: " + session.name + ", error: " + 
+                              (error != null ? error.errorCode : "unknown"));
+                        scheduleRetryWithBackoff(session);
+                    }
+                    
+                    // TODO: 연결 유지/해제 정책은 현재 앱 패턴에 맞춰 최소 변경
+                    // 필요하면 여기서 disconnect() 호출
                 }
             });
-            */
             
         } catch (Exception e) {
             Log.e(TAG, "Error sending ring command for " + session.mac + ": " + e.getMessage());

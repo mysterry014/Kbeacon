@@ -625,13 +625,107 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         }
     }
     
-    // 이름 변경 다이얼로그 표시 메서드
+    // Phase 4B: 이름 변경 다이얼로그 구현
     private void showDeviceNameChangeDialog(KBeacon beacon) {
-        // TODO: Phase 2에서 구현
-        // - EditText가 포함된 AlertDialog 생성
-        // - 최대 18자, 한글 입력 지원
-        // - 확인 시 beacon.setName() 호출
-        toastShow("이름 변경 - TODO");
+        if (beacon == null) {
+            return;
+        }
+        
+        String mac = beacon.getMac();
+        String currentName = beacon.getName();
+        
+        // BeaconState에서 현재 이름 조회 (로컬 별칭 우선)
+        BeaconState beaconState = mBeaconDataStore.get(mac);
+        if (beaconState != null && beaconState.getName() != null) {
+            currentName = beaconState.getName();
+        }
+        
+        showDeviceNameChangeDialog(mac, currentName != null ? currentName : "Unknown");
+    }
+    
+    /**
+     * 비콘 이름 변경 다이얼로그
+     * @param mac 비콘 MAC 주소
+     * @param currentName 현재 이름
+     */
+    private void showDeviceNameChangeDialog(String mac, String currentName) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("비콘 이름 변경");
+        
+        // EditText 설정
+        final android.widget.EditText editText = new android.widget.EditText(this);
+        editText.setText(currentName);
+        editText.setSelection(currentName.length()); // 커서를 끝으로
+        editText.setHint("새 이름 입력 (1-20자)");
+        editText.setSingleLine(true);
+        
+        // 다이얼로그에 EditText 추가
+        builder.setView(editText);
+        
+        // 확인 버튼
+        builder.setPositiveButton("확인", (dialog, which) -> {
+            String newName = editText.getText().toString().trim();
+            
+            // 유효성 검사
+            if (newName.isEmpty()) {
+                toastShow("이름을 입력해주세요");
+                return;
+            }
+            
+            if (newName.length() > 20) {
+                toastShow("이름은 20자 이하로 입력해주세요");
+                return;
+            }
+            
+            // 제어문자 및 특수문자 검사 (기본적인 검증)
+            if (newName.matches(".*[\\p{Cntrl}].*")) {
+                toastShow("제어문자는 사용할 수 없습니다");
+                return;
+            }
+            
+            // 이름 변경 저장
+            saveBeaconName(mac, newName);
+            
+            Log.d(TAG, "Beacon name changed: " + mac + " -> " + newName);
+            toastShow("이름이 변경되었습니다: " + newName);
+        });
+        
+        // 취소 버튼
+        builder.setNegativeButton("취소", (dialog, which) -> dialog.dismiss());
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+    
+    /**
+     * 비콘 이름을 BeaconState와 Prefs에 저장
+     * @param mac 비콘 MAC 주소
+     * @param newName 새 이름
+     */
+    private void saveBeaconName(String mac, String newName) {
+        // BeaconState 업데이트
+        BeaconState beaconState = mBeaconDataStore.get(mac);
+        if (beaconState != null) {
+            beaconState.setName(newName);
+            mBeaconDataStore.upsert(beaconState);
+        } else {
+            // 새로운 BeaconState 생성 (일반적으로는 발생하지 않음)
+            beaconState = new BeaconState(newName, mac);
+            mBeaconDataStore.upsert(beaconState);
+        }
+        
+        // Prefs에 MAC/이름 dual-key로 저장 (기존 저장 훅과 동일한 방식)
+        if (mPrefs != null) {
+            // 이름 키로 저장 (이전 이름도 동기화하기 위함)
+            mPrefs.setDistanceThreshold(mac, newName, beaconState.getDistanceThresholdMeters());
+            mPrefs.setBatteryPct(mac, newName, beaconState.getBatteryPercent());
+            mPrefs.setTxPowerAt1m(mac, newName, beaconState.getTxPowerAt1m());
+            mPrefs.setN(mac, newName, beaconState.getPathLossExponent());
+            
+            Log.d(TAG, "Saved beacon name to prefs: " + mac + " -> " + newName);
+        }
+        
+        // UI는 500ms 주기 갱신에서 자동으로 반영됨 (별도 invalidate 불필요)
     }
 
     /**
@@ -864,8 +958,81 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     @Override
     public void onDistanceSetting(String mac) {
         Log.d(TAG, "Distance setting requested for MAC: " + mac);
-        // TODO Phase 3 후속: 거리 설정 다이얼로그 구현
-        toastShow("거리 설정 기능은 추후 구현 예정");
+        
+        // BeaconState에서 현재 거리 임계값 조회
+        BeaconState beaconState = mBeaconDataStore.get(mac);
+        double currentThreshold = (beaconState != null) ? 
+            beaconState.getDistanceThresholdMeters() : Prefs.getDefaultDistanceThreshold();
+        String beaconName = (beaconState != null && beaconState.getName() != null) ? 
+            beaconState.getName() : "Unknown";
+            
+        showDistanceSettingDialog(mac, beaconName, currentThreshold);
+    }
+    
+    /**
+     * Phase 4C: 거리 임계값 설정 다이얼로그
+     * @param mac 비콘 MAC 주소
+     * @param beaconName 비콘 이름
+     * @param currentThreshold 현재 임계값 (미터)
+     */
+    private void showDistanceSettingDialog(String mac, String beaconName, double currentThreshold) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("거리 임계값 설정 - " + beaconName);
+        
+        // EditText 설정
+        final android.widget.EditText editText = new android.widget.EditText(this);
+        editText.setText(String.format("%.1f", currentThreshold));
+        editText.setSelection(editText.getText().length()); // 커서를 끝으로
+        editText.setHint("거리 입력 (0.5 ~ 200.0m)");
+        editText.setSingleLine(true);
+        editText.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        
+        // 다이얼로그에 EditText 추가
+        builder.setView(editText);
+        
+        // 확인 버튼
+        builder.setPositiveButton("확인", (dialog, which) -> {
+            String distanceStr = editText.getText().toString().trim();
+            
+            // 유효성 검사
+            if (distanceStr.isEmpty()) {
+                toastShow("거리를 입력해주세요");
+                return;
+            }
+            
+            double newThreshold;
+            try {
+                newThreshold = Double.parseDouble(distanceStr);
+            } catch (NumberFormatException e) {
+                toastShow("올바른 숫자를 입력해주세요");
+                return;
+            }
+            
+            // 범위 검사 (0.5m ~ 200.0m)
+            if (newThreshold < 0.5 || newThreshold > 200.0) {
+                toastShow("거리는 0.5m ~ 200.0m 범위로 입력해주세요");
+                return;
+            }
+            
+            // 거리 임계값 저장
+            saveDistanceThreshold(mac, beaconName, newThreshold);
+            
+            // BeaconState 즉시 갱신
+            BeaconState beaconState = mBeaconDataStore.get(mac);
+            if (beaconState != null) {
+                beaconState.setDistanceThreshold(newThreshold);
+                mBeaconDataStore.upsert(beaconState);
+            }
+            
+            Log.d(TAG, "Distance threshold saved: " + beaconName + " = " + newThreshold + "m");
+            toastShow("거리 임계값 " + String.format("%.1f", newThreshold) + "m로 저장됨");
+        });
+        
+        // 취소 버튼
+        builder.setNegativeButton("취소", (dialog, which) -> dialog.dismiss());
+        
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
     
     @Override

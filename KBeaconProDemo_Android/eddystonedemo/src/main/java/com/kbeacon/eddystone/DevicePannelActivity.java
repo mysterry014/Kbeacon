@@ -339,7 +339,7 @@ public class DevicePannelActivity extends AppBaseActivity implements View.OnClic
         });
     }
 
-    public void ringDevice() {
+public void ringDevice() {
         if (!mBeacon.isConnected()) {
             return;
         }
