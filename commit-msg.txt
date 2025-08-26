@@ -1,7 +1,8 @@
-  feat(persistence): SharedPreferences 기반 per-device 설정 영속화 구현
+  feat(phase3): 부저 반복알람/배터리 스케줄러/폰알람 구현
 
-  - Prefs.java: MAC/이름 dual-key 저장소 구현 완료
-  - DeviceScanActivity: 신규 비콘 탐지 시 자동 설정 복원 로직 추가
-  - 저장 훅 메서드 3개 구현 (거리임계값/캘리브레이션/배터리)
-  - BeaconState: setDistanceThreshold() 편의 메서드 추가
-  - 빌드 검증 완료, Phase 3 UI 연동 준비 완료
+  - RingManager: 여러 비콘 동시 부저 반복 알람 관리 (스케줄 재트리거/백오프)
+  - BatteryScheduler: 1시간 주기 자동 배터리 조회 (신규 즉시 + 백오프 지원)
+  - LeDeviceListAdapter: OnRowActionListener 콜백 인터페이스 및 onClick 연결
+  - DeviceScanActivity: 폰 알람 start/stop, 전체 콜백 구현
+  - KBeacon API 호환성: KBConnState 수정, getBatteryPercent 직접 사용
+  - TODO: ringDevice 실제 API 연결, 거리설정/캘리브레이션 다이얼로그

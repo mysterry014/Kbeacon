@@ -54,6 +54,12 @@ import com.kkmcn.sensordemo.data.Prefs;
 import com.kkmcn.sensordemo.model.BeaconState;
 import com.kkmcn.sensordemo.utils.RssiFilter;
 import com.kkmcn.sensordemo.utils.DistanceEstimator;
+import com.kkmcn.sensordemo.ring.RingManager;
+import com.kkmcn.sensordemo.battery.BatteryScheduler;
+
+import android.media.MediaPlayer;
+import android.media.RingtoneManager;
+import android.net.Uri;
 
 import java.util.HashMap;
 import java.util.List;
@@ -69,7 +75,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
  * Activity for scanning and displaying available Bluetooth LE devices.
  */
 public class DeviceScanActivity extends AppBaseActivity implements View.OnClickListener, AdapterView.OnItemClickListener,
-        KBeaconsMgr.KBeaconMgrDelegate, LeDeviceListAdapter.ListDataSource{
+        KBeaconsMgr.KBeaconMgrDelegate, LeDeviceListAdapter.ListDataSource, LeDeviceListAdapter.OnRowActionListener {
 	private final static String TAG = "Beacon.ScanAct";//DeviceScanActivity.class.getSimpleName();
 
     private static final String LOG_TAG = "ScanExample";
@@ -106,6 +112,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private BeaconDataStore mBeaconDataStore;
     private ConcurrentHashMap<String, RssiFilter> mRssiFilters;
     private ConcurrentHashMap<String, DistanceEstimator> mDistanceEstimators;
+    
+    // Phase 3 기능 컴포넌트들
+    private RingManager mRingManager;
+    private BatteryScheduler mBatteryScheduler;
+    private MediaPlayer mPhoneAlarmPlayer;
     
     // Phase 2 Part 3: 영속화 컴포넌트
     private Prefs mPrefs;
@@ -175,6 +186,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
         mListView = (ListView) findViewById(R.id.listview);
         mDevListAdapter = new LeDeviceListAdapter(this, getApplicationContext());
+        mDevListAdapter.setOnRowActionListener(this); // Phase 3: 콜백 리스너 연결
         mListView.setAdapter(mDevListAdapter);
         mListView.setOnItemClickListener(this);
 
@@ -224,13 +236,17 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mEditFltDevName.addTextChangedListener(new EditChangedListener());
         mBtnRmvNameFilter = (Button)findViewById(R.id.btmRemoveFilterName);
 
-        // 하단 폰 알람 버튼만 유지
+        // Phase 3: 기능 컴포넌트 초기화
+        mRingManager = new RingManager(mBeaconsMgr, mBeaconDataStore);
+        mBatteryScheduler = new BatteryScheduler(mBeaconsMgr, mBeaconDataStore, this);
+        
+        // 하단 폰 알람 버튼 초기화 및 연결
         mBtnPhoneAlarm = (Button) findViewById(R.id.btn_phone_alarm);
         mBtnPhoneAlarmStop = (Button) findViewById(R.id.btn_phone_alarm_stop);
         
-        // TODO: Phase 2-3에서 폰 알람 로직 연결
-        // mBtnPhoneAlarm.setOnClickListener() - 폰 알람 시작
-        // mBtnPhoneAlarmStop.setOnClickListener() - 폰 알람 중지
+        // Phase 3: 폰 알람 버튼 리스너 연결
+        mBtnPhoneAlarm.setOnClickListener(v -> startPhoneAlarm());
+        mBtnPhoneAlarmStop.setOnClickListener(v -> stopPhoneAlarm());
 
         swipeRefreshLayout = (SwipeRefreshLayout)findViewById(R.id.swipe_container);
         //设置刷新时动画的颜色，可以设置4个
@@ -446,6 +462,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 
                 mBeaconDataStore.upsert(beaconState);
                 
+                // Phase 3: 신규 비콘 탐지 시 배터리 스케줄러에 알림
+                if (isNewBeacon && mBatteryScheduler != null) {
+                    mBatteryScheduler.onSeen(mac, beaconName);
+                }
+                
                 // 기존 딕셔너리도 유지 (기존 로직 호환)
                 mBeaconsDictory.put(mac, beacon);
                 
@@ -654,6 +675,15 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     protected void onDestroy() {
         super.onDestroy();
 
+        // Phase 3: 기능 컴포넌트 정리
+        if (mRingManager != null) {
+            mRingManager.shutdown();
+        }
+        if (mBatteryScheduler != null) {
+            mBatteryScheduler.shutdown();
+        }
+        stopPhoneAlarm();
+
         mBeaconsMgr.clearBeacons();
     }
 
@@ -810,6 +840,105 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         if (mPrefs != null) {
             mPrefs.setBatteryPct(mac, name, batteryPct);
             Log.d(TAG, "Saved battery: " + name + " = " + batteryPct + "%");
+        }
+    }
+    
+    // Phase 3: LeDeviceListAdapter.OnRowActionListener 콜백 구현
+    
+    @Override
+    public void onRingStart(String mac) {
+        if (mRingManager != null) {
+            boolean started = mRingManager.start(mac);
+            Log.d(TAG, "Ring start requested for MAC: " + mac + ", result: " + started);
+        }
+    }
+    
+    @Override
+    public void onRingStop(String mac) {
+        if (mRingManager != null) {
+            boolean stopped = mRingManager.stop(mac);
+            Log.d(TAG, "Ring stop requested for MAC: " + mac + ", result: " + stopped);
+        }
+    }
+    
+    @Override
+    public void onDistanceSetting(String mac) {
+        Log.d(TAG, "Distance setting requested for MAC: " + mac);
+        // TODO Phase 3 후속: 거리 설정 다이얼로그 구현
+        toastShow("거리 설정 기능은 추후 구현 예정");
+    }
+    
+    @Override
+    public void onCalibration(String mac) {
+        Log.d(TAG, "Calibration requested for MAC: " + mac);
+        // TODO Phase 3 후속: 캘리브레이션 다이얼로그 구현  
+        toastShow("캘리브레이션 기능은 추후 구현 예정");
+    }
+    
+    // Phase 3: 폰(태블릿) 알람 구현
+    
+    /**
+     * 폰 알람 시작 (20초 반복 재생, 중지까지 지속)
+     */
+    private void startPhoneAlarm() {
+        try {
+            if (mPhoneAlarmPlayer == null) {
+                // 알람 톤 선택 (기본 알람 → 알림 순으로 대체)
+                Uri alarmTone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+                if (alarmTone == null) {
+                    alarmTone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                }
+                if (alarmTone == null) {
+                    alarmTone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                }
+                
+                if (alarmTone != null) {
+                    mPhoneAlarmPlayer = MediaPlayer.create(this, alarmTone);
+                    if (mPhoneAlarmPlayer != null) {
+                        mPhoneAlarmPlayer.setLooping(true); // 무한 반복
+                    }
+                }
+            }
+            
+            if (mPhoneAlarmPlayer != null) {
+                mPhoneAlarmPlayer.start();
+                Log.d(TAG, "Phone alarm started (looping)");
+                
+                // 버튼 상태 업데이트
+                if (mBtnPhoneAlarm != null) {
+                    mBtnPhoneAlarm.setText("알람중");
+                }
+            } else {
+                Log.w(TAG, "Failed to create phone alarm player");
+                toastShow("알람 톤을 재생할 수 없습니다");
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error starting phone alarm: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 폰 알람 중지
+     */
+    private void stopPhoneAlarm() {
+        try {
+            if (mPhoneAlarmPlayer != null) {
+                if (mPhoneAlarmPlayer.isPlaying()) {
+                    mPhoneAlarmPlayer.stop();
+                }
+                mPhoneAlarmPlayer.release();
+                mPhoneAlarmPlayer = null;
+                Log.d(TAG, "Phone alarm stopped");
+            }
+            
+            // 버튼 상태 복원
+            if (mBtnPhoneAlarm != null) {
+                mBtnPhoneAlarm.setText("폰 알람");
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error stopping phone alarm: " + e.getMessage());
         }
     }
 }

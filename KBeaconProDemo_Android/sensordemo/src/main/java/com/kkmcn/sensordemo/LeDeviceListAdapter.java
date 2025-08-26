@@ -30,12 +30,23 @@ public class LeDeviceListAdapter extends BaseAdapter {
 
 		int getCount();
 	}
+	
+	// Phase 3: 리스트 항목 버튼 액션 콜백 인터페이스
+	public interface OnRowActionListener {
+		void onRingStart(String mac);
+		void onRingStop(String mac);
+		void onDistanceSetting(String mac);
+		void onCalibration(String mac);
+	}
 
 	private ListDataSource mDataSource;
 	private Context mContext;
 	
 	// Phase 2: BeaconState 기반 데이터 관리
 	private List<BeaconState> mBeaconStates;
+	
+	// Phase 3: 콜백 리스너
+	private OnRowActionListener mOnRowActionListener;
 
 	public LeDeviceListAdapter(ListDataSource c, Context ctx) {
 		super();
@@ -50,6 +61,14 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	 */
 	public void updateBeaconStates(List<BeaconState> beaconStates) {
 		this.mBeaconStates = beaconStates != null ? new ArrayList<>(beaconStates) : new ArrayList<>();
+	}
+	
+	/**
+	 * Phase 3: 콜백 리스너 설정
+	 * @param listener OnRowActionListener 인스턴스
+	 */
+	public void setOnRowActionListener(OnRowActionListener listener) {
+		this.mOnRowActionListener = listener;
 	}
 
 	@Override
@@ -182,11 +201,36 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			String.format("%.1f m", distanceFiltered) : "–";
 		viewHolder.tvDistance.setText(distanceText);
 		
-		// TODO: Phase 3에서 버튼 클릭 리스너 추가
-		// viewHolder.btnRingAlarm.setOnClickListener()
-		// viewHolder.btnRingAlarmStop.setOnClickListener()
-		// viewHolder.btnDistanceSetting.setOnClickListener()
-		// viewHolder.btnCalibration.setOnClickListener()
+		// Phase 3: 버튼 클릭 리스너 연결
+		String mac = beaconState.getMac();
+		
+		// 부저 알람 시작 버튼
+		viewHolder.btnRingAlarm.setOnClickListener(v -> {
+			if (mOnRowActionListener != null) {
+				mOnRowActionListener.onRingStart(mac);
+			}
+		});
+		
+		// 부저 알람 중지 버튼
+		viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
+			if (mOnRowActionListener != null) {
+				mOnRowActionListener.onRingStop(mac);
+			}
+		});
+		
+		// 거리 설정 버튼 (TODO: Phase 3 후속 단계에서 다이얼로그 구현)
+		viewHolder.btnDistanceSetting.setOnClickListener(v -> {
+			if (mOnRowActionListener != null) {
+				mOnRowActionListener.onDistanceSetting(mac);
+			}
+		});
+		
+		// 캘리브레이션 버튼 (TODO: Phase 3 후속 단계에서 구현)
+		viewHolder.btnCalibration.setOnClickListener(v -> {
+			if (mOnRowActionListener != null) {
+				mOnRowActionListener.onCalibration(mac);
+			}
+		});
 
 		// 기존 UI 업데이트 (호환성 유지, 숨김 처리된 레이아웃용)
 		if (viewHolder.deviceName != null) {
@@ -228,7 +272,7 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		return view;
 	}
 
-	class ViewHolder {
+	static class ViewHolder {
 		// Phase 1 새로운 UI 요소들
 		TextView tvBeaconName;
 		TextView tvRssi;
