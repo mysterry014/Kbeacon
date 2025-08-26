@@ -1,7 +1,6 @@
-  feat(data): Phase 2-1 데이터 처리 유틸 및 상태 모델 구현
+  feat(data): scan callback→filters→store→adapter 500ms render pipeline
 
-  - RssiWindow: N=10 윈도우, 중앙값±7dB 이상치 제거
-  - RssiFilter: EMA α=0.25로 rssiFiltered 산출
-  - DistanceEstimator: RSSI→거리 변환, EMA β=0.30 적용
-  - BeaconState: 비콘별 상태 정보 모델 (MAC 기반 식별)
-  - BeaconDataStore: 스레드 안전 싱글톤 저장소
+  - DeviceScanActivity: 6자리 필터 + RssiFilter + DistanceEstimator 연동
+  - LeDeviceListAdapter: BeaconState 기반 UI 바인딩 (이름/RSSI/배터리/거리)
+  - 500ms 주기 UI 갱신으로 성능 최적화
+  - 스레드 안전 데이터 처리 파이프라인 구현

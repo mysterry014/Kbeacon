@@ -49,9 +49,15 @@ import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvType;
 import com.kkmcn.kbeaconlib2.KBeacon;
 import com.kkmcn.kbeaconlib2.KBeaconsMgr;
+import com.kkmcn.sensordemo.data.BeaconDataStore;
+import com.kkmcn.sensordemo.model.BeaconState;
+import com.kkmcn.sensordemo.utils.RssiFilter;
+import com.kkmcn.sensordemo.utils.DistanceEstimator;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.core.app.ActivityCompat;
@@ -94,6 +100,16 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     
     // 하단 폰 알람 버튼들만 유지
     private Button mBtnPhoneAlarm, mBtnPhoneAlarmStop;
+    
+    // Phase 2 데이터 처리 컴포넌트들
+    private BeaconDataStore mBeaconDataStore;
+    private ConcurrentHashMap<String, RssiFilter> mRssiFilters;
+    private ConcurrentHashMap<String, DistanceEstimator> mDistanceEstimators;
+    
+    // 500ms UI 갱신용
+    private Handler mUiUpdateHandler;
+    private Runnable mUiUpdateRunnable;
+    private static final int UI_UPDATE_INTERVAL_MS = 500;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -125,6 +141,21 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         setTitle(R.string.device_list);
 
         mBeaconsDictory = new HashMap<>(50);
+
+        // Phase 2 데이터 처리 컴포넌트 초기화
+        mBeaconDataStore = BeaconDataStore.getInstance();
+        mRssiFilters = new ConcurrentHashMap<>();
+        mDistanceEstimators = new ConcurrentHashMap<>();
+        
+        // 500ms UI 갱신 시스템 초기화
+        mUiUpdateHandler = new Handler();
+        mUiUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                updateUiFromDataStore();
+                mUiUpdateHandler.postDelayed(this, UI_UPDATE_INTERVAL_MS);
+            }
+        };
 
         mBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
         if (mBeaconsMgr == null)
@@ -338,15 +369,65 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
 
     public void onBeaconDiscovered(KBeacon[] beacons)
     {
-        for (KBeacon pBeacons: beacons)
+        // Phase 2: 데이터 처리 파이프라인 적용
+        for (KBeacon beacon : beacons)
         {
-            mBeaconsDictory.put(pBeacons.getMac(), pBeacons);
+            try {
+                // (a) 이름 필터: 6자리 숫자로 시작하는 비콘만 처리
+                String beaconName = beacon.getName();
+                if (beaconName == null || !beaconName.matches("^\\d{6}_.+")) {
+                    continue; // 필터 통과 실패시 스킵
+                }
+                
+                String mac = beacon.getMac();
+                int rawRssi = beacon.getRssi();
+                
+                // (b) BeaconDataStore에서 BeaconState 조회/생성
+                BeaconState beaconState = mBeaconDataStore.get(mac);
+                if (beaconState == null) {
+                    beaconState = new BeaconState(beaconName, mac);
+                }
+                
+                // (c) RssiFilter로 rssiFiltered 산출
+                RssiFilter rssiFilter = mRssiFilters.get(mac);
+                if (rssiFilter == null) {
+                    rssiFilter = new RssiFilter();
+                    mRssiFilters.put(mac, rssiFilter);
+                }
+                double rssiFiltered = rssiFilter.addSample(rawRssi);
+                
+                // (d) DistanceEstimator로 distanceFiltered 산출
+                DistanceEstimator distanceEstimator = mDistanceEstimators.get(mac);
+                if (distanceEstimator == null) {
+                    // 기본값 사용: txPowerAt1m=-59, n=2.0
+                    distanceEstimator = new DistanceEstimator();
+                    // TODO: 캘리브레이션 값이 있으면 추후 적용
+                    mDistanceEstimators.put(mac, distanceEstimator);
+                }
+                double distanceFiltered = distanceEstimator.estimate(rssiFiltered);
+                
+                // (e) BeaconState 갱신 후 BeaconDataStore에 저장
+                beaconState.setName(beaconName);
+                beaconState.updateSignalState(rawRssi, rssiFiltered, distanceFiltered);
+                beaconState.setBatteryPercent(beacon.getBatteryPercent());
+                
+                mBeaconDataStore.upsert(beaconState);
+                
+                // 기존 딕셔너리도 유지 (기존 로직 호환)
+                mBeaconsDictory.put(mac, beacon);
+                
+            } catch (Exception e) {
+                Log.d(TAG, "Error processing beacon: " + e.getMessage());
+            }
         }
+        
+        // 기존 배열 업데이트 (기존 로직 호환)
         if (mBeaconsDictory.size() > 0) {
             mBeaconsArray = new KBeacon[mBeaconsDictory.size()];
             mBeaconsDictory.values().toArray(mBeaconsArray);
-            mDevListAdapter.notifyDataSetChanged();
         }
+        
+        // UI 갱신은 500ms 주기로 별도 처리됨 (notifyDataSetChanged 제거)
     }
 
     public void example_printAllAdvPackets(KBeacon[] beacons)
@@ -499,14 +580,33 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         toastShow("이름 변경 - TODO");
     }
 
+    /**
+     * 500ms 주기로 BeaconDataStore에서 데이터를 가져와 UI 갱신
+     */
+    private void updateUiFromDataStore() {
+        try {
+            List<BeaconState> beaconStates = mBeaconDataStore.getValidBeacons();
+            mDevListAdapter.updateBeaconStates(beaconStates);
+            mDevListAdapter.notifyDataSetChanged();
+        } catch (Exception e) {
+            Log.d(TAG, "Error updating UI from data store: " + e.getMessage());
+        }
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        
+        // 500ms UI 갱신 시작
+        mUiUpdateHandler.post(mUiUpdateRunnable);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        
+        // 500ms UI 갱신 중지
+        mUiUpdateHandler.removeCallbacks(mUiUpdateRunnable);
     }
 
     @Override

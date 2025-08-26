@@ -16,6 +16,10 @@ import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketIBeacon;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor;
 import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvType;
 import com.kkmcn.kbeaconlib2.KBeacon;
+import com.kkmcn.sensordemo.model.BeaconState;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class LeDeviceListAdapter extends BaseAdapter {
@@ -29,21 +33,35 @@ public class LeDeviceListAdapter extends BaseAdapter {
 
 	private ListDataSource mDataSource;
 	private Context mContext;
+	
+	// Phase 2: BeaconState 기반 데이터 관리
+	private List<BeaconState> mBeaconStates;
 
 	public LeDeviceListAdapter(ListDataSource c, Context ctx) {
 		super();
 		mDataSource = c;
 		mContext = ctx;
+		mBeaconStates = new ArrayList<>();
+	}
+	
+	/**
+	 * Phase 2: BeaconState 리스트 업데이트
+	 * @param beaconStates 새로운 BeaconState 리스트
+	 */
+	public void updateBeaconStates(List<BeaconState> beaconStates) {
+		this.mBeaconStates = beaconStates != null ? new ArrayList<>(beaconStates) : new ArrayList<>();
 	}
 
 	@Override
 	public int getCount() {
-		return mDataSource.getCount();
+		// Phase 2: BeaconState 기반 카운트 사용
+		return mBeaconStates.size();
 	}
 
 	@Override
 	public Object getItem(int i) {
-		return mDataSource.getBeaconDevice(i);
+		// Phase 2: BeaconState 반환
+		return i >= 0 && i < mBeaconStates.size() ? mBeaconStates.get(i) : null;
 	}
 
 	@Override
@@ -123,44 +141,69 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder = (ViewHolder) view.getTag();
 		}
 
-		KBeacon device = mDataSource.getBeaconDevice(i);
-		if (device == null) {
-			return null;
+		// Phase 2: BeaconState 기반 데이터 바인딩
+		if (i >= mBeaconStates.size()) {
+			return view; // 인덱스 오버플로우 방지
+		}
+		
+		BeaconState beaconState = mBeaconStates.get(i);
+		if (beaconState == null) {
+			return view;
 		}
 
-		// Phase 1 새로운 UI 업데이트
-		if (device.getName() != null && device.getName().length() > 0) {
-			viewHolder.tvBeaconName.setText(device.getName());
-			// 기존 UI도 업데이트 (숨김 처리된 레이아웃용)
-			viewHolder.deviceName.setText(device.getName());
+		// Phase 2 새로운 UI 업데이트 (BeaconState 기반)
+		// 1. 이름 표시
+		String displayName = beaconState.getName();
+		if (displayName == null || displayName.isEmpty()) {
+			// 이름이 없으면 MAC 일부로 대체
+			String mac = beaconState.getMac();
+			displayName = mac != null && mac.length() > 6 ? 
+				mac.substring(mac.length() - 6) : "Unknown";
 		}
+		viewHolder.tvBeaconName.setText(displayName);
+		viewHolder.tvBeaconName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+		viewHolder.tvBeaconName.setMaxLines(1);
 		
-		// RSSI 표시
-		String rssiText = String.format("%.1f dBm", (float)device.getRssi());
+		// 2. RSSI 표시 (필터링된 값)
+		double rssiFiltered = beaconState.getRssiFiltered();
+		String rssiText = rssiFiltered != 0.0 ? 
+			String.format("%.0f dBm", rssiFiltered) : "–";
 		viewHolder.tvRssi.setText(rssiText);
 		
-		// 배터리 표시
-		String batteryText = "배터리: " + device.getBatteryPercent() + "%";
+		// 3. 배터리 표시
+		int batteryPercent = beaconState.getBatteryPercent();
+		String batteryText = batteryPercent > 0 ? 
+			String.format("%d%%", batteryPercent) : "--%";
 		viewHolder.tvBattery.setText(batteryText);
 		
-		// 거리 표시 (Phase 2에서 실제 계산 추가)
-		viewHolder.tvDistance.setText("거리: 0.0m");  // TODO: Phase 2에서 실제 거리 계산
+		// 4. 거리 표시 (필터링된 값, 소수 1자리)
+		double distanceFiltered = beaconState.getDistanceFiltered();
+		String distanceText = distanceFiltered > 0.0 ? 
+			String.format("%.1f m", distanceFiltered) : "–";
+		viewHolder.tvDistance.setText(distanceText);
 		
-		// TODO: Phase 2-3에서 버튼 클릭 리스너 추가
+		// TODO: Phase 3에서 버튼 클릭 리스너 추가
 		// viewHolder.btnRingAlarm.setOnClickListener()
 		// viewHolder.btnRingAlarmStop.setOnClickListener()
 		// viewHolder.btnDistanceSetting.setOnClickListener()
 		// viewHolder.btnCalibration.setOnClickListener()
 
-		// 기존 UI 업데이트 (숨김 처리된 레이아웃용)
-		String strMacAddress = mContext.getString(R.string.BEACON_MAC_ADDRESS) + device.getMac();
-		viewHolder.deviceMacAddr.setText(strMacAddress);
-
-		String strRssiValue = mContext.getString(R.string.BEACON_RSSI_VALUE) + device.getRssi();
-		viewHolder.rssiState.setText(strRssiValue);
-
-		String strBattPercent = mContext.getString(R.string.BEACON_BATTERY) + device.getBatteryPercent() + "%";
-		viewHolder.deviceBatteryPercent.setText(strBattPercent);
+		// 기존 UI 업데이트 (호환성 유지, 숨김 처리된 레이아웃용)
+		if (viewHolder.deviceName != null) {
+			viewHolder.deviceName.setText(displayName);
+		}
+		if (viewHolder.deviceMacAddr != null && beaconState.getMac() != null) {
+			String strMacAddress = mContext.getString(R.string.BEACON_MAC_ADDRESS) + beaconState.getMac();
+			viewHolder.deviceMacAddr.setText(strMacAddress);
+		}
+		if (viewHolder.rssiState != null) {
+			String strRssiValue = mContext.getString(R.string.BEACON_RSSI_VALUE) + beaconState.getLastRssi();
+			viewHolder.rssiState.setText(strRssiValue);
+		}
+		if (viewHolder.deviceBatteryPercent != null) {
+			String strBattPercent = mContext.getString(R.string.BEACON_BATTERY) + batteryText;
+			viewHolder.deviceBatteryPercent.setText(strBattPercent);
+		}
 
 		String strNA = "N/A";
 
