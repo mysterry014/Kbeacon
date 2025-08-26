@@ -1,5 +1,7 @@
-  fix(ui): 스캔 버튼 크래시 수정 - TextView background 속성 호환성 개선
+  feat(ui): 터치 인식 정확도 대폭 개선 및 UI 정리
 
-  - listitem_device.xml의 selectableItemBackground 속성을 android 네임스페이스로 수정
-  - IosTheme에서 정의되지 않은 커스텀 속성으로 인한 XML inflation 오류 해결
-  - 스캔 시작 후 ListView 아이템 생성 시 발생하던 크래시 해결
+  • ListView 하이라이트 완전 제거 (selector=transparent, cacheColorHint=transparent)
+  • 자식 우선 포커스 설정 (setItemsCanFocus=true, descendantFocusability=afterDescendants)
+  • 버튼 터치 영역 확대 (40dp→48dp, 패딩 추가)
+  • XML 레이아웃 터치 전파 차단 (clickable=false, 부모→자식 순)
+  • 거리설정 다이얼로그 "(별칭)" 텍스트 제거로 UI 깔끔화

@@ -197,6 +197,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mListView.setAdapter(mDevListAdapter);
         // [수정2] 행 전체 클릭 비활성화 - 오직 이름 TextView 클릭만 허용
         mListView.setOnItemClickListener(null);
+        
+        // [터치개선] ListView 하이라이트 제거 및 자식 우선 포커스
+        mListView.setSelector(android.R.color.transparent);
+        mListView.setCacheColorHint(android.R.color.transparent);
+        mListView.setItemsCanFocus(true);   // 자식 뷰(버튼/텍스트)가 먼저 터치 받도록
 
 
         //total filter information
@@ -1063,7 +1068,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
      */
     private void showDistanceSettingDialog(String mac, String beaconName, double currentThreshold) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("거리 임계값 설정 - " + beaconName + " (별칭)"); // 별칭임을 명시
+        builder.setTitle("거리 임계값 설정 - " + beaconName); // 깔끔한 제목
         
         // EditText 설정
         final android.widget.EditText editText = new android.widget.EditText(this);

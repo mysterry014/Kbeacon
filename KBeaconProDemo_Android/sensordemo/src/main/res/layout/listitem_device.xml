@@ -14,7 +14,7 @@
      limitations under the License.
 -->
 
-<!-- [수정3] 루트 레이아웃: 클릭/포커스 금지 -->
+<!-- [수정3] 루트 레이아웃: 클릭/포커스 금지 + 자식 우선 포커스 -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_gravity="center_horizontal"
     android:layout_width="match_parent"
@@ -22,9 +22,10 @@
     android:id="@+id/listLayout"
     android:clickable="false"
     android:focusable="false"
-    android:longClickable="false">
+    android:longClickable="false"
+    android:descendantFocusability="afterDescendants">
 
-    <!-- [수정3] 새로운 레이아웃: 2행 구조, 클릭 금지 -->
+    <!-- [수정3] 새로운 레이아웃: 2행 구조, 클릭 금지 + 자식 우선 포커스 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -32,7 +33,8 @@
         android:padding="8dp"
         android:clickable="false"
         android:focusable="false"
-        android:longClickable="false">
+        android:longClickable="false"
+        android:descendantFocusability="afterDescendants">
 
         <!-- 첫번째 행: 비콘 정보 표시 -->
         <LinearLayout
@@ -48,7 +50,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
                 
-                <!-- [수정3] 이름 TextView만 클릭 허용 + 터치 피드백 -->
+                <!-- [수정3] 이름 TextView만 클릭 허용 + 터치 피드백 + 터치 영역 확대 -->
                 <TextView
                     android:id="@+id/tv_beacon_name"
                     android:layout_width="wrap_content"
@@ -59,7 +61,11 @@
                     android:textColor="@android:color/black"
                     android:clickable="true"
                     android:focusable="false"
-                    android:background="?android:attr/selectableItemBackground"/>
+                    android:background="?android:attr/selectableItemBackground"
+                    android:minHeight="48dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:gravity="center_vertical"/>
                     
                 <TextView
                     android:id="@+id/tv_distance"
@@ -99,41 +105,45 @@
             <Button
                 android:id="@+id/btn_ring_alarm"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="알람"
                 android:textSize="12sp"
-                android:focusable="false"
+                android:clickable="true"
+                android:focusable="true"
                 android:layout_marginEnd="4dp"/>
                 
             <Button
                 android:id="@+id/btn_ring_alarm_stop"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="알람 중지"
                 android:textSize="12sp"
-                android:focusable="false"
+                android:clickable="true"
+                android:focusable="true"
                 android:layout_marginEnd="4dp"/>
                 
             <Button
                 android:id="@+id/btn_distance_setting"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="거리설정"
                 android:textSize="12sp"
-                android:focusable="false"
+                android:clickable="true"
+                android:focusable="true"
                 android:layout_marginEnd="4dp"/>
                 
             <Button
                 android:id="@+id/btn_calibration"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="48dp"
                 android:layout_weight="1"
                 android:text="거리보정"
-                android:focusable="false"
-                android:textSize="12sp"/>
+                android:textSize="12sp"
+                android:clickable="true"
+                android:focusable="true"/>
         </LinearLayout>
     </LinearLayout>
 
