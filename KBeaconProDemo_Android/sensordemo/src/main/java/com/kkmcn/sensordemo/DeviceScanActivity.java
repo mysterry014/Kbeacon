@@ -1095,6 +1095,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     public void onDistanceSetting(String mac) {
         Log.d(TAG, "Distance setting requested for MAC: " + mac);
         
+        // [터치디바운스] 다이얼로그 띄우는 동안 UI 갱신 금지
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 300;
+        
         // [A] 별칭 기준 일관화: 거리설정 다이얼로그도 별칭 우선
         BeaconState beaconState = mBeaconDataStore.get(mac);
         double currentThreshold = (beaconState != null) ? 
@@ -1174,6 +1177,10 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     @Override
     public void onCalibration(String mac) {
         Log.d(TAG, "Calibration requested for MAC: " + mac);
+        
+        // [터치디바운스] 캘리브레이션 동안 UI 갱신 금지
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 300;
+        
         // TODO Phase 3 후속: 캘리브레이션 다이얼로그 구현  
         toastShow("캘리브레이션 기능은 추후 구현 예정");
     }

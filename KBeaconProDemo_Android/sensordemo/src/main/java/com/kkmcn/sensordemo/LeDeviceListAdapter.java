@@ -253,14 +253,12 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			// 부저 알람 시작 버튼
 			Log.d("LeDeviceListAdapter", String.format("Setting RingAlarm listener for position=%d, MAC=%s", i, captureMac));
 			viewHolder.btnRingAlarm.setOnClickListener(v -> {
-				Log.d("RingAlarm", String.format("CLICK: position=%d, MAC=%s, name=%s, enabled=%s, clickable=%s", 
-					i, captureMac, beaconState.getDisplayName(), v.isEnabled(), v.isClickable()));
+				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
+				v.setEnabled(false);
+				v.postDelayed(() -> v.setEnabled(true), 300);
 				
-				// 버튼 상태 체크
-				if (!v.isEnabled() || !v.isClickable()) {
-					Log.w("RingAlarm", "Button is not enabled or clickable, ignoring click");
-					return;
-				}
+				Log.d("RingAlarm", String.format("CLICK: position=%d, MAC=%s, name=%s", 
+					i, captureMac, beaconState.getDisplayName()));
 				
 				if (mOnRowActionListener != null && captureMac != null) {
 					Log.d("RingAlarm", "Calling onRingStart for MAC: " + captureMac);
@@ -273,14 +271,12 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			// 부저 알람 중지 버튼
 			Log.d("LeDeviceListAdapter", String.format("Setting RingStop listener for position=%d, MAC=%s", i, captureMac));
 			viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
-				Log.d("RingStop", String.format("CLICK: position=%d, MAC=%s, name=%s, enabled=%s, clickable=%s", 
-					i, captureMac, beaconState.getDisplayName(), v.isEnabled(), v.isClickable()));
+				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
+				v.setEnabled(false);
+				v.postDelayed(() -> v.setEnabled(true), 300);
 				
-				// 버튼 상태 체크
-				if (!v.isEnabled() || !v.isClickable()) {
-					Log.w("RingStop", "Button is not enabled or clickable, ignoring click");
-					return;
-				}
+				Log.d("RingStop", String.format("CLICK: position=%d, MAC=%s, name=%s", 
+					i, captureMac, beaconState.getDisplayName()));
 				
 				if (mOnRowActionListener != null && captureMac != null) {
 					Log.d("RingStop", "Calling onRingStop for MAC: " + captureMac);
@@ -292,6 +288,10 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			
 			// 거리 설정 버튼
 			viewHolder.btnDistanceSetting.setOnClickListener(v -> {
+				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
+				v.setEnabled(false);
+				v.postDelayed(() -> v.setEnabled(true), 300);
+				
 				if (mOnRowActionListener != null && captureMac != null) {
 					mOnRowActionListener.onDistanceSetting(captureMac);
 				}
@@ -299,6 +299,10 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			
 			// 캘리브레이션 버튼
 			viewHolder.btnCalibration.setOnClickListener(v -> {
+				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
+				v.setEnabled(false);
+				v.postDelayed(() -> v.setEnabled(true), 300);
+				
 				if (mOnRowActionListener != null && captureMac != null) {
 					mOnRowActionListener.onCalibration(captureMac);
 				}

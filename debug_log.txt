@@ -1,0 +1,502 @@
+08-27 05:31:43.846 10546 10546 D RING    : UI onRingStart mac=BC:57:29:13:F7:5B
+08-27 05:31:43.860 10546 10546 D RING    : start mac=BC:57:29:13:F7:5B ringMs=2000
+08-27 05:31:43.860 10546 10546 D RING    : session state transition: IDLE → STARTING
+08-27 05:31:43.860 10546 10546 I RING    : RingManager.start result: true
+08-27 05:31:43.860 10546 10994 D RING    : [DEBUG] Beacon found: 550329_홍길동, state=Connected
+08-27 05:31:43.861 10546 10994 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:31:43.861 10546 10994 D RING    : session state transition: STARTING → RUNNING
+08-27 05:31:43.861 10546 10994 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:31:43.861 10546 10994 I RING    : [COMMAND] Sending KBeacon ring command to 550329_홍길동: ringTime=2000ms, ringType=0x1
+08-27 05:31:43.861 10546 10994 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:31:43.861 10546 10994 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:31:45.012 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:31:45.012 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 550329_홍길동
+08-27 05:31:47.513 10546 11016 D RING    : [DEBUG] Beacon found: 550329_홍길동, state=Connected
+08-27 05:31:47.513 10546 11016 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:31:47.513 10546 11016 D RING    : session state transition: STARTING → RUNNING
+08-27 05:31:47.513 10546 11016 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:31:47.514 10546 11016 I RING    : [COMMAND] Sending KBeacon ring command to 550329_홍길동: ringTime=2000ms, ringType=0x1
+08-27 05:31:47.514 10546 11016 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:31:47.514 10546 11016 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:31:48.758 10546 10546 D RING    : UI onRingStop mac=BC:57:29:13:F7:5B
+08-27 05:31:48.762 10546 10546 I Toast   : show: caller = com.kkmcn.sensordemo.DeviceScanActivity.onRingStop:1039 
+08-27 05:31:48.769 10546 10546 D RING_STOP: Stopping ring for 550329_홍길동 (BC:57:29:13:F7:5B)
+08-27 05:31:48.769 10546 10546 D RING_STOP: [START] Sending stop command to 550329_홍길동 (BC:57:29:13:F7:5B)
+08-27 05:31:48.769 10546 10546 D RING_STOP: [CONNECTED] Beacon ready, sending stop command directly
+08-27 05:31:48.770 10546 10546 D RING_STOP: [SEND] Stop command JSON: {"msg":"ring","ringTime":0,"ringType":0}
+08-27 05:31:48.770 10546 10546 I RING_STOP: RingManager.stop result: true for 550329_홍길동
+08-27 05:31:48.777 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:31:48.778 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 550329_홍길동
+08-27 05:31:50.040 10546 10546 I RING_STOP: [SUCCESS] Stop command sent successfully for 550329_홍길동
+08-27 05:31:51.002 10546 10546 D RING    : UI onRingStart mac=BC:57:29:14:24:DA
+08-27 05:31:51.015 10546 10546 D RING    : start mac=BC:57:29:14:24:DA ringMs=2000
+08-27 05:31:51.015 10546 10546 D RING    : session state transition: IDLE → STARTING
+08-27 05:31:51.015 10546 10546 I RING    : RingManager.start result: true
+08-27 05:31:51.016 10546 10994 D RING    : [DEBUG] Beacon found: 561976_김철수, state=Connected
+08-27 05:31:51.016 10546 10994 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:31:51.016 10546 10994 D RING    : session state transition: STARTING → RUNNING
+08-27 05:31:51.016 10546 10994 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:31:51.016 10546 10994 I RING    : [COMMAND] Sending KBeacon ring command to 561976_김철수: ringTime=2000ms, ringType=0x1
+08-27 05:31:51.017 10546 10994 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:31:51.017 10546 10994 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:31:51.960 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:31:51.960 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 561976_김철수
+08-27 05:31:54.461 10546 11016 D RING    : [DEBUG] Beacon found: 561976_김철수, state=Connected
+08-27 05:31:54.461 10546 11016 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:31:54.461 10546 11016 D RING    : session state transition: STARTING → RUNNING
+08-27 05:31:54.461 10546 11016 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:31:54.461 10546 11016 I RING    : [COMMAND] Sending KBeacon ring command to 561976_김철수: ringTime=2000ms, ringType=0x1
+08-27 05:31:54.463 10546 11016 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:31:54.463 10546 11016 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:31:55.739 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:31:55.739 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 561976_김철수
+08-27 05:31:58.241 10546 10994 D RING    : [DEBUG] Beacon found: 561976_김철수, state=Connected
+08-27 05:31:58.241 10546 10994 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:31:58.241 10546 10994 D RING    : session state transition: STARTING → RUNNING
+08-27 05:31:58.241 10546 10994 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:31:58.242 10546 10994 I RING    : [COMMAND] Sending KBeacon ring command to 561976_김철수: ringTime=2000ms, ringType=0x1
+08-27 05:31:58.242 10546 10994 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:31:58.242 10546 10994 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:31:59.519 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:31:59.519 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 561976_김철수
+08-27 05:32:01.579 10546 10546 D RING    : UI onRingStop mac=BC:57:29:14:24:DA
+08-27 05:32:01.582 10546 10546 I Toast   : show: caller = com.kkmcn.sensordemo.DeviceScanActivity.onRingStop:1039 
+08-27 05:32:01.590 10546 10546 D RING_STOP: Stopping ring for 561976_김철수 (BC:57:29:14:24:DA)
+08-27 05:32:01.590 10546 10546 D RING_STOP: [START] Sending stop command to 561976_김철수 (BC:57:29:14:24:DA)
+08-27 05:32:01.590 10546 10546 D RING_STOP: [CONNECTED] Beacon ready, sending stop command directly
+08-27 05:32:01.591 10546 10546 D RING_STOP: [SEND] Stop command JSON: {"msg":"ring","ringTime":0,"ringType":0}
+08-27 05:32:01.595 10546 10546 I RING_STOP: RingManager.stop result: true for 561976_김철수
+08-27 05:32:02.671 10546 10546 I RING_STOP: [SUCCESS] Stop command sent successfully for 561976_김철수
+08-27 05:32:45.223 10546 10546 D RING    : UI onRingStart mac=BC:57:29:13:F7:5B
+08-27 05:32:45.228 10546 10546 D RING    : start mac=BC:57:29:13:F7:5B ringMs=2000
+08-27 05:32:45.228 10546 10546 D RING    : session state transition: IDLE → STARTING
+08-27 05:32:45.228 10546 10546 I RING    : RingManager.start result: true
+08-27 05:32:45.228 10546 10994 D RING    : [DEBUG] Beacon found: 550329_홍길동, state=Connected
+08-27 05:32:45.228 10546 10994 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:32:45.228 10546 10994 D RING    : session state transition: STARTING → RUNNING
+08-27 05:32:45.228 10546 10994 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:32:45.228 10546 10994 I RING    : [COMMAND] Sending KBeacon ring command to 550329_홍길동: ringTime=2000ms, ringType=0x1
+08-27 05:32:45.228 10546 10994 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:32:45.228 10546 10994 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:32:46.106 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:32:46.106 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 550329_홍길동
+08-27 05:32:48.607 10546 11016 D RING    : [DEBUG] Beacon found: 550329_홍길동, state=Connected
+08-27 05:32:48.607 10546 11016 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:32:48.608 10546 11016 D RING    : session state transition: STARTING → RUNNING
+08-27 05:32:48.608 10546 11016 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:32:48.608 10546 11016 I RING    : [COMMAND] Sending KBeacon ring command to 550329_홍길동: ringTime=2000ms, ringType=0x1
+08-27 05:32:48.609 10546 11016 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:32:48.609 10546 11016 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:32:49.257 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:32:49.257 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 550329_홍길동
+08-27 05:32:49.841 10546 10546 D RING    : UI onRingStop mac=BC:57:29:13:F7:5B
+08-27 05:32:49.846 10546 10546 I Toast   : show: caller = com.kkmcn.sensordemo.DeviceScanActivity.onRingStop:1039 
+08-27 05:32:49.852 10546 10546 D RING_STOP: Stopping ring for 550329_홍길동 (BC:57:29:13:F7:5B)
+08-27 05:32:49.852 10546 10546 D RING_STOP: [START] Sending stop command to 550329_홍길동 (BC:57:29:13:F7:5B)
+08-27 05:32:49.852 10546 10546 D RING_STOP: [CONNECTED] Beacon ready, sending stop command directly
+08-27 05:32:49.853 10546 10546 D RING_STOP: [SEND] Stop command JSON: {"msg":"ring","ringTime":0,"ringType":0}
+08-27 05:32:49.856 10546 10546 I RING_STOP: RingManager.stop result: true for 550329_홍길동
+08-27 05:32:50.516 10546 10546 I RING_STOP: [SUCCESS] Stop command sent successfully for 550329_홍길동
+08-27 05:32:53.297 10546 10546 D RING    : UI onRingStart mac=BC:57:29:14:24:DA
+08-27 05:32:53.308 10546 10546 D RING    : start mac=BC:57:29:14:24:DA ringMs=2000
+08-27 05:32:53.309 10546 10546 D RING    : session state transition: IDLE → STARTING
+08-27 05:32:53.309 10546 10546 I RING    : RingManager.start result: true
+08-27 05:32:53.311 10546 11016 D RING    : [DEBUG] Beacon found: 561976_김철수, state=Connected
+08-27 05:32:53.311 10546 11016 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:32:53.311 10546 11016 D RING    : session state transition: STARTING → RUNNING
+08-27 05:32:53.311 10546 11016 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:32:53.312 10546 11016 I RING    : [COMMAND] Sending KBeacon ring command to 561976_김철수: ringTime=2000ms, ringType=0x1
+08-27 05:32:53.312 10546 11016 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:32:53.312 10546 11016 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:32:54.329 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:32:54.329 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 561976_김철수
+08-27 05:32:56.830 10546 10994 D RING    : [DEBUG] Beacon found: 561976_김철수, state=Connected
+08-27 05:32:56.830 10546 10994 I RING    : [DEBUG] Beacon already connected, sending ring command directly
+08-27 05:32:56.830 10546 10994 D RING    : session state transition: STARTING → RUNNING
+08-27 05:32:56.830 10546 10994 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:32:56.831 10546 10994 I RING    : [COMMAND] Sending KBeacon ring command to 561976_김철수: ringTime=2000ms, ringType=0x1
+08-27 05:32:56.831 10546 10994 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:32:56.831 10546 10994 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:32:57.407 10546 10546 D RING    : UI onRingStop mac=BC:57:29:14:24:DA
+08-27 05:32:57.411 10546 10546 I Toast   : show: caller = com.kkmcn.sensordemo.DeviceScanActivity.onRingStop:1039 
+08-27 05:32:57.418 10546 10546 D RING_STOP: Stopping ring for 561976_김철수 (BC:57:29:14:24:DA)
+08-27 05:32:57.418 10546 10546 D RING_STOP: [START] Sending stop command to 561976_김철수 (BC:57:29:14:24:DA)
+08-27 05:32:57.418 10546 10546 D RING_STOP: [CONNECTED] Beacon ready, sending stop command directly
+08-27 05:32:57.418 10546 10546 D RING_STOP: [SEND] Stop command JSON: {"msg":"ring","ringTime":0,"ringType":0}
+08-27 05:32:57.418 10546 10546 I RING_STOP: RingManager.stop result: true for 561976_김철수
+08-27 05:32:58.736 10546 10546 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:32:58.737 10546 10546 I RING    : [SUCCESS] Ring command sent successfully: 561976_김철수
+08-27 05:33:01.888 10546 10546 I RING_STOP: [SUCCESS] Stop command sent successfully for 561976_김철수
+08-27 05:33:18.034  1129 15393 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:33:18.034  1129 15393 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 05:36:31.426 15859 15892 I LegalRepository: save consent info Agreement(type='THIRD_PARTY_SHARING', legalId='6867...',consented=false)
+08-27 05:45:03.703  1129 17268 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam4][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:45:03.703  1129 17268 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam4][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 05:45:24.327 14646 18712 I cobalt.logger: start logging STRING metric
+08-27 05:45:31.858  1129 19233 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:45:31.858  1129 19233 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 05:45:33.328  1129 19378 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:45:33.328  1129 19378 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 05:46:40.892 14646 19892 I cobalt.logger: start logging STRING metric
+08-27 05:49:07.462  1129 21123 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:49:07.462  1129 21123 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 05:54:52.379  1129 22588 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:54:52.379  1129 22588 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 05:56:37.829 14646 23363 I cobalt.logger: start logging STRING metric
+08-27 05:56:58.663 25077 25171 I Routine@Core[4.8.04.0]: AppFunctionsMetadataCollector: collect: converted meta=RawActionMeta(id=-1, tag=appfunction://com.sec.android.app.clockpackage.crossappactions#AlarmCrossAppActions_createAlarm, packageName=com.sec.android.app.clockpackage, componentName=clock|createAlarm, componentType=v3, labelResourceId=2131886247, subLabelResourceId=0, descriptionResourceId=0, enabledLabelResourceId=0, negativeEnabledLabelResourceId=0, supportNegative=0, iconResourceId=2131232124, category=clock, configActivity=@template/DYNAMIC, defaultParameter=null, defaultParameterLabel=null, uri=null, correctParam=null, parameterSpecSet={"inputParameterSpecs":[{"key":"alarm_time","name":2131886310,"structure":"PLAIN_OBJECT","type":"TIME_OF_DAY"},{"key":"__label__","name":2131886399,"structure":"MAP","type":"STRING"}],"outputParameterSpecs":[{"key":"alarm","name":-1,"structure":"PLAIN_OBJECT","type":"ALARM"}]}, supportState=0, attributes=irreversible|programmable|representation_supported|create|hide_from_adder, version=1)
+08-27 05:56:58.981 25224 25224 D RING    : RingManager initialized
+08-27 05:56:59.001 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:56:59.502 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:00.003 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:00.505 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:01.006 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:01.507 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:02.008 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:02.508 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:03.010 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:03.510 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:04.012 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:04.513 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:05.014 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:05.514 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:06.016 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:06.518 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:07.019 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:07.521 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:08.021 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:08.523 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:09.024 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:09.525 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:10.026 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:10.527 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:11.028 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:11.530 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:12.033 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:12.536 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:13.039 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:13.542 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:14.046 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:14.548 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:15.052 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:15.556 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:16.058 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:16.561 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:17.064 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:17.569 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:18.075 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:19.248 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:19.761 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:20.494 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:20.996 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:21.497 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:21.775 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:22.276 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:22.503  1129 26064 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:57:22.503  1129 26064 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 05:57:22.778 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:23.280 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:23.784 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:24.289 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:24.791 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=0
+08-27 05:57:25.298 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:25.334 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:25.334 25224 25224 D LeDeviceListAdapter: MAC changed, resetting listeners: position=0, oldMAC=null, newMAC=BC:57:29:13:F7:5B
+08-27 05:57:25.334 25224 25224 D LeDeviceListAdapter: Setting RingAlarm listener for position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:25.335 25224 25224 D LeDeviceListAdapter: Setting RingStop listener for position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:25.349 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:25.349 25224 25224 D LeDeviceListAdapter: MAC changed, resetting listeners: position=1, oldMAC=null, newMAC=BC:57:29:14:24:DA
+08-27 05:57:25.349 25224 25224 D LeDeviceListAdapter: Setting RingAlarm listener for position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:25.349 25224 25224 D LeDeviceListAdapter: Setting RingStop listener for position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:25.804 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:25.816 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:25.816 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:25.821 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:25.821 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:26.311 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:26.318 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:26.319 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:26.323 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:26.324 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:26.820 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:26.829 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:26.829 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:26.835 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:26.835 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:27.038 25224 25224 D RingAlarm: CLICK: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, enabled=true, clickable=true
+08-27 05:57:27.038 25224 25224 D RingAlarm: Calling onRingStart for MAC: BC:57:29:13:F7:5B
+08-27 05:57:27.038 25224 25224 D RING    : UI onRingStart: MAC=BC:57:29:13:F7:5B, name=550329_홍길동, beaconExists=true
+08-27 05:57:27.065 25224 25224 D RING    : Before RingManager.start: MAC=BC:57:29:13:F7:5B, manager=RingManager
+08-27 05:57:27.065 25224 25224 D RING    : start mac=BC:57:29:13:F7:5B ringMs=2000
+08-27 05:57:27.065 25224 25224 D RING    : session state transition: IDLE → STARTING
+08-27 05:57:27.066 25224 25224 I RING    : RingManager.start result: true for MAC=BC:57:29:13:F7:5B
+08-27 05:57:27.066 25224 26238 D RING    : [DEBUG] Beacon found: 550329_홍길동, state=Disconnected
+08-27 05:57:27.066 25224 26238 D RING    : connectEnhanced attempt mac=BC:57:29:13:F7:5B currentState=Disconnected
+08-27 05:57:27.066 25224 26238 D RING    : Connecting to beacon with auth: 550329_홍길동
+08-27 05:57:27.079 25224 26238 I RING    : [DEBUG] connect with password state changed: Connecting, reason: 0
+08-27 05:57:27.079 25224 26238 D RING    : [DEBUG] Connecting with auth in progress...
+08-27 05:57:27.323 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:27.327 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:27.328 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:27.331 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:27.332 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:27.825 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:27.831 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:27.831 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:27.834 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:27.834 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:28.330 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:28.344 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:28.344 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:28.352 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:28.352 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:28.837 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:28.845 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:28.845 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:28.849 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:28.850 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:29.319 25224 25224 I RING    : [DEBUG] connect with password state changed: Connected, reason: 0
+08-27 05:57:29.319 25224 25224 I RING    : [SUCCESS] Connected with auth to beacon, sending ring command: 550329_홍길동
+08-27 05:57:29.319 25224 25224 D RING    : session state transition: STARTING → RUNNING
+08-27 05:57:29.320 25224 25224 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:57:29.321 25224 25224 I RING    : [COMMAND] Sending KBeacon ring command to 550329_홍길동: ringTime=2000ms, ringType=0x1
+08-27 05:57:29.322 25224 25224 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:57:29.322 25224 25224 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:57:29.345 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:29.356 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:29.356 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:29.363 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:29.363 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:29.377 25224 25224 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:57:29.377 25224 25224 I RING    : [SUCCESS] Ring command sent successfully: 550329_홍길동
+08-27 05:57:29.854 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:29.866 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:29.867 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:29.874 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:29.874 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:30.361 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:30.377 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:30.378 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:30.384 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:30.384 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:30.866 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:30.876 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:30.876 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:30.878 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:30.879 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:31.341 25224 25224 D RingStop: CLICK: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, enabled=true, clickable=true
+08-27 05:57:31.341 25224 25224 D RingStop: Calling onRingStop for MAC: BC:57:29:13:F7:5B
+08-27 05:57:31.342 25224 25224 D RING    : UI onRingStop: MAC=BC:57:29:13:F7:5B, name=550329_홍길동, beaconExists=true
+08-27 05:57:31.347 25224 25224 I Toast   : show: caller = com.kkmcn.sensordemo.DeviceScanActivity.onRingStop:1081 
+08-27 05:57:31.355 25224 25224 D RING_STOP: Stopping ring for 550329_홍길동 (BC:57:29:13:F7:5B)
+08-27 05:57:31.355 25224 25224 D RING_STOP: [START] Sending stop command to 550329_홍길동 (BC:57:29:13:F7:5B)
+08-27 05:57:31.355 25224 25224 D RING_STOP: [CONNECTED] Beacon ready, sending stop command directly
+08-27 05:57:31.355 25224 25224 D RING_STOP: [SEND] Stop command JSON: {"msg":"ring","ringTime":0,"ringType":0}
+08-27 05:57:31.358 25224 25224 I RING_STOP: RingManager.stop result: true for 550329_홍길동
+08-27 05:57:31.367 25224 25224 V UI_UPDATE: Skipping UI update - touching=false, frozen=true
+08-27 05:57:31.417 25224 25224 I RING_STOP: [SUCCESS] Stop command sent successfully for 550329_홍길동
+08-27 05:57:31.875 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:31.893 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:31.893 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:31.902 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:31.904 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:32.387 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:32.403 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:32.403 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:32.410 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:32.410 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:32.893 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:32.902 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:32.903 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:32.907 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:32.907 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:33.400 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:33.414 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:33.415 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:33.422 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:33.423 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:33.906 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:33.915 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:33.915 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:33.921 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:33.921 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:34.284 25224 25224 D RingAlarm: CLICK: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, enabled=true, clickable=true
+08-27 05:57:34.284 25224 25224 D RingAlarm: Calling onRingStart for MAC: BC:57:29:14:24:DA
+08-27 05:57:34.284 25224 25224 D RING    : UI onRingStart: MAC=BC:57:29:14:24:DA, name=561976_김철수, beaconExists=true
+08-27 05:57:34.295 25224 25224 D RING    : Before RingManager.start: MAC=BC:57:29:14:24:DA, manager=RingManager
+08-27 05:57:34.295 25224 25224 D RING    : start mac=BC:57:29:14:24:DA ringMs=2000
+08-27 05:57:34.295 25224 25224 D RING    : session state transition: IDLE → STARTING
+08-27 05:57:34.295 25224 25224 I RING    : RingManager.start result: true for MAC=BC:57:29:14:24:DA
+08-27 05:57:34.296 25224 26394 D RING    : [DEBUG] Beacon found: 561976_김철수, state=Disconnected
+08-27 05:57:34.296 25224 26394 D RING    : connectEnhanced attempt mac=BC:57:29:14:24:DA currentState=Disconnected
+08-27 05:57:34.296 25224 26394 D RING    : Connecting to beacon with auth: 561976_김철수
+08-27 05:57:34.303 25224 26394 I RING    : [DEBUG] connect with password state changed: Connecting, reason: 0
+08-27 05:57:34.303 25224 26394 D RING    : [DEBUG] Connecting with auth in progress...
+08-27 05:57:34.408 25224 25224 V UI_UPDATE: Skipping UI update - touching=false, frozen=true
+08-27 05:57:34.910 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:34.917 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:34.917 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:34.921 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:34.922 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:35.417 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:35.431 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:35.432 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:35.439 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:35.439 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:35.924 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:35.934 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:35.934 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:35.939 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:35.939 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:36.431 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:36.442 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:36.443 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:36.450 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:36.450 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:36.941 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:36.954 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:36.955 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:36.963 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:36.963 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:37.449 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:37.464 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:37.464 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:37.470 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:37.470 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:37.955 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:37.967 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:37.968 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:37.973 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:37.973 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:38.459 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:38.464 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:38.464 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:38.467 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:38.467 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:38.968 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:38.978 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:38.978 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:38.984 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:38.984 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:38.991 25224 25224 I RING    : [DEBUG] connect with password state changed: Connected, reason: 0
+08-27 05:57:38.991 25224 25224 I RING    : [SUCCESS] Connected with auth to beacon, sending ring command: 561976_김철수
+08-27 05:57:38.991 25224 25224 D RING    : session state transition: STARTING → RUNNING
+08-27 05:57:38.991 25224 25224 I RING    : [DEBUG] Beacon connection verified, proceeding with ring command
+08-27 05:57:38.991 25224 25224 I RING    : [COMMAND] Sending KBeacon ring command to 561976_김철수: ringTime=2000ms, ringType=0x1
+08-27 05:57:38.991 25224 25224 D RING    : [DEBUG] JSON command: {"msg":"ring","ringTime":2000,"ringType":1}
+08-27 05:57:38.991 25224 25224 I RING    : [DEBUG] Calling beacon.sendCommand()...
+08-27 05:57:39.038 25224 25224 I RING    : [CALLBACK] sendCommand callback - success: true, error: none
+08-27 05:57:39.038 25224 25224 I RING    : [SUCCESS] Ring command sent successfully: 561976_김철수
+08-27 05:57:39.476 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:39.489 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:39.490 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:39.496 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:39.496 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:39.985 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:40.001 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:40.002 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:40.009 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:40.009 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:40.495 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:40.510 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:40.510 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:40.519 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:40.520 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:41.005 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:41.021 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:41.022 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:41.028 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:41.028 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:41.337 25224 25224 D RingStop: CLICK: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, enabled=true, clickable=true
+08-27 05:57:41.337 25224 25224 D RingStop: Calling onRingStop for MAC: BC:57:29:14:24:DA
+08-27 05:57:41.337 25224 25224 D RING    : UI onRingStop: MAC=BC:57:29:14:24:DA, name=561976_김철수, beaconExists=true
+08-27 05:57:41.342 25224 25224 I Toast   : show: caller = com.kkmcn.sensordemo.DeviceScanActivity.onRingStop:1081 
+08-27 05:57:41.349 25224 25224 D RING_STOP: Stopping ring for 561976_김철수 (BC:57:29:14:24:DA)
+08-27 05:57:41.349 25224 25224 D RING_STOP: [START] Sending stop command to 561976_김철수 (BC:57:29:14:24:DA)
+08-27 05:57:41.349 25224 25224 D RING_STOP: [CONNECTED] Beacon ready, sending stop command directly
+08-27 05:57:41.350 25224 25224 D RING_STOP: [SEND] Stop command JSON: {"msg":"ring","ringTime":0,"ringType":0}
+08-27 05:57:41.352 25224 25224 I RING_STOP: RingManager.stop result: true for 561976_김철수
+08-27 05:57:41.442 25224 25224 I RING_STOP: [SUCCESS] Stop command sent successfully for 561976_김철수
+08-27 05:57:41.510 25224 25224 V UI_UPDATE: Skipping UI update - touching=false, frozen=true
+08-27 05:57:42.016 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:42.032 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:42.033 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:42.039 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:42.039 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:42.525 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:42.535 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:42.535 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:42.543 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:42.543 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:43.030 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:43.034 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:43.035 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:43.037 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:43.037 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:43.535 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:43.544 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:43.544 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:43.546 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:43.546 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:44.039 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:44.044 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:44.044 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:44.044 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:44.044 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:44.546 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:44.560 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:44.560 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:44.568 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:44.568 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:45.050 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:45.057 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:45.058 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:45.060 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:45.061 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:45.550 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:45.559 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:45.559 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:45.560 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:45.560 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:46.056 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:46.064 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:46.065 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:46.068 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:46.069 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:46.561 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:46.572 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:46.573 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:46.575 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:46.575 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:47.065 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:47.069 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:47.069 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:47.071 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:47.072 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:47.568 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:47.576 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:47.577 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:47.578 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:47.579 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:48.076 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:48.091 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:48.091 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:48.099 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:48.099 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:48.583 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:48.589 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:48.589 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:48.593 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:48.593 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:57:49.086 25224 25224 V UI_UPDATE: updateUiFromDataStore: beacons=2
+08-27 05:57:49.092 25224 25224 D LeDeviceListAdapter: getView: position=0, MAC=BC:57:29:13:F7:5B, name=550329_홍길동, viewType=RECYCLED
+08-27 05:57:49.092 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=0, MAC=BC:57:29:13:F7:5B
+08-27 05:57:49.094 25224 25224 D LeDeviceListAdapter: getView: position=1, MAC=BC:57:29:14:24:DA, name=561976_김철수, viewType=RECYCLED
+08-27 05:57:49.094 25224 25224 V LeDeviceListAdapter: MAC unchanged, skipping listener reset: position=1, MAC=BC:57:29:14:24:DA
+08-27 05:59:37.150  1129 27376 I WNC]MetadataToDevice: [flashFiringPower:1255] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_POWER(0->0)
+08-27 05:59:37.150  1129 27376 I WNC]MetadataToDevice: [flashFiringTime:1279] [Cam3][frN:0 in:0 out:(0/1) zoomRatio(1.000000) HQ(0) RS(0) T:0] ANDROID_FLASH_FIRING_TIME(0->0)
+08-27 06:00:00.415 25077 25123 I Routine@Core[4.8.04.0]: COORD/BasicActionController: <act> #1. LifeStyle/DND(id=1, uuid=513871, routineId=1), validState=1, timeStamp=2025/08/27 00:00:05.705, extra=ORDERING_INDEX&0;PERFORM_ACTION_RESULT&1
+08-27 06:00:00.415 25077 25123 I Routine@Core[4.8.04.0]: COORD/BasicActionController: <act> #2. aod_main_setting(id=2, uuid=391070, routineId=1), validState=1, timeStamp=2025/08/27 00:00:05.782, extra=ORDERING_INDEX&1;PERFORM_ACTION_RESULT&1
+08-27 06:00:00.901 25249 25249 I AudioReceiver: onReceive() : action = .RINGER_MODE_CHANGED
+08-27 06:00:00.907 25249 25249 I AudioReceiver: onReceive() : action = .RINGER_MODE_CHANGED
+08-27 06:00:00.981 27654 27654 I CM.CallSettingsMenuFeature: true : TRANSLATE_DURING_CALLS
+08-27 06:00:00.996 27654 27654 I CU.AnsweringMessageReceiver: onReceive = com.samsung.android.app.telephonyui.action.RINGER_MODE_CHANGED
