@@ -163,16 +163,17 @@ public class RingManager {
             return false;
         }
         
-        Log.d(TAG, "Stopping ring for " + session.name + " (" + mac + ")");
+        Log.d("RING_STOP", "Stopping ring for " + session.name + " (" + mac + ")");
         
-        // 스케줄된 작업 취소
+        // [C] 부저 중지 즉시화: 스케줄 취소 + 즉시 중지 명령 전송
         if (session.scheduledTask != null) {
             session.scheduledTask.cancel(false);
         }
         
         session.state = RingState.STOPPED;
         
-        // TODO Phase 3: BeaconState에 ringActive=false 반영
+        // [C] 즉시 중지 명령 전송: ringType=0x0으로 기기에서 즉시 끄도록 함
+        sendStopCommand(session);
         
         // 세션 제거
         mSessions.remove(mac);
@@ -378,6 +379,83 @@ public class RingManager {
                 Log.e("RING", "Stack trace: ", e);
             }
             scheduleRetryWithBackoff(session);
+        }
+    }
+    
+    /**
+     * [C] 부저 중지 명령 전송 (즉시 중지용)
+     * @param session 링 세션
+     */
+    private void sendStopCommand(RingSession session) {
+        try {
+            // KBeacon 인스턴스 조회
+            KBeacon beacon = mBeaconsMgr.getBeacon(session.mac);
+            if (beacon == null) {
+                Log.w("RING_STOP", "[WARNING] Beacon not found for stop command: " + session.mac);
+                return;
+            }
+            
+            Log.d("RING_STOP", "[START] Sending stop command to " + session.name + " (" + session.mac + ")");
+            
+            // 연결 상태에 따른 처리
+            if (!isBeaconReadyForCommand(beacon)) {
+                // 연결되지 않은 경우, 연결 후 중지 명령 전송
+                Log.d("RING_STOP", "Connecting for stop command: " + session.name);
+                
+                beacon.connect("0000000000000000", 10000, new KBeacon.ConnStateDelegate() {
+                    @Override
+                    public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
+                        if (state == KBConnState.Connected) {
+                            Log.d("RING_STOP", "[CONNECTED] Sending immediate stop command");
+                            sendStopCommandDirect(session, beacon);
+                        } else if (state == KBConnState.Disconnected && nReason != 0) {
+                            Log.e("RING_STOP", "[ERROR] Stop command connection failed: " + nReason);
+                        }
+                    }
+                });
+            } else {
+                // 이미 연결된 경우, 바로 중지 명령 전송
+                Log.d("RING_STOP", "[CONNECTED] Beacon ready, sending stop command directly");
+                sendStopCommandDirect(session, beacon);
+            }
+            
+        } catch (Exception e) {
+            Log.e("RING_STOP", "Exception in sendStopCommand for " + session.mac + ": " + e.getMessage());
+        }
+    }
+    
+    /**
+     * [C] 실제 중지 명령 전송 (연결된 상태에서)
+     * @param session 링 세션
+     * @param beacon 연결된 KBeacon
+     */
+    private void sendStopCommandDirect(RingSession session, KBeacon beacon) {
+        try {
+            // JSON 중지 명령: ringType=0x0 (turn off)
+            org.json.JSONObject cmdPara = new org.json.JSONObject();
+            cmdPara.put("msg", "ring");
+            cmdPara.put("ringTime", 0);  // 시간 0
+            cmdPara.put("ringType", 0x0);  // 0x0 = turn off (즉시 중지)
+            
+            Log.d("RING_STOP", "[SEND] Stop command JSON: " + cmdPara.toString());
+            
+            beacon.sendCommand(cmdPara, new KBeacon.ActionCallback() {
+                @Override
+                public void onActionComplete(boolean bConfigSuccess, KBException error) {
+                    if (bConfigSuccess) {
+                        Log.i("RING_STOP", "[SUCCESS] Stop command sent successfully for " + session.name);
+                    } else {
+                        Log.e("RING_STOP", "[FAILED] Stop command failed for " + session.name + 
+                              ", error: " + (error != null ? error.errorCode : "unknown"));
+                    }
+                    
+                    // 중지 명령 완료 후 연결 해제 (선택적)
+                    // beacon.disconnect();  // 필요시 주석 해제
+                }
+            });
+            
+        } catch (Exception e) {
+            Log.e("RING_STOP", "Exception in sendStopCommandDirect: " + e.getMessage());
         }
     }
     

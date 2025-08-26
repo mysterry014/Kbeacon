@@ -67,6 +67,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.core.app.ActivityCompat;
@@ -640,13 +642,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         String mac = beacon.getMac();
         String currentName = beacon.getName();
         
-        // BeaconState에서 현재 이름 조회 (로컬 별칭 우선)
+        // [A] 별엀 기준 일관화: 다이얼로그에 전달할 이름 조회
         BeaconState beaconState = mBeaconDataStore.get(mac);
-        if (beaconState != null && beaconState.getName() != null) {
-            currentName = beaconState.getName();
+        String displayName = "Unknown";
+        if (beaconState != null) {
+            displayName = beaconState.getDisplayName(); // 별칭 우선, 없으면 광고 이름
         }
         
-        showDeviceNameChangeDialog(mac, currentName != null ? currentName : "Unknown");
+        showDeviceNameChangeDialog(mac, displayName);
     }
     
     /**
@@ -658,13 +661,13 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         Log.d("NAME", "showDeviceNameChangeDialog mac=" + mac + " current=" + currentName);
         
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("비콘 이름 변경");
+        builder.setTitle("별칭 설정"); // 별칭 용어 사용으로 혼동 방지
         
         // EditText 설정
         final android.widget.EditText editText = new android.widget.EditText(this);
         editText.setText(currentName);
         editText.setSelection(currentName.length()); // 커서를 끝으로
-        editText.setHint("새 이름 입력 (1-18자)");
+        editText.setHint("별칭 입력 (1-18자)"); // 별칭 용어로 일관화
         editText.setSingleLine(true);
         
         // 다이얼로그에 EditText 추가
@@ -676,12 +679,12 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             
             // 유효성 검사
             if (newName.isEmpty()) {
-                toastShow("이름을 입력해주세요");
+                toastShow("별칭을 입력해주세요");
                 return;
             }
             
             if (newName.length() > 18) {
-                toastShow("이름은 18자 이하로 입력해주세요 (KBeacon 제한)");
+                toastShow("별칭은 18자 이하로 입력해주세요");
                 return;
             }
             
@@ -696,7 +699,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             saveAlias(mac, newName);
             
             Log.d("NAME", "alias change: mac=" + mac + " old=" + oldName + " new=" + newName);
-            Toast.makeText(this, "이름 변경: " + oldName + " → " + newName, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "별칭 설정: " + oldName + " → " + newName, Toast.LENGTH_SHORT).show();
         });
         
         // 취소 버튼
@@ -735,11 +738,43 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
 
 
     /**
-     * 500ms 주기로 BeaconDataStore에서 데이터를 가져와 UI 갱신
+     * [D1] 6자리 숫자 파싱 유틸 (정렬용)
+     * @param s displayName
+     * @return 선두 6자리 숫자 (없으면 Integer.MAX_VALUE)
+     */
+    private static Integer leadingSix(String s) {
+        if (s == null) return Integer.MAX_VALUE;
+        Matcher m = Pattern.compile("^(\\d{6})").matcher(s);
+        return m.find() ? Integer.parseInt(m.group(1)) : Integer.MAX_VALUE;
+    }
+
+    /**
+     * [D1] 500ms 주기로 BeaconDataStore에서 데이터를 가져와 정렬 후 UI 갱신
      */
     private void updateUiFromDataStore() {
         try {
             List<BeaconState> beaconStates = mBeaconDataStore.getValidBeacons();
+            
+            // [D1] 500ms 렌더 전 스냅샷 정렬: (6자리, displayName, mac) 순
+            beaconStates.sort((a, b) -> {
+                // 1순위: displayName 선두 6자리 숫자
+                Integer sixA = leadingSix(a.getDisplayName());
+                Integer sixB = leadingSix(b.getDisplayName());
+                int compare = sixA.compareTo(sixB);
+                if (compare != 0) return compare;
+                
+                // 2순위: displayName 사전순
+                String nameA = a.getDisplayName() != null ? a.getDisplayName() : "";
+                String nameB = b.getDisplayName() != null ? b.getDisplayName() : "";
+                compare = nameA.compareToIgnoreCase(nameB);
+                if (compare != 0) return compare;
+                
+                // 3순위: MAC 대문자 사전순
+                String macA = a.getMac() != null ? a.getMac().toUpperCase() : "";
+                String macB = b.getMac() != null ? b.getMac().toUpperCase() : "";
+                return macA.compareTo(macB);
+            });
+            
             mDevListAdapter.updateBeaconStates(beaconStates);
             mDevListAdapter.notifyDataSetChanged();
         } catch (Exception e) {
@@ -966,10 +1001,15 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     @Override
     public void onRingStop(String mac) {
         Log.d("RING", "UI onRingStop mac=" + mac);
-        Toast.makeText(this, "부저 중지: " + mac, Toast.LENGTH_SHORT).show();
+        
+        // [C] 별칭 기준 토스트 메시지
+        BeaconState beaconState = mBeaconDataStore.get(mac);
+        String displayName = (beaconState != null) ? beaconState.getDisplayName() : mac;
+        Toast.makeText(this, "부저 중지 요청: " + displayName, Toast.LENGTH_SHORT).show();
+        
         if (mRingManager != null) {
             boolean stopped = mRingManager.stop(mac);
-            Log.i("RING", "RingManager.stop result: " + stopped);
+            Log.i("RING_STOP", "RingManager.stop result: " + stopped + " for " + displayName);
         } else {
             Log.e("RING", "RingManager is null!");
         }
@@ -979,14 +1019,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     public void onDistanceSetting(String mac) {
         Log.d(TAG, "Distance setting requested for MAC: " + mac);
         
-        // BeaconState에서 현재 거리 임계값 조회
+        // [A] 별칭 기준 일관화: 거리설정 다이얼로그도 별칭 우선
         BeaconState beaconState = mBeaconDataStore.get(mac);
         double currentThreshold = (beaconState != null) ? 
             beaconState.getDistanceThresholdMeters() : Prefs.getDefaultDistanceThreshold();
-        String beaconName = (beaconState != null && beaconState.getName() != null) ? 
-            beaconState.getName() : "Unknown";
+        String displayName = (beaconState != null) ? 
+            beaconState.getDisplayName() : "Unknown"; // 별칭 우선 사용
             
-        showDistanceSettingDialog(mac, beaconName, currentThreshold);
+        showDistanceSettingDialog(mac, displayName, currentThreshold);
     }
     
     /**
@@ -997,7 +1037,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
      */
     private void showDistanceSettingDialog(String mac, String beaconName, double currentThreshold) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("거리 임계값 설정 - " + beaconName);
+        builder.setTitle("거리 임계값 설정 - " + beaconName + " (별칭)"); // 별칭임을 명시
         
         // EditText 설정
         final android.widget.EditText editText = new android.widget.EditText(this);

@@ -1,16 +1,11 @@
-  feat(phase4): 사용자 피드백 반영한 UI 안정화 및 인증 연결 개선
+  refactor(ui): ListView 안정성 개선 및 정렬 최적화
 
-   • 클릭 매핑 안정화
-    - ListView View.setTag() 방식을 클로저 기반 MAC 캡처로 대체
-    - 500ms UI 갱신 주기에서 View 재활용 시 클릭 오동작 해결
-    - LeDeviceListAdapter에서 final captureMac으로 안정적 매핑
+  - ListView stable ID 구현으로 View 재활용 문제 해결
+  - 6자리 숫자 기준 비콘 목록 정렬 안정화
+  - 클로저 기반 MAC 캡처로 클릭 이벤트 정확성 향상
+  - 500ms UI 갱신 주기에서 올바른 비콘 선택 보장
 
-  • 비콘 이름 관리 개선
-    - 별칭 시스템 강화로 광고 이름과 분리된 표시 이름 지원
-    - Prefs.setAlias(), BeaconState.getDisplayName() API 활용
-    - 18자 이하 한글 입력 지원 및 실시간 UI 반영
-
-  • 부저 연결 체인 강화
-    - RingManager에서 패스워드 기반 인증 연결로 전환
-    - beacon.connect("0000000000000000", timeout) 사용
-    - 연결 실패 시 상세 로깅 및 백오프 재시도 개선
+  변경사항:
+  • LeDeviceListAdapter: MAC→Long ID 변환, hasStableIds() 활성화
+  • BeaconDataStore: getValidBeacons() 정렬 로직 강화
+  • 클릭 리스너 완전 재설정으로 혼동 방지

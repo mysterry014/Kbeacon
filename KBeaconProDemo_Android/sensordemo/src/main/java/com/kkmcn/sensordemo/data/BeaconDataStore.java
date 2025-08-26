@@ -120,10 +120,55 @@ public class BeaconDataStore {
     
     /**
      * 6자리 숫자로 시작하는 비콘 조회 (CLAUDE.md 요구사항)
-     * @return 6자리 숫자로 시작하는 BeaconState 리스트
+     * [B] 6자리 기준 정렬: 리스트 위치 안정화를 위해 정렬된 결과 반환
+     * @return 6자리 숫자로 시작하는 BeaconState 리스트 (정렬됨)
      */
     public List<BeaconState> getValidBeacons() {
-        return getByNamePattern("^\\d{6}_.*");
+        List<BeaconState> validBeacons = getByNamePattern("^\\d{6}_.*");
+        
+        // [B] 6자리 기준 정렬: (six_digits, displayName, mac) 순서로 정렬
+        validBeacons.sort((a, b) -> {
+            // 1순위: 6자리 숫자 추출 및 비교
+            int sixA = parseLeadingSixDigits(a.getDisplayName());
+            int sixB = parseLeadingSixDigits(b.getDisplayName());
+            int compare = Integer.compare(sixA, sixB);
+            if (compare != 0) return compare;
+            
+            // 2순위: displayName 비교
+            String nameA = a.getDisplayName() != null ? a.getDisplayName() : "";
+            String nameB = b.getDisplayName() != null ? b.getDisplayName() : "";
+            compare = nameA.compareToIgnoreCase(nameB);
+            if (compare != 0) return compare;
+            
+            // 3순위: MAC 비교 (최종 안정화)
+            String macA = a.getMac() != null ? a.getMac() : "";
+            String macB = b.getMac() != null ? b.getMac() : "";
+            return macA.compareToIgnoreCase(macB);
+        });
+        
+        return validBeacons;
+    }
+    
+    /**
+     * [B] 6자리 숫자 파싱 헬퍼 (정렬용)
+     * @param displayName 표시 이름
+     * @return 6자리 숫자 (없으면 Integer.MAX_VALUE)
+     */
+    private int parseLeadingSixDigits(String displayName) {
+        if (displayName == null || displayName.length() < 6) {
+            return Integer.MAX_VALUE;
+        }
+        
+        try {
+            String prefix = displayName.substring(0, 6);
+            if (prefix.matches("\\d{6}")) {
+                return Integer.parseInt(prefix);
+            }
+        } catch (NumberFormatException e) {
+            // 파싱 실패 시 최대값 반환 (맨 뒤로 정렬)
+        }
+        
+        return Integer.MAX_VALUE;
     }
     
     /**

@@ -97,7 +97,28 @@ public class LeDeviceListAdapter extends BaseAdapter {
 
 	@Override
 	public long getItemId(int i) {
+		// [D2] MAC → 고정 long ID: "AA:BB:CC:DD:EE:FF" → AABBCCDDEEFF(16진) → long
+		if (i >= 0 && i < mBeaconStates.size()) {
+			BeaconState state = mBeaconStates.get(i);
+			if (state != null && state.getMac() != null) {
+				String mac = state.getMac();
+				try {
+					// MAC 콜론 제거 후 16진수 → long 변환
+					String hexMac = mac.replace(":", "");
+					return Long.parseLong(hexMac, 16);
+				} catch (Exception e) {
+					// 파싱 실패 시 해시코드 폴백
+					return mac.hashCode();
+				}
+			}
+		}
 		return i;
+	}
+	
+	@Override
+	public boolean hasStableIds() {
+		// [B] 안정적 ID 활성화: ListView 재활용 최적화
+		return true;
 	}
 
 
@@ -203,8 +224,15 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			String.format("%.1f m", distanceFiltered) : "–";
 		viewHolder.tvDistance.setText(distanceText);
 		
-		// Phase 4: 클로저 기반 MAC 캡처 (태그 방식 대체)
-		final String captureMac = beaconState.getMac();  // 클로저 캡처용
+		// [B] 클릭 대상 혼동 제거: 매 바인딩마다 리스너 완전 재설정
+		final String captureMac = beaconState.getMac();  // 클로저 MAC 캡처 (안정적)
+		
+		// [B] 리스너 완전 재설정: 재활용된 View의 이전 리스너 제거 후 새로 설정
+		viewHolder.tvBeaconName.setOnClickListener(null);  // 기존 리스너 제거
+		viewHolder.btnRingAlarm.setOnClickListener(null);
+		viewHolder.btnRingAlarmStop.setOnClickListener(null);
+		viewHolder.btnDistanceSetting.setOnClickListener(null);
+		viewHolder.btnCalibration.setOnClickListener(null);
 		
 		// 이름 TextView 클릭 리스너 (클로저로 MAC 캡처)
 		viewHolder.tvBeaconName.setOnClickListener(v -> {
