@@ -224,12 +224,20 @@ public class CalibrationDialog {
                     stopUiUpdates(); // UI 업데이트 중지
                 });
             }
+            
+            @Override
+            public void onStageReadyToCollect(int stageIndex) {
+                Log.d(TAG, String.format("[UI-GATE] Stage %d ready to collect - showing collection UI", stageIndex + 1));
+                runOnUiThread(() -> {
+                    tvInstructions.setText(String.format("%.0fm 지점에서 측정 중...\n비콘을 움직이지 마세요.", distancesFromStage(stageIndex)));
+                });
+            }
         });
         
         // UI 업데이트 시작
         startUiUpdates();
         
-        // 첫 번째 단계 카운트다운 시작
+        // 첫 번째 단계 카운트다운 시작 (이미 beginStageWaiting(0)이 호출됨)
         startStageCountdown(0);
         
         btnAction.setEnabled(false);
@@ -247,6 +255,8 @@ public class CalibrationDialog {
     }
     
     private void startStageCountdown(int stageIndex) {
+        Log.d(TAG, String.format("[UI-COUNTDOWN] Starting countdown for stage %d", stageIndex + 1));
+        
         isCountingDown = true;
         countdownRemaining = COUNTDOWN_SECONDS;
         
@@ -258,13 +268,19 @@ public class CalibrationDialog {
             @Override
             public void run() {
                 countdownRemaining--;
+                Log.v(TAG, String.format("[UI-COUNTDOWN] Stage %d countdown: %d seconds remaining", stageIndex + 1, countdownRemaining));
                 
                 if (countdownRemaining > 0) {
                     stageStatusTexts[stageIndex].setText(String.format("%dm: 준비중... %d", stageIndex + 1, countdownRemaining));
                     countdownHandler.postDelayed(this, 1000);
                 } else {
+                    Log.d(TAG, String.format("[UI-COUNTDOWN] Stage %d countdown finished - enabling intake", stageIndex + 1));
                     isCountingDown = false;
-                    startStageCollection(stageIndex);
+                    
+                    // 카운트다운 완료 후 수집 게이트 열기
+                    if (session != null) {
+                        session.enableIntakeForCurrentStage();
+                    }
                 }
             }
         };
@@ -272,11 +288,7 @@ public class CalibrationDialog {
         countdownHandler.postDelayed(countdownRunnable, 1000);
     }
     
-    private void startStageCollection(int stageIndex) {
-        tvInstructions.setText(String.format("%dm 지점에서 측정 중...\n비콘을 움직이지 마세요.", stageIndex + 1));
-        
-        Log.d(TAG, String.format("Starting stage %d collection", stageIndex + 1));
-    }
+    // startStageCollection 메서드 제거 - onStageReadyToCollect 콜백으로 대체
     
     private void startUiUpdates() {
         stopUiUpdates(); // 기존 업데이트 중지
@@ -302,28 +314,36 @@ public class CalibrationDialog {
     }
     
     private void updateStageStatus() {
-        if (session == null || isCountingDown) {
+        if (session == null) {
+            return;
+        }
+        
+        if (isCountingDown) {
+            Log.v(TAG, "[UI-UPDATE] Skipping update - countdown in progress");
             return;
         }
         
         // 샘플 요청 (현재 수집 중인 단계에 대해서만)
         if (session.isCollecting()) {
+            Log.v(TAG, "[UI-UPDATE] Requesting samples - session is collecting");
             callback.onSampleNeeded(session);
+        } else {
+            Log.v(TAG, "[UI-UPDATE] Not requesting samples - session not collecting: " + session.getStage());
         }
         
-        // 단계 완료 확인 및 다음 단계 진행
+        // 단계 완룼 확인 및 다음 단계 진행
         if (session.isCurrentStageComplete()) {
-            Log.d(TAG, "Current stage complete, proceeding to next stage or computation");
+            Log.d(TAG, "[UI-UPDATE] Current stage complete, proceeding to next stage or computation");
             
             if (session.nextStageOrCompute()) {
                 CalibrationStage newStage = session.getStage();
-                Log.d(TAG, "Stage transition successful. New stage: " + newStage);
+                Log.d(TAG, "[UI-UPDATE] Stage transition successful. New stage: " + newStage);
                 
                 int newStageIndex = getCurrentStageIndex(newStage);
                 
                 if (newStageIndex >= 0 && session.isCollecting()) {
-                    // 다음 단계 카운트다운 시작
-                    Log.d(TAG, "Starting countdown for next stage: " + (newStageIndex + 1));
+                    // 다음 단계 카운트다운 시작 (이미 beginStageWaiting이 호출되어 게이트가 닫힘)
+                    Log.d(TAG, "[UI-UPDATE] Starting countdown for next stage: " + (newStageIndex + 1));
                     startStageCountdown(newStageIndex);
                 } else if (newStage == CalibrationStage.COMPUTING) {
                     runOnUiThread(() -> {
@@ -331,7 +351,7 @@ public class CalibrationDialog {
                     });
                 }
             } else {
-                Log.e(TAG, "Failed to proceed to next stage or computation");
+                Log.e(TAG, "[UI-UPDATE] Failed to proceed to next stage or computation");
             }
         }
     }

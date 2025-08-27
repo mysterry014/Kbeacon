@@ -49,6 +49,7 @@ public class CalibrationSession {
         void onStageCompleted(int stageIndex, double medianRssi);
         void onCalibrationFinished(CalibrationResult result);
         void onCalibrationError(String errorMessage);
+        void onStageReadyToCollect(int stageIndex); // 카운트다운 완료 후 수집 준비 완료
     }
     
     public static class CalibrationResult {
@@ -83,6 +84,9 @@ public class CalibrationSession {
     private CalibrationResult result;
     private CalibrationListener listener;
     
+    // [수집 게이트] 카운트다운 중에는 샘플 수집 차단
+    private volatile boolean intakeEnabled = false;
+    
     /**
      * 캘리브레이션 세션 생성
      * @param mac 대상 비콘 MAC 주소
@@ -99,8 +103,8 @@ public class CalibrationSession {
             stageRssiSamples.add(new ArrayList<>());
         }
         
-        this.currentStage = CalibrationStage.STAGE_1M;
-        this.stageStartTimeMs = System.currentTimeMillis();
+        // 첫 번째 단계 준비 (게이트 닫힘 상태)
+        beginStageWaiting(0, CalibrationStage.STAGE_1M);
         
         Log.d(TAG, String.format("Calibration session started for MAC: %s, distances: [%.1f, %.1f, %.1f]", 
                mac, distancesMeters[0], distancesMeters[1], distancesMeters[2]));
@@ -115,26 +119,37 @@ public class CalibrationSession {
     }
     
     /**
-     * 새 RSSI 샘플 수집 (활성 단계일 때만)
+     * 새 RSSI 샘플 수집 (수집 게이트 열렸을 때만)
      * 
      * 주의: 광고 RSSI 기준으로 설계됨. 연결 중 RSSI는 사용하지 않음.
      * 
      * @param rssi 원시 RSSI 값 (dBm)
      */
-    public void onRssiSample(int rssi) {
-        if (!isCollecting()) {
+    public synchronized void onRssiSample(int rssi) {
+        int stageIndex = getCurrentStageIndex();
+        Log.v(TAG, String.format("[INTAKE] onRssiSample: rssi=%d, intakeEnabled=%s, isCollecting=%s, stage=%s", 
+                rssi, intakeEnabled, isCollecting(), currentStage));
+        
+        // [수집 게이트] 카운트다운 중이면 샘플 차단
+        if (!intakeEnabled) {
+            Log.v(TAG, "[INTAKE] Sample rejected - intake gate closed (countdown or waiting)");
             return;
         }
         
-        int stageIndex = getCurrentStageIndex();
+        if (!isCollecting()) {
+            Log.v(TAG, "[INTAKE] Sample rejected - not in collecting stage");
+            return;
+        }
+        
         if (stageIndex < 0) {
+            Log.v(TAG, "[INTAKE] Sample rejected - invalid stage index");
             return;
         }
         
         stageRssiSamples.get(stageIndex).add(rssi);
         
         int sampleCount = stageRssiSamples.get(stageIndex).size();
-        Log.v(TAG, String.format("Stage %d sample: %d dBm (total: %d)", 
+        Log.d(TAG, String.format("[SAMPLE] Stage %d sample accepted: %d dBm (total: %d)", 
                stageIndex + 1, rssi, sampleCount));
         
         // 진행 상황 콜백
@@ -194,14 +209,14 @@ public class CalibrationSession {
             listener.onStageCompleted(stageIndex, medianRssi);
         }
         
-        // 다음 단계로 진행
+        // 다음 단계로 진행 (게이트 닫힐 상태로)
         switch (currentStage) {
             case STAGE_1M:
-                startStage(1, CalibrationStage.STAGE_2M);
+                beginStageWaiting(1, CalibrationStage.STAGE_2M);
                 return true;
                 
             case STAGE_2M:
-                startStage(2, CalibrationStage.STAGE_3M);
+                beginStageWaiting(2, CalibrationStage.STAGE_3M);
                 return true;
                 
             case STAGE_3M:
@@ -215,23 +230,54 @@ public class CalibrationSession {
     }
     
     /**
-     * 새 단계 시작 (단계별 초기화 포함)
+     * 단계 대기 시작 (게이트 닫힘 + 버퍼 리셋)
+     * 카운트다운이 끝나면 enableIntakeForCurrentStage()를 호출해야 함
+     * 
      * @param stageIndex 단계 인덱스 (0:1m, 1:2m, 2:3m)
      * @param stage 단계 enum
      */
-    private void startStage(int stageIndex, CalibrationStage stage) {
+    public synchronized void beginStageWaiting(int stageIndex, CalibrationStage stage) {
+        Log.d(TAG, String.format("[GATE] beginStageWaiting stage %d (%s) - intake=false, buffers reset", 
+                stageIndex + 1, stage));
+        
         currentStage = stage;
         stageStartTimeMs = System.currentTimeMillis();
+        intakeEnabled = false; // 게이트 닫기
         
-        // [수정] 단계 진입 시 해당 단계의 샘플 리스트 초기화
-        if (stageIndex >= 0 && stageIndex < stageRssiSamples.size()) {
-            stageRssiSamples.get(stageIndex).clear();
-            Log.d(TAG, String.format("Stage %d started - sample list cleared", stageIndex + 1));
-        }
+        // 해당 단계 버퍼 리셋
+        resetStageBuffers(stageIndex);
         
-        // 단계 시작 콜백
+        // 단계 시작 콜백 (카운트다운 시작 신호)
         if (listener != null) {
             listener.onStageStarted(stageIndex, distancesMeters[stageIndex]);
+        }
+    }
+    
+    /**
+     * 카운트다운 완료 후 수집 게이트 열기
+     */
+    public synchronized void enableIntakeForCurrentStage() {
+        int stageIndex = getCurrentStageIndex();
+        Log.d(TAG, String.format("[GATE] enableIntake stage %d - intake=true, collection started", stageIndex + 1));
+        
+        intakeEnabled = true; // 게이트 열기
+        
+        // 수집 준비 완료 콜백
+        if (listener != null) {
+            listener.onStageReadyToCollect(stageIndex);
+        }
+    }
+    
+    /**
+     * 단계별 버퍼 초기화
+     * @param stageIndex 단계 인덱스
+     */
+    private void resetStageBuffers(int stageIndex) {
+        if (stageIndex >= 0 && stageIndex < stageRssiSamples.size()) {
+            int previousCount = stageRssiSamples.get(stageIndex).size();
+            stageRssiSamples.get(stageIndex).clear();
+            Log.d(TAG, String.format("[BUFFER] Stage %d buffers reset (was %d samples, now %d)", 
+                    stageIndex + 1, previousCount, stageRssiSamples.get(stageIndex).size()));
         }
     }
     

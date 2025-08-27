@@ -1,9 +1,9 @@
-  fix(calibration): 캘리브레이션 대화상자 UI 및 세션 처리 개선
+  fix(calibration): 카운트다운 중 샘플 누적 및 UI 깜빡임 문제 해결
 
-  • 카운트다운 시간 3초→10초 증가 (사용자 위치 조정 시간 확보)
-  • 2m/3m 단계에서 샘플 카운트 초기화 문제 해결 (startStage에서 clear 추가)
-  • CalibrationSession에 리스너 콜백 체계 구축
-  • CalibrationDialog에서 콜백 기반 UI 업데이트로 전환
-  • 측정 완료 후 결과 표시 누락 문제 해결
-  • NaN/Inf 방어 코드 추가로 회귀 계산 안정성 개선
-  • 디버깅 로그 강화 및 UI 리소스 관리 개선
+  • 수집 게이트(intakeEnabled) 도입으로 카운트다운 중 샘플 차단
+  • beginStageWaiting/enableIntakeForCurrentStage API 분리
+  • 카운트다운과 수집 상태 UI 완전 분리로 깜빡임 제거
+  • 단계별 버퍼 완전 초기화로 2m/3m 샘플 카운트 정상화
+  • onStageReadyToCollect 콜백 추가로 수집 시작 시점 명확화
+  • 상세 디버깅 로그 추가 (INTAKE, GATE, SAMPLE 태그)
+  • 동기화 안전성 강화 (synchronized 메서드)
