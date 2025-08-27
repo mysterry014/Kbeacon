@@ -120,6 +120,17 @@ public class DistanceEstimator {
     }
     
     /**
+     * 캘리브레이션 설정 (CalibrationDialog에서 사용)
+     * @param txPowerAt1m 1미터 거리에서의 RSSI (dBm)
+     * @param pathLossExponent 경로 손실 지수 (n)
+     */
+    public synchronized void setCalibration(double txPowerAt1m, double pathLossExponent) {
+        this.txPowerAt1m = txPowerAt1m;
+        this.pathLossExponent = pathLossExponent;
+        // 필터는 초기화하지 않음 - 연속적인 거리 추정 유지
+    }
+    
+    /**
      * 필터 초기화
      */
     public synchronized void reset() {

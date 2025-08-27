@@ -13,12 +13,14 @@
       "Bash(gradlew :sensordemo:compileDebugJava:*)",
       "Bash(adb logcat:*)",
       "Bash(adb:*)",
-      "Bash(gradlew:*)"
+      "Bash(gradlew:*)",
+      "Bash(.gradlew:*)"
     ],
     "deny": [],
     "ask": [],
     "additionalDirectories": [
       "C:\\mnt\\c\\work_DJ\\KBeacon"
     ]
-  }
+  },
+  "outputStyle": "default"
 }

@@ -63,6 +63,8 @@ import com.kkmcn.sensordemo.utils.RssiFilter;
 import com.kkmcn.sensordemo.utils.DistanceEstimator;
 import com.kkmcn.sensordemo.ring.RingManager;
 import com.kkmcn.sensordemo.battery.BatteryScheduler;
+import com.kkmcn.sensordemo.cal.CalibrationSession;
+import com.kkmcn.sensordemo.cal.CalibrationDialog;
 
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
@@ -138,6 +140,10 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     // [터치디바운스] UI 갱신 제어 플래그
     private volatile boolean userTouchingList = false;
     private volatile long uiFreezeUntilMs = 0L;
+    
+    // [캘리브레이션] 가드 플래그 및 세션 관리
+    private volatile boolean isCalibrating = false;
+    private CalibrationSession activeCalibrationSession = null;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -475,14 +481,25 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 // (d) DistanceEstimator로 distanceFiltered 산출
                 DistanceEstimator distanceEstimator = mDistanceEstimators.get(mac);
                 if (distanceEstimator == null) {
-                    // Phase 2 Part 3: 저장된 캘리브레이션 값 복원
-                    double txPowerAt1m = mPrefs.getTxPowerAt1m(mac, beaconName, Prefs.getDefaultTxPowerAt1m());
-                    double pathLossExponent = mPrefs.getN(mac, beaconName, Prefs.getDefaultPathLossExponent());
+                    // Phase 2 Part 3: 저장된 캘리브레이션 값 복원 (캘리브레이션 우선)
+                    double txPowerAt1m, pathLossExponent;
+                    
+                    // 캘리브레이션 결과 우선 로드 시도
+                    Prefs.CalibrationParams calibParams = mPrefs.loadCalibration(mac);
+                    if (calibParams != null) {
+                        txPowerAt1m = calibParams.txPowerAt1m;
+                        pathLossExponent = calibParams.pathLossExponent;
+                        Log.d(TAG, String.format("Restored calibration result for %s: tx1m=%.2f, n=%.2f, R²=%.2f", 
+                               beaconName, txPowerAt1m, pathLossExponent, calibParams.rSquared));
+                    } else {
+                        // 캘리브레이션 결과가 없으면 개별 설정값 또는 기본값 사용
+                        txPowerAt1m = mPrefs.getTxPowerAt1m(mac, beaconName, Prefs.getDefaultTxPowerAt1m());
+                        pathLossExponent = mPrefs.getN(mac, beaconName, Prefs.getDefaultPathLossExponent());
+                        Log.d(TAG, "Using default/manual calibration for " + beaconName + ": txPower=" + txPowerAt1m + ", n=" + pathLossExponent);
+                    }
                     
                     distanceEstimator = new DistanceEstimator(txPowerAt1m, pathLossExponent, 0.30);
                     mDistanceEstimators.put(mac, distanceEstimator);
-                    
-                    Log.d(TAG, "Restored calibration for " + beaconName + ": txPower=" + txPowerAt1m + ", n=" + pathLossExponent);
                 }
                 double distanceFiltered = distanceEstimator.estimate(rssiFiltered);
                 
@@ -517,6 +534,13 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 // Phase 3: 신규 비콘 탐지 시 배터리 스케줄러에 알림
                 if (isNewBeacon && mBatteryScheduler != null) {
                     mBatteryScheduler.onSeen(mac, beaconName);
+                }
+                
+                // [캘리브레이션] 활성 세션이 있고 대상 MAC이면 샘플 전달
+                if (activeCalibrationSession != null && 
+                    mac.equalsIgnoreCase(activeCalibrationSession.getMac())) {
+                    activeCalibrationSession.onRssiSample(rawRssi);
+                    Log.v(TAG, String.format("Calibration sample: MAC=%s, RSSI=%d", mac, rawRssi));
                 }
                 
                 // 기존 딕셔너리도 유지 (기존 로직 호환)
@@ -1049,6 +1073,12 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     
     @Override
     public void onRingStart(String mac) {
+        // [캘리브레이션] 가드: 캘리브레이션 중에는 수동 알람 비활성
+        if (isCalibrating) {
+            Log.d(TAG, "Ring alarm blocked - calibration in progress");
+            return;
+        }
+        
         // [디버깅] 비콘 정보와 함께 상세 로깅
         BeaconState beaconState = mBeaconDataStore.get(mac);
         String displayName = (beaconState != null) ? beaconState.getDisplayName() : "Unknown";
@@ -1073,6 +1103,12 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     
     @Override
     public void onRingStop(String mac) {
+        // [캘리브레이션] 가드: 캘리브레이션 중에는 수동 알람 비활성
+        if (isCalibrating) {
+            Log.d(TAG, "Ring stop blocked - calibration in progress");
+            return;
+        }
+        
         // [디버깅] 비콘 정보와 함께 상세 로깅
         BeaconState beaconState = mBeaconDataStore.get(mac);
         String displayName = (beaconState != null) ? beaconState.getDisplayName() : "Unknown";
@@ -1181,8 +1217,82 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         // [터치디바운스] 캘리브레이션 동안 UI 갱신 금지
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 300;
         
-        // TODO Phase 3 후속: 캘리브레이션 다이얼로그 구현  
-        toastShow("캘리브레이션 기능은 추후 구현 예정");
+        // 캘리브레이션 다이얼로그 표시
+        CalibrationDialog.show(this, mac, new CalibrationDialog.CalibrationCallback() {
+            @Override
+            public void onCalibrationStarted() {
+                isCalibrating = true;
+                Log.i(TAG, "Calibration started - alarm guard activated");
+            }
+            
+            @Override
+            public void onCalibrationFinished(boolean saved) {
+                isCalibrating = false;
+                activeCalibrationSession = null;
+                Log.i(TAG, "Calibration finished - alarm guard deactivated, saved=" + saved);
+            }
+            
+            @Override
+            public void onSampleNeeded(CalibrationSession session) {
+                activeCalibrationSession = session;
+                // 현재 스캔에서 해당 MAC의 RSSI를 세션에 전달하는 것은 
+                // onBeaconDiscovered 콜백에서 처리됨
+            }
+            
+            @Override
+            public String getBeaconDisplayName(String mac) {
+                BeaconState beaconState = mBeaconDataStore.get(mac);
+                return (beaconState != null) ? beaconState.getDisplayName() : "Unknown";
+            }
+            
+            @Override
+            public void saveCalibrationResult(String mac, CalibrationSession.CalibrationResult result) {
+                // 1. Prefs에 캘리브레이션 결과 저장
+                mPrefs.saveCalibration(mac, result.txPowerAt1m, result.pathLossExponent, 
+                                     result.rSquared, result.rmse, result.timestampMs);
+                
+                // 2. BeaconState 업데이트
+                BeaconState beaconState = mBeaconDataStore.get(mac);
+                if (beaconState != null) {
+                    beaconState.setTxPowerAt1m(result.txPowerAt1m);
+                    beaconState.setPathLossExponent(result.pathLossExponent);
+                }
+                
+                // 3. DistanceEstimator에 새 캘리브레이션 적용
+                DistanceEstimator estimator = mDistanceEstimators.get(mac);
+                if (estimator != null) {
+                    estimator.setCalibration(result.txPowerAt1m, result.pathLossExponent);
+                    Log.i(TAG, String.format("Applied calibration to estimator: MAC=%s, tx1m=%.2f, n=%.2f", 
+                           mac, result.txPowerAt1m, result.pathLossExponent));
+                }
+                
+                // 4. UI 즉시 반영을 위한 어댑터 알림
+                runOnUiThread(() -> {
+                    if (mDevListAdapter != null) {
+                        mDevListAdapter.notifyDataSetChanged();
+                    }
+                });
+                
+                Toast.makeText(DeviceScanActivity.this, 
+                              String.format("보정 완료: %s\ntx1m=%.2f, n=%.2f, R²=%.2f", 
+                                          getBeaconDisplayName(mac), 
+                                          result.txPowerAt1m, result.pathLossExponent, result.rSquared), 
+                              Toast.LENGTH_LONG).show();
+            }
+            
+            @Override
+            public CalibrationSession.CalibrationResult loadCalibrationResult(String mac) {
+                Prefs.CalibrationParams params = mPrefs.loadCalibration(mac);
+                if (params != null) {
+                    return new CalibrationSession.CalibrationResult(
+                        params.txPowerAt1m, params.pathLossExponent,
+                        params.rSquared, params.rmse, 0.0, // maxResidual은 저장하지 않으므로 0으로 설정
+                        CalibrationSession.QualityRating.GOOD // 저장된 결과는 GOOD으로 가정
+                    );
+                }
+                return null;
+            }
+        });
     }
     
     // Phase 3: 폰(태블릿) 알람 구현
@@ -1191,6 +1301,12 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
      * 폰 알람 시작 (20초 반복 재생, 중지까지 지속)
      */
     private void startPhoneAlarm() {
+        // [캘리브레이션] 가드: 캘리브레이션 중에는 알람 비활성
+        if (isCalibrating) {
+            Log.d(TAG, "Phone alarm blocked - calibration in progress");
+            return;
+        }
+        
         try {
             if (mPhoneAlarmPlayer == null) {
                 // 알람 톤 선택 (기본 알람 → 알림 순으로 대체)

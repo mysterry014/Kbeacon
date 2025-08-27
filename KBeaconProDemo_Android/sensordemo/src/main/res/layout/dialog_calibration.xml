@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 제목 -->
+        <TextView
+            android:id="@+id/tv_calibration_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="거리보정"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 안내문 -->
+        <TextView
+            android:id="@+id/tv_instructions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="비콘으로부터 정확히 1m, 2m, 3m 떨어진 지점에서\n각각 측정을 진행합니다."
+            android:textSize="14sp"
+            android:gravity="center"
+            android:layout_marginBottom="16dp"
+            android:lineSpacingMultiplier="1.2" />
+
+        <!-- 단계 상태 카드 -->
+        <LinearLayout
+            android:id="@+id/layout_stages"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/card_background"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="측정 단계"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tv_stage1_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="1m: 대기중"
+                android:textSize="14sp"
+                android:padding="4dp" />
+
+            <TextView
+                android:id="@+id/tv_stage2_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="2m: 대기중"
+                android:textSize="14sp"
+                android:padding="4dp" />
+
+            <TextView
+                android:id="@+id/tv_stage3_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="3m: 대기중"
+                android:textSize="14sp"
+                android:padding="4dp" />
+
+        </LinearLayout>
+
+        <!-- 결과 표시 영역 -->
+        <LinearLayout
+            android:id="@+id/layout_result"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/card_background"
+            android:padding="12dp"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="보정 결과"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tv_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:lineSpacingMultiplier="1.2"
+                android:fontFamily="monospace" />
+
+        </LinearLayout>
+
+        <!-- 버튼 영역 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_cancel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="취소"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btn_action"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="측정 시작"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

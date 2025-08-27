@@ -391,6 +391,135 @@ public class Prefs {
         editor.apply();
     }
     
+    // ============ 캘리브레이션 결과 저장/복원 API ============
+    
+    /**
+     * 캘리브레이션 결과 데이터 클래스
+     */
+    public static class CalibrationParams {
+        public final double txPowerAt1m;
+        public final double pathLossExponent;
+        public final double rSquared;
+        public final double rmse;
+        public final long timestampMs;
+        
+        public CalibrationParams(double txPowerAt1m, double pathLossExponent, 
+                               double rSquared, double rmse, long timestampMs) {
+            this.txPowerAt1m = txPowerAt1m;
+            this.pathLossExponent = pathLossExponent;
+            this.rSquared = rSquared;
+            this.rmse = rmse;
+            this.timestampMs = timestampMs;
+        }
+    }
+    
+    // 캘리브레이션 키 접미사
+    private static final String KEY_SUFFIX_CAL_TX1M = ".cal_tx1m";
+    private static final String KEY_SUFFIX_CAL_N = ".cal_n";
+    private static final String KEY_SUFFIX_CAL_R2 = ".cal_r2";
+    private static final String KEY_SUFFIX_CAL_RMSE = ".cal_rmse";
+    private static final String KEY_SUFFIX_CAL_TS = ".cal_ts";
+    
+    /**
+     * 캘리브레이션 결과 저장 (MAC 기준)
+     * 키 설계: cal_tx1m_{mac}, cal_n_{mac}, cal_r2_{mac}, cal_rmse_{mac}, cal_ts_{mac}
+     * 
+     * @param mac MAC 주소
+     * @param txPowerAt1m 1m 기준 RSSI
+     * @param pathLossExponent 경로 손실 지수
+     * @param rSquared R² 값
+     * @param rmse RMSE 값
+     * @param timestampMs 측정 시간
+     */
+    public void saveCalibration(String mac, double txPowerAt1m, double pathLossExponent, 
+                               double rSquared, double rmse, long timestampMs) {
+        if (mac == null || mac.isEmpty()) {
+            Log.w(TAG, "Cannot save calibration: MAC is null or empty");
+            return;
+        }
+        
+        String normalizedMac = normalizeMac(mac);
+        SharedPreferences.Editor editor = mPrefs.edit();
+        
+        // 캘리브레이션 전용 키로 저장
+        editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TX1M, String.valueOf(txPowerAt1m));
+        editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_N, String.valueOf(pathLossExponent));
+        editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_R2, String.valueOf(rSquared));
+        editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_RMSE, String.valueOf(rmse));
+        editor.putLong(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TS, timestampMs);
+        
+        // 실제 사용되는 tx1m, n 값도 동시에 업데이트
+        editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_TX_POWER, String.valueOf(txPowerAt1m));
+        editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_N, String.valueOf(pathLossExponent));
+        
+        editor.apply();
+        
+        Log.i(TAG, String.format("Saved calibration for MAC %s: tx1m=%.2f, n=%.2f, R²=%.2f, RMSE=%.2f", 
+               normalizedMac, txPowerAt1m, pathLossExponent, rSquared, rmse));
+    }
+    
+    /**
+     * 캘리브레이션 결과 로드 (MAC 기준)
+     * @param mac MAC 주소
+     * @return 캘리브레이션 파라미터 (null이면 저장된 결과 없음)
+     */
+    public CalibrationParams loadCalibration(String mac) {
+        if (mac == null || mac.isEmpty()) {
+            return null;
+        }
+        
+        String normalizedMac = normalizeMac(mac);
+        
+        try {
+            String tx1mStr = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TX1M, null);
+            String nStr = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_N, null);
+            String r2Str = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_R2, null);
+            String rmseStr = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_RMSE, null);
+            long timestamp = mPrefs.getLong(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TS, 0);
+            
+            if (tx1mStr == null || nStr == null || r2Str == null || rmseStr == null || timestamp == 0) {
+                return null; // 불완전한 데이터
+            }
+            
+            double txPowerAt1m = Double.parseDouble(tx1mStr);
+            double pathLossExponent = Double.parseDouble(nStr);
+            double rSquared = Double.parseDouble(r2Str);
+            double rmse = Double.parseDouble(rmseStr);
+            
+            Log.d(TAG, String.format("Loaded calibration for MAC %s: tx1m=%.2f, n=%.2f, R²=%.2f, RMSE=%.2f", 
+                   normalizedMac, txPowerAt1m, pathLossExponent, rSquared, rmse));
+            
+            return new CalibrationParams(txPowerAt1m, pathLossExponent, rSquared, rmse, timestamp);
+            
+        } catch (NumberFormatException e) {
+            Log.w(TAG, "Failed to load calibration for MAC " + normalizedMac + ": " + e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * 캘리브레이션 결과 삭제
+     * @param mac MAC 주소
+     */
+    public void clearCalibration(String mac) {
+        if (mac == null || mac.isEmpty()) {
+            return;
+        }
+        
+        String normalizedMac = normalizeMac(mac);
+        SharedPreferences.Editor editor = mPrefs.edit();
+        
+        editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TX1M);
+        editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_N);
+        editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_R2);
+        editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_RMSE);
+        editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TS);
+        
+        editor.apply();
+        
+        Log.d(TAG, "Cleared calibration for MAC: " + normalizedMac);
+    }
+    
     // TODO: 추후 확장 포인트
     // - 배치 저장/로드 최적화
     // - JSON 기반 백업/복원

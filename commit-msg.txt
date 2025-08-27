@@ -1,6 +1,14 @@
-  fix(touch): 거리설정/보정 버튼 터치 디바운스 완성
+  feat(calibration): 1/2/3m 측정→선형회귀(tx1m,n)→품질평가→저장 및 즉시 반영
 
-  • 거리설정/보정 버튼에 300ms UI 프리즈 추가
-  • 버튼 자체 300ms 비활성화로 연타 방지
-  • 전체 버튼 시스템 터치 안정성 완성
-  • 첫 클릭 정확 반응 보장
+  • CalibrationSession: 샘플 수집/이상치 제거/중앙값/회귀/R²/RMSE/판정
+  • CalibrationDialog: 3단계 UX, 저장/취소/재측정, 품질결과 표시
+  • Prefs: per-device 보정치(tx1m,n,r2,rmse,ts) 저장/복원 API
+  • DeviceScanActivity: 보정 가드/샘플 전달/저장 후 즉시 반영
+  • DistanceEstimator: setCalibration() 지원, EMA 파이프라인과 연계
+
+  주요 특징:
+  - 광고 RSSI 기준 3단계 측정 (연결중 RSSI 미사용)
+  - 이상치 제거 후 중앙값 기반 선형회귀
+  - R²/RMSE 품질평가 및 GOOD/BORDERLINE/BAD 판정
+  - 캘리브레이션 중 알람 차단 가드
+  - 저장 즉시 거리계산 파이프라인에 반영
