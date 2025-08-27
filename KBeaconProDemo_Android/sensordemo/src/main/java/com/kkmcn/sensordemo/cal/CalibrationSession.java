@@ -2,6 +2,7 @@ package com.kkmcn.sensordemo.cal;
 
 import android.util.Log;
 import com.kkmcn.sensordemo.utils.RssiWindow;
+import com.kkmcn.sensordemo.data.Prefs;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,6 +43,14 @@ public class CalibrationSession {
         GOOD, BORDERLINE, BAD
     }
     
+    public interface CalibrationListener {
+        void onStageStarted(int stageIndex, double distanceMeters);
+        void onStageProgress(int stageIndex, int sampleCount, int maxSamples, long remainingMs);
+        void onStageCompleted(int stageIndex, double medianRssi);
+        void onCalibrationFinished(CalibrationResult result);
+        void onCalibrationError(String errorMessage);
+    }
+    
     public static class CalibrationResult {
         public final double txPowerAt1m;
         public final double pathLossExponent;
@@ -72,6 +81,7 @@ public class CalibrationSession {
     private CalibrationStage currentStage;
     private long stageStartTimeMs;
     private CalibrationResult result;
+    private CalibrationListener listener;
     
     /**
      * 캘리브레이션 세션 생성
@@ -97,6 +107,14 @@ public class CalibrationSession {
     }
     
     /**
+     * 캘리브레이션 리스너 설정
+     * @param listener 콜백 리스너
+     */
+    public void setListener(CalibrationListener listener) {
+        this.listener = listener;
+    }
+    
+    /**
      * 새 RSSI 샘플 수집 (활성 단계일 때만)
      * 
      * 주의: 광고 RSSI 기준으로 설계됨. 연결 중 RSSI는 사용하지 않음.
@@ -115,8 +133,16 @@ public class CalibrationSession {
         
         stageRssiSamples.get(stageIndex).add(rssi);
         
+        int sampleCount = stageRssiSamples.get(stageIndex).size();
         Log.v(TAG, String.format("Stage %d sample: %d dBm (total: %d)", 
-               stageIndex + 1, rssi, stageRssiSamples.get(stageIndex).size()));
+               stageIndex + 1, rssi, sampleCount));
+        
+        // 진행 상황 콜백
+        if (listener != null) {
+            long elapsed = System.currentTimeMillis() - stageStartTimeMs;
+            long remaining = Math.max(0, MAX_DURATION_MS_PER_STAGE - elapsed);
+            listener.onStageProgress(stageIndex, sampleCount, MIN_SAMPLES_PER_STAGE, remaining);
+        }
     }
     
     /**
@@ -163,27 +189,82 @@ public class CalibrationSession {
         Log.d(TAG, String.format("Stage %d complete: %d samples → median RSSI: %.1f dBm", 
                stageIndex + 1, samples.size(), medianRssi));
         
+        // 단계 완료 콜백
+        if (listener != null) {
+            listener.onStageCompleted(stageIndex, medianRssi);
+        }
+        
         // 다음 단계로 진행
         switch (currentStage) {
             case STAGE_1M:
-                currentStage = CalibrationStage.STAGE_2M;
-                stageStartTimeMs = System.currentTimeMillis();
+                startStage(1, CalibrationStage.STAGE_2M);
                 return true;
                 
             case STAGE_2M:
-                currentStage = CalibrationStage.STAGE_3M;
-                stageStartTimeMs = System.currentTimeMillis();
+                startStage(2, CalibrationStage.STAGE_3M);
                 return true;
                 
             case STAGE_3M:
                 // 모든 단계 완료 → 회귀 계산
-                currentStage = CalibrationStage.COMPUTING;
-                computeLinearRegression();
-                currentStage = CalibrationStage.DONE;
+                finishCalibration();
                 return true;
                 
             default:
                 return false;
+        }
+    }
+    
+    /**
+     * 새 단계 시작 (단계별 초기화 포함)
+     * @param stageIndex 단계 인덱스 (0:1m, 1:2m, 2:3m)
+     * @param stage 단계 enum
+     */
+    private void startStage(int stageIndex, CalibrationStage stage) {
+        currentStage = stage;
+        stageStartTimeMs = System.currentTimeMillis();
+        
+        // [수정] 단계 진입 시 해당 단계의 샘플 리스트 초기화
+        if (stageIndex >= 0 && stageIndex < stageRssiSamples.size()) {
+            stageRssiSamples.get(stageIndex).clear();
+            Log.d(TAG, String.format("Stage %d started - sample list cleared", stageIndex + 1));
+        }
+        
+        // 단계 시작 콜백
+        if (listener != null) {
+            listener.onStageStarted(stageIndex, distancesMeters[stageIndex]);
+        }
+    }
+    
+    /**
+     * 캘리브레이션 완료 처리
+     */
+    private void finishCalibration() {
+        currentStage = CalibrationStage.COMPUTING;
+        Log.d(TAG, "Starting regression computation");
+        
+        try {
+            computeLinearRegression();
+            currentStage = CalibrationStage.DONE;
+            
+            Log.i(TAG, String.format("Calibration finished: result=%s", 
+                   result != null ? result.rating : "null"));
+            
+            // 완료 콜백 (반드시 호출)
+            if (listener != null) {
+                if (result != null) {
+                    listener.onCalibrationFinished(result);
+                } else {
+                    listener.onCalibrationError("Regression computation failed - no result generated");
+                }
+            }
+        } catch (Exception e) {
+            currentStage = CalibrationStage.DONE;
+            Log.e(TAG, "Calibration computation failed: " + e.getMessage(), e);
+            
+            // 오류 콜백
+            if (listener != null) {
+                listener.onCalibrationError("Computation failed: " + e.getMessage());
+            }
         }
     }
     
@@ -323,10 +404,27 @@ public class CalibrationSession {
         double pathLossExponent = -regression.slope / 10.0; // n = -m/10
         double txPowerAt1m = regression.intercept; // tx1m = b
         
+        // [NaN/Inf 방어] 회귀 결과 유효성 검사
+        if (Double.isNaN(regression.slope) || Double.isInfinite(regression.slope) ||
+            Double.isNaN(regression.intercept) || Double.isInfinite(regression.intercept)) {
+            Log.e(TAG, String.format("Degenerate regression: slope=%.3f, intercept=%.3f", 
+                   regression.slope, regression.intercept));
+            result = createBadResult("Degenerate regression - slope or intercept invalid");
+            return;
+        }
+        
         // 품질평가
         double rSquared = calculateRSquared(x, y, regression.slope, regression.intercept);
         double rmse = calculateRMSE(x, y, regression.slope, regression.intercept);
         double maxResidual = calculateMaxResidual(x, y, regression.slope, regression.intercept);
+        
+        // [NaN/Inf 방어] 품질 지표 유효성 검사
+        if (Double.isNaN(rSquared) || Double.isNaN(rmse) || 
+            Double.isInfinite(rSquared) || Double.isInfinite(rmse)) {
+            Log.e(TAG, String.format("Quality metrics invalid: R²=%.3f, RMSE=%.3f", rSquared, rmse));
+            result = createBadResult("Quality computation failed - metrics invalid");
+            return;
+        }
         
         // 품질판정
         QualityRating rating = determineQualityRating(rSquared, rmse);
@@ -427,6 +525,23 @@ public class CalibrationSession {
         }
         
         return maxResidual;
+    }
+    
+    /**
+     * BAD 품질의 결과 생성 (오류 상황용)
+     * @param reason 오류 원인
+     * @return BAD 품질의 결과
+     */
+    private CalibrationResult createBadResult(String reason) {
+        Log.w(TAG, "Creating BAD result: " + reason);
+        return new CalibrationResult(
+            Prefs.getDefaultTxPowerAt1m(), // 기본값 사용
+            Prefs.getDefaultPathLossExponent(),
+            0.0, // R² = 0
+            999.0, // RMSE = 999 (매우 나쁨)
+            999.0, // maxResidual = 999
+            QualityRating.BAD
+        );
     }
     
     /**

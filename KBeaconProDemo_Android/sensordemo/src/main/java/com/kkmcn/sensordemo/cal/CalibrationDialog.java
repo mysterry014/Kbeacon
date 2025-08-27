@@ -28,7 +28,7 @@ public class CalibrationDialog {
     private static final String TAG = "CalibrationDialog";
     
     // 카운트다운 설정
-    private static final int COUNTDOWN_SECONDS = 3;
+    private static final int COUNTDOWN_SECONDS = 10;
     private static final int UI_UPDATE_INTERVAL_MS = 500;
     
     public interface CalibrationCallback {
@@ -172,14 +172,78 @@ public class CalibrationDialog {
         double[] distances = {1.0, 2.0, 3.0};
         session = new CalibrationSession(mac, distances);
         
+        // [수정] 세션에 리스너 설정
+        session.setListener(new CalibrationSession.CalibrationListener() {
+            @Override
+            public void onStageStarted(int stageIndex, double distanceMeters) {
+                Log.d(TAG, String.format("Stage %d started: %.1fm", stageIndex + 1, distanceMeters));
+                runOnUiThread(() -> {
+                    tvInstructions.setText(String.format("%.0fm 지점에서 측정 중...\n비콘을 움직이지 마세요.", distanceMeters));
+                });
+            }
+            
+            @Override
+            public void onStageProgress(int stageIndex, int sampleCount, int maxSamples, long remainingMs) {
+                runOnUiThread(() -> {
+                    if (stageIndex >= 0 && stageIndex < stageStatusTexts.length) {
+                        stageStatusTexts[stageIndex].setText(String.format("%.0fm: 수집중... (%d/%d개)", 
+                                distancesFromStage(stageIndex), sampleCount, maxSamples));
+                    }
+                });
+            }
+            
+            @Override
+            public void onStageCompleted(int stageIndex, double medianRssi) {
+                Log.d(TAG, String.format("Stage %d completed: median RSSI = %.1f dBm", stageIndex + 1, medianRssi));
+                runOnUiThread(() -> {
+                    if (stageIndex >= 0 && stageIndex < stageStatusTexts.length) {
+                        stageStatusTexts[stageIndex].setText(String.format("%.0fm: 완료 (RSSI: %.1f dBm)", 
+                                distancesFromStage(stageIndex), medianRssi));
+                    }
+                });
+            }
+            
+            @Override
+            public void onCalibrationFinished(CalibrationSession.CalibrationResult result) {
+                Log.i(TAG, String.format("Calibration finished: rating=%s, tx1m=%.2f, n=%.2f", 
+                       result.rating, result.txPowerAt1m, result.pathLossExponent));
+                runOnUiThread(() -> {
+                    showCalibrationResult(result);
+                    stopUiUpdates(); // UI 업데이트 중지
+                });
+            }
+            
+            @Override
+            public void onCalibrationError(String errorMessage) {
+                Log.e(TAG, "Calibration error: " + errorMessage);
+                runOnUiThread(() -> {
+                    tvInstructions.setText("측정 실패: " + errorMessage + "\n재측정을 시도해주세요.");
+                    btnAction.setText("재측정");
+                    btnAction.setEnabled(true);
+                    btnAction.setOnClickListener(v -> startCalibration());
+                    stopUiUpdates(); // UI 업데이트 중지
+                });
+            }
+        });
+        
         // UI 업데이트 시작
         startUiUpdates();
         
-        // 첫 번째 단계 시작
+        // 첫 번째 단계 카운트다운 시작
         startStageCountdown(0);
         
         btnAction.setEnabled(false);
         layoutResult.setVisibility(View.GONE);
+    }
+    
+    private double distancesFromStage(int stageIndex) {
+        return (stageIndex == 0) ? 1.0 : (stageIndex == 1) ? 2.0 : 3.0;
+    }
+    
+    private void runOnUiThread(Runnable action) {
+        if (uiHandler != null) {
+            uiHandler.post(action);
+        }
     }
     
     private void startStageCountdown(int stageIndex) {
@@ -215,12 +279,13 @@ public class CalibrationDialog {
     }
     
     private void startUiUpdates() {
+        stopUiUpdates(); // 기존 업데이트 중지
+        
         uiUpdateRunnable = new Runnable() {
             @Override
             public void run() {
-                updateStageStatus();
-                
                 if (session != null && (session.isCollecting() || session.getStage() == CalibrationStage.COMPUTING)) {
+                    updateStageStatus();
                     uiHandler.postDelayed(this, UI_UPDATE_INTERVAL_MS);
                 }
             }
@@ -229,46 +294,45 @@ public class CalibrationDialog {
         uiHandler.post(uiUpdateRunnable);
     }
     
+    private void stopUiUpdates() {
+        if (uiUpdateRunnable != null) {
+            uiHandler.removeCallbacks(uiUpdateRunnable);
+            uiUpdateRunnable = null;
+        }
+    }
+    
     private void updateStageStatus() {
         if (session == null || isCountingDown) {
             return;
         }
         
-        CalibrationStage stage = session.getStage();
-        
-        // 샘플 요청
+        // 샘플 요청 (현재 수집 중인 단계에 대해서만)
         if (session.isCollecting()) {
             callback.onSampleNeeded(session);
         }
         
-        // 현재 단계 상태 업데이트
-        int currentStageIndex = getCurrentStageIndex(stage);
-        if (currentStageIndex >= 0 && session.isCollecting()) {
-            int sampleCount = session.getCurrentStageSampleCount();
-            stageStatusTexts[currentStageIndex].setText(String.format("%dm: 수집중... (%d개)", 
-                    currentStageIndex + 1, sampleCount));
+        // 단계 완료 확인 및 다음 단계 진행
+        if (session.isCurrentStageComplete()) {
+            Log.d(TAG, "Current stage complete, proceeding to next stage or computation");
             
-            // 단계 완료 확인 및 다음 단계 진행
-            if (session.isCurrentStageComplete()) {
-                if (session.nextStageOrCompute()) {
-                    // 다음 단계가 있으면 카운트다운 시작
-                    CalibrationStage nextStage = session.getStage();
-                    int nextStageIndex = getCurrentStageIndex(nextStage);
-                    
-                    // 현재 단계 완료 표시
-                    stageStatusTexts[currentStageIndex].setText(String.format("%dm: 완료", currentStageIndex + 1));
-                    
-                    if (nextStageIndex >= 0 && session.isCollecting()) {
-                        startStageCountdown(nextStageIndex);
-                    }
-                } else {
-                    Log.e(TAG, "Failed to proceed to next stage");
+            if (session.nextStageOrCompute()) {
+                CalibrationStage newStage = session.getStage();
+                Log.d(TAG, "Stage transition successful. New stage: " + newStage);
+                
+                int newStageIndex = getCurrentStageIndex(newStage);
+                
+                if (newStageIndex >= 0 && session.isCollecting()) {
+                    // 다음 단계 카운트다운 시작
+                    Log.d(TAG, "Starting countdown for next stage: " + (newStageIndex + 1));
+                    startStageCountdown(newStageIndex);
+                } else if (newStage == CalibrationStage.COMPUTING) {
+                    runOnUiThread(() -> {
+                        tvInstructions.setText("데이터 분석 중...");
+                    });
                 }
+            } else {
+                Log.e(TAG, "Failed to proceed to next stage or computation");
             }
-        } else if (stage == CalibrationStage.COMPUTING) {
-            tvInstructions.setText("데이터 분석 중...");
-        } else if (stage == CalibrationStage.DONE) {
-            onCalibrationComplete();
         }
     }
     
@@ -281,24 +345,7 @@ public class CalibrationDialog {
         }
     }
     
-    private void onCalibrationComplete() {
-        Log.d(TAG, "Calibration completed");
-        
-        CalibrationSession.CalibrationResult result = session.getResult();
-        if (result != null) {
-            // 모든 단계 완료 표시
-            for (int i = 0; i < stageStatusTexts.length; i++) {
-                stageStatusTexts[i].setText(String.format("%dm: 완료", i + 1));
-            }
-            
-            showCalibrationResult(result);
-        } else {
-            tvInstructions.setText("측정 실패. 다시 시도해주세요.");
-            btnAction.setText("재측정");
-            btnAction.setEnabled(true);
-            btnAction.setOnClickListener(v -> startCalibration());
-        }
-    }
+    // onCalibrationComplete() 메서드 제거 - 콜백으로 대체됨
     
     private void showCalibrationResult(CalibrationSession.CalibrationResult result) {
         layoutResult.setVisibility(View.VISIBLE);
@@ -372,9 +419,7 @@ public class CalibrationDialog {
             session.cancel();
         }
         
-        if (uiUpdateRunnable != null) {
-            uiHandler.removeCallbacks(uiUpdateRunnable);
-        }
+        stopUiUpdates();
         
         callback.onCalibrationFinished(false);
         dialog.dismiss();

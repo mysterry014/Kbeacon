@@ -1,14 +1,9 @@
-  feat(calibration): 1/2/3m 측정→선형회귀(tx1m,n)→품질평가→저장 및 즉시 반영
+  fix(calibration): 캘리브레이션 대화상자 UI 및 세션 처리 개선
 
-  • CalibrationSession: 샘플 수집/이상치 제거/중앙값/회귀/R²/RMSE/판정
-  • CalibrationDialog: 3단계 UX, 저장/취소/재측정, 품질결과 표시
-  • Prefs: per-device 보정치(tx1m,n,r2,rmse,ts) 저장/복원 API
-  • DeviceScanActivity: 보정 가드/샘플 전달/저장 후 즉시 반영
-  • DistanceEstimator: setCalibration() 지원, EMA 파이프라인과 연계
-
-  주요 특징:
-  - 광고 RSSI 기준 3단계 측정 (연결중 RSSI 미사용)
-  - 이상치 제거 후 중앙값 기반 선형회귀
-  - R²/RMSE 품질평가 및 GOOD/BORDERLINE/BAD 판정
-  - 캘리브레이션 중 알람 차단 가드
-  - 저장 즉시 거리계산 파이프라인에 반영
+  • 카운트다운 시간 3초→10초 증가 (사용자 위치 조정 시간 확보)
+  • 2m/3m 단계에서 샘플 카운트 초기화 문제 해결 (startStage에서 clear 추가)
+  • CalibrationSession에 리스너 콜백 체계 구축
+  • CalibrationDialog에서 콜백 기반 UI 업데이트로 전환
+  • 측정 완료 후 결과 표시 누락 문제 해결
+  • NaN/Inf 방어 코드 추가로 회귀 계산 안정성 개선
+  • 디버깅 로그 강화 및 UI 리소스 관리 개선
