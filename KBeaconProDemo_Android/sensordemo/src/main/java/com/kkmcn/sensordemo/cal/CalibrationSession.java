@@ -26,6 +26,7 @@ public class CalibrationSession {
     // 수집 파라미터
     private static final int MIN_SAMPLES_PER_STAGE = 25;
     private static final int MAX_DURATION_MS_PER_STAGE = 20000; // 20초
+    private static final int SOFT_EXTEND_MS = 10000; // 1차 연장 10초
     private static final int WINDOW_SIZE = 10;
     private static final double OUTLIER_THRESHOLD_DB = 7.0;
     
@@ -80,12 +81,14 @@ public class CalibrationSession {
     private final double[] stageMedianRssi; // 각 단계별 중앙값 결과
     
     private CalibrationStage currentStage;
-    private long stageStartTimeMs;
+    private long stageWaitStartMs;  // 카운트다운 시작 시각 (참고용)
+    private long intakeStartMs;     // 실제 수집 시작 시각 (게이트 열린 시점)
     private CalibrationResult result;
     private CalibrationListener listener;
     
     // [수집 게이트] 카운트다운 중에는 샘플 수집 차단
     private volatile boolean intakeEnabled = false;
+    private boolean extendedOnce = false; // 1차 연장 여부
     
     /**
      * 캘리브레이션 세션 생성
@@ -152,10 +155,15 @@ public class CalibrationSession {
         Log.d(TAG, String.format("[SAMPLE] Stage %d sample accepted: %d dBm (total: %d)", 
                stageIndex + 1, rssi, sampleCount));
         
-        // 진행 상황 콜백
+        // 진행 상황 콜백 (수집 시작 시각 기준)
         if (listener != null) {
-            long elapsed = System.currentTimeMillis() - stageStartTimeMs;
-            long remaining = Math.max(0, MAX_DURATION_MS_PER_STAGE - elapsed);
+            long elapsedSinceIntake = intakeStartMs > 0 ? 
+                System.currentTimeMillis() - intakeStartMs : 0;
+            long remaining = Math.max(0, MAX_DURATION_MS_PER_STAGE - elapsedSinceIntake);
+            
+            Log.v(TAG, String.format("[PROGRESS] Stage %d: sample accepted, count=%d, elapsedSinceIntake=%dms, remaining=%dms", 
+                    stageIndex + 1, sampleCount, elapsedSinceIntake, remaining));
+            
             listener.onStageProgress(stageIndex, sampleCount, MIN_SAMPLES_PER_STAGE, remaining);
         }
     }
@@ -175,10 +183,37 @@ public class CalibrationSession {
         }
         
         List<Integer> samples = stageRssiSamples.get(stageIndex);
-        long elapsed = System.currentTimeMillis() - stageStartTimeMs;
         
-        // 최소 샘플 수 또는 최대 시간 도달
-        return samples.size() >= MIN_SAMPLES_PER_STAGE || elapsed >= MAX_DURATION_MS_PER_STAGE;
+        // ★ 수집 시작 시각 기준으로 타임아웃 체크 (카운트다운 제외)
+        long elapsedSinceIntake = intakeStartMs > 0 ? 
+            System.currentTimeMillis() - intakeStartMs : 0;
+        
+        boolean hasEnoughSamples = samples.size() >= MIN_SAMPLES_PER_STAGE;
+        boolean isBaseTimeout = intakeStartMs > 0 && elapsedSinceIntake >= MAX_DURATION_MS_PER_STAGE;
+        boolean isExtendedTimeout = extendedOnce && intakeStartMs > 0 && elapsedSinceIntake >= SOFT_EXTEND_MS;
+        
+        Log.v(TAG, String.format("[TIMEOUT] Stage %d: samples=%d/%d, elapsedSinceIntake=%dms, baseTimeout=%s, extendedTimeout=%s, extended=%s", 
+                stageIndex + 1, samples.size(), MIN_SAMPLES_PER_STAGE, elapsedSinceIntake, 
+                isBaseTimeout, isExtendedTimeout, extendedOnce));
+        
+        // 최소 샘플 수 달성 또는 완전 타임아웃
+        if (hasEnoughSamples) {
+            return true;
+        }
+        
+        // 기본 20초 타임아웃 시 연장 처리
+        if (isBaseTimeout && !extendedOnce && samples.size() > 0) {
+            Log.d(TAG, String.format("[EXTEND] Stage %d: insufficient samples (%d/%d), extending 10s more", 
+                    stageIndex + 1, samples.size(), MIN_SAMPLES_PER_STAGE));
+            
+            // 1차 연장 시작
+            intakeStartMs = System.currentTimeMillis(); // 연장 시작 지점으로 리셋
+            extendedOnce = true;
+            return false; // 아직 완료 안 됨
+        }
+        
+        // 연장도 끝났거나 샘플이 아예 없으면 종료
+        return isExtendedTimeout || (isBaseTimeout && samples.size() == 0);
     }
     
     /**
@@ -241,8 +276,9 @@ public class CalibrationSession {
                 stageIndex + 1, stage));
         
         currentStage = stage;
-        stageStartTimeMs = System.currentTimeMillis();
+        stageWaitStartMs = System.currentTimeMillis(); // 카운트다운 시작 시각
         intakeEnabled = false; // 게이트 닫기
+        extendedOnce = false;  // 연장 플래그 리셋
         
         // 해당 단계 버퍼 리셋
         resetStageBuffers(stageIndex);
@@ -258,7 +294,10 @@ public class CalibrationSession {
      */
     public synchronized void enableIntakeForCurrentStage() {
         int stageIndex = getCurrentStageIndex();
-        Log.d(TAG, String.format("[GATE] enableIntake stage %d - intake=true, collection started", stageIndex + 1));
+        intakeStartMs = System.currentTimeMillis(); // ★ 실제 수집 시작 시각 기록
+        
+        Log.d(TAG, String.format("[GATE] enableIntake stage %d - intake=true, collection started at %d", 
+                stageIndex + 1, intakeStartMs));
         
         intakeEnabled = true; // 게이트 열기
         
@@ -278,6 +317,9 @@ public class CalibrationSession {
             stageRssiSamples.get(stageIndex).clear();
             Log.d(TAG, String.format("[BUFFER] Stage %d buffers reset (was %d samples, now %d)", 
                     stageIndex + 1, previousCount, stageRssiSamples.get(stageIndex).size()));
+        
+        // 연장 플래그도 리셋
+        extendedOnce = false;
         }
     }
     

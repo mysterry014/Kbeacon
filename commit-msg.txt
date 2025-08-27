@@ -1,9 +1,8 @@
-  fix(calibration): 카운트다운 중 샘플 누적 및 UI 깜빡임 문제 해결
+fix(calibration): 타이머 분리로 25개 샘플 수집 보장 및 연장 로직 추가
 
-  • 수집 게이트(intakeEnabled) 도입으로 카운트다운 중 샘플 차단
-  • beginStageWaiting/enableIntakeForCurrentStage API 분리
-  • 카운트다운과 수집 상태 UI 완전 분리로 깜빡임 제거
-  • 단계별 버퍼 완전 초기화로 2m/3m 샘플 카운트 정상화
-  • onStageReadyToCollect 콜백 추가로 수집 시작 시점 명확화
-  • 상세 디버깅 로그 추가 (INTAKE, GATE, SAMPLE 태그)
-  • 동기화 안전성 강화 (synchronized 메서드)
+  • 타이머 분리: stageWaitStartMs(카운트다운) + intakeStartMs(수집)
+  • 수집 타임아웃을 카운트다운 제외한 순수 수집 시간 기준으로 변경
+  • 20초 내 25개 미달 시 10초 자동 연장 로직 추가 (extendedOnce)
+  • 느린 BLE 광고 주기 및 이상치 제거 환경에서도 안정적 샘플 확보
+  • 상세 디버깅 로그로 수집 시간/샘플 수/연장 상태 추적 가능
+  • resetStageBuffers에서 연장 플래그도 함께 리셋하여 단계별 독립성 보장
