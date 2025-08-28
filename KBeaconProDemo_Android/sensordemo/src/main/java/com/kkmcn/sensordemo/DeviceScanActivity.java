@@ -238,14 +238,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
         
-        // BleService 기반 스캔 상태 확인
+        // Service 기반으로만 스캔 상태 확인 (KBeaconsMgr 직접 호출 제거)
         boolean isScanning = false;
         if (mServiceBound && mBleService != null) {
             isScanning = mBleService.isScanningActive();
-        } else if (mBeaconsMgr != null) {
-            // 폴백: 기존 KBeaconsMgr 사용
-            isScanning = mBeaconsMgr.isScanning();
         }
+        
+        Log.d(TAG, "onCreateOptionsMenu - Service bound: " + mServiceBound + 
+                  ", Scanning: " + isScanning);
         
         if (isScanning) {
             menu.findItem(R.id.menu_stop).setVisible(true);
@@ -778,13 +778,25 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-        if(id == R.id.menu_scan){
-            handleStartScan();
+        if (id == R.id.menu_scan) {
+            // 스캔 제어를 Service로 일원화
+            if (mServiceBound && mBleService != null) {
+                mBleService.startScanning();
+                Log.d(TAG, "Start scanning via BleService");
+            } else {
+                Log.w(TAG, "BleService not bound, starting service");
+                startBleServiceSafely();
+            }
             invalidateOptionsMenu();
-        }
-        else if(id == R.id.menu_stop){
-            mBeaconsMgr.stopScanning();
+            return true;
+        } else if (id == R.id.menu_stop) {
+            // 스캔 중지를 Service로 일원화
+            if (mServiceBound && mBleService != null) {
+                mBleService.stopScanning();
+                Log.d(TAG, "Stop scanning via BleService");
+            }
             invalidateOptionsMenu();
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -1014,7 +1026,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     protected void onStop() {
         super.onStop();
 
-        mBeaconsMgr.stopScanning();
+        // 스캔 제어를 Service에 완전히 위임 - Activity가 직접 중지하지 않음
+        // BleService가 백그라운드에서 계속 실행되어야 함
+        Log.d(TAG, "onStop - Activity가 백그라운드로 이동, 스캔 유지");
         invalidateOptionsMenu();
     }
 

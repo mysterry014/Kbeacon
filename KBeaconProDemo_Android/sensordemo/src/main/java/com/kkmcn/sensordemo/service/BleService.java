@@ -43,6 +43,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.Set;
+import java.util.HashSet;
+
+import com.kkmcn.sensordemo.prefs.DevicePrefs;
 
 /**
  * KBeacon BLE 관리 Foreground Service
@@ -103,8 +107,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private final ConcurrentHashMap<String, Double> rssiEmaCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Double> distanceEmaCache = new ConcurrentHashMap<>();
     
-    // MAC 기반 수집 게이트 - 선택된 MAC만 데이터 수집
-    private final ConcurrentHashMap<String, String> selectedMacToName = new ConcurrentHashMap<>();
+    // 하이브리드 스캔 구조: paired(추적 대상) + candidates(후보)
+    private final ConcurrentHashMap<String, BeaconState> candidates = new ConcurrentHashMap<>();
+    private Set<String> pairedSet = new HashSet<>();
+    private static final Pattern NAME_REGEX = Pattern.compile("^\\d{6}_.+");
     
     // Ring 관리
     private final ConcurrentHashMap<String, ScheduledFuture<?>> activeRingTasks = new ConcurrentHashMap<>();
@@ -142,6 +148,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // 영속 저장소 초기화
         servicePrefs = new ServicePrefs(this);
+        
+        // 저장된 paired MAC 목록 복원
+        pairedSet = DevicePrefs.getPaired(getApplicationContext());
+        Log.d(TAG, "Restored paired devices: " + pairedSet.size());
         
         // 저장된 MAC 게이트 레지스트리 복원
         restoreSavedData();
@@ -317,54 +327,73 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * 스캔 상태 확인
+     * 스캔 상태 확인 (바인더 API)
      */
     public boolean isScanningActive() {
         return isScanning;
     }
     
     /**
-     * 현재 비콘 상태 목록 반환 (이름 필터 적용)
+     * 하이브리드 스캔: 모든 비콘 상태 반환 (필터 제거)
+     * UI에서 paired/candidate 분기 처리
      */
     public List<BeaconState> getFilteredBeaconStates() {
-        List<BeaconState> filtered = new ArrayList<>();
-        
-        for (BeaconState state : beaconStates.values()) {
-            // 표시용 이름 필터: 6자리 숫자로 시작하는 이름만
-            String displayName = state.getDisplayName();
-            if (displayName != null && NAME_FILTER_PATTERN.matcher(displayName).matches()) {
-                filtered.add(state);
-            }
-        }
-        
-        // MAC 주소 기준 정렬 (일관된 순서)
-        Collections.sort(filtered, (a, b) -> {
-            String macA = a.getMac() != null ? a.getMac() : "";
-            String macB = b.getMac() != null ? b.getMac() : "";
-            return macA.compareToIgnoreCase(macB);
-        });
-        
-        return filtered;
+        return new ArrayList<>(beaconStates.values());
     }
     
     /**
-     * MAC 기반 수집 게이트에 비콘 등록
-     * 이름 필터를 통과한 비콘의 MAC을 등록하여 데이터 수집 허용
+     * 후보 비콘 목록 반환 (이름 필터 통과한 신규 비콘)
      */
+    public List<BeaconState> getCandidateBeaconStates() {
+        return new ArrayList<>(candidates.values());
+    }
+    
+    /**
+     * MAC을 paired 목록에 추가 (바인더 API)
+     */
+    public void addPaired(String mac) {
+        if (!pairedSet.contains(mac)) {
+            pairedSet.add(mac);
+            DevicePrefs.addPaired(getApplicationContext(), mac);
+            Log.d(TAG, "Added to paired: " + mac);
+            
+            // candidates에서 제거 (이미 paired로 승격)
+            candidates.remove(mac);
+        }
+    }
+    
+    /**
+     * MAC을 paired 목록에서 제거 (바인더 API)
+     */
+    public void removePaired(String mac) {
+        if (pairedSet.contains(mac)) {
+            pairedSet.remove(mac);
+            DevicePrefs.removePaired(getApplicationContext(), mac);
+            Log.d(TAG, "Removed from paired: " + mac);
+        }
+    }
+    
+    /**
+     * 하이브리드 스캔: MAC을 paired 목록에 등록 (레거시 호환)
+     * @deprecated 대신 addPaired(String mac) 사용
+     */
+    @Deprecated
     public void registerMacForCollection(String mac, String displayName) {
-        if (mac != null && displayName != null) {
-            selectedMacToName.put(mac, displayName);
-            Log.d(TAG, String.format("MAC registered for collection: %s -> %s", mac, displayName));
+        if (mac != null) {
+            addPaired(mac);
+            Log.d(TAG, String.format("MAC registered for collection (deprecated): %s -> %s", mac, displayName));
         }
     }
     
     /**
-     * MAC 기반 수집 게이트에서 비콘 해제
+     * 하이브리드 스캔: MAC을 paired 목록에서 제거 (레거시 호환)
+     * @deprecated 대신 removePaired(String mac) 사용
      */
+    @Deprecated
     public void unregisterMacForCollection(String mac) {
         if (mac != null) {
-            String oldName = selectedMacToName.remove(mac);
-            Log.d(TAG, String.format("MAC unregistered from collection: %s (was: %s)", mac, oldName));
+            removePaired(mac);
+            Log.d(TAG, String.format("MAC unregistered from collection (deprecated): %s", mac));
         }
     }
     
@@ -478,7 +507,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // ========== Private Methods ==========
     
     /**
-     * 비콘 광고 처리 (핵심 로직)
+     * 하이브리드 스캔: 비콘 광고 처리 (핵심 로직)
+     * 1) 모든 MAC을 beaconStates에 저장
+     * 2) paired MAC은 전체 처리 + UI 표시
+     * 3) 이름 필터 통과한 candidate는 candidates 컬렉션에 저장
      */
     private void processBeaconAdvertisement(KBeacon beacon) {
         String mac = beacon.getMac();
@@ -486,11 +518,21 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return;
         }
         
-        // BeaconState 조회/생성
+        // BeaconState 조회/생성 (모든 MAC에 대해)
         BeaconState state = beaconStates.computeIfAbsent(mac, k -> {
             BeaconState newState = new BeaconState(mac);
             rssiWindows.put(mac, new RssiWindow(RSSI_WINDOW_SIZE, RSSI_OUTLIER_THRESHOLD));
-            Log.d(TAG, "New beacon discovered: " + mac);
+            
+            // DevicePrefs에서 저장된 값들 복원
+            newState.setDistanceThreshold(DevicePrefs.getDistanceThreshold(getApplicationContext(), mac, 50.0f));
+            int savedBattery = DevicePrefs.getBattery(getApplicationContext(), mac, -1);
+            if (savedBattery >= 0) {
+                newState.setBatteryPercent(savedBattery);
+            }
+            
+            Log.d(TAG, "New beacon discovered: " + mac + 
+                     ", distance threshold: " + newState.getDistanceThreshold() + 
+                     ", saved battery: " + savedBattery);
             return newState;
         });
         
@@ -498,24 +540,45 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         String advName = beacon.getName();
         if (advName != null && !advName.isEmpty()) {
             state.setAdvertisedName(advName);
-            
-            // 이름 필터 통과 시 MAC 수집 게이트에 자동 등록
-            if (NAME_FILTER_PATTERN.matcher(advName).matches()) {
-                if (!selectedMacToName.containsKey(mac)) {
-                    registerMacForCollectionWithSave(mac, advName);
-                }
-            }
         }
         
-        // MAC 수집 게이트 확인: 등록된 MAC만 RSSI/거리 데이터 수집
-        if (!selectedMacToName.containsKey(mac)) {
-            // 수집 게이트 통과 실패: 광고 이름만 업데이트하고 RSSI/거리는 수집하지 않음
-            return;
-        }
-        
-        // RSSI 처리
+        // 기본 RSSI 업데이트 (모든 비콘에 대해)
         int currentRssi = beacon.getRssi();
         state.setLastRssi(currentRssi);
+        state.setLastUpdateTime(System.currentTimeMillis());
+        
+        // 디버깅 로그: 하이브리드 스캔 상태
+        if (advName != null && NAME_REGEX.matcher(advName).matches()) {
+            Log.d(TAG, "Name filter PASS: " + advName + " (MAC: " + mac + ")");
+        } else if (advName != null) {
+            Log.v(TAG, "Name filter FAIL: " + advName + " (MAC: " + mac + ")");
+        }
+        
+        Log.d(TAG, String.format("Beacon %s -> Paired: %s, Name: %s, RSSI: %d, " +
+                                 "Paired count: %d, Candidates: %d", 
+                                 mac, pairedSet.contains(mac), advName, currentRssi,
+                                 pairedSet.size(), candidates.size()));
+        
+        // 하이브리드 분기 처리
+        if (pairedSet.contains(mac)) {
+            // Paired 비콘: 전체 처리 (RSSI 필터링, 거리 계산, 자동 알람)
+            processPairedBeacon(beacon, state, currentRssi);
+        } else {
+            // 신규 비콘: 이름 필터 확인
+            if (advName != null && NAME_REGEX.matcher(advName).matches()) {
+                candidates.put(mac, state);
+                Log.d(TAG, "New candidate added: " + mac + " (" + advName + ")");
+                // UI에 candidate 업데이트 신호 (필요시)
+                publishCandidateToUI(state);
+            }
+        }
+    }
+    
+    /**
+     * Paired 비콘 전체 처리 (RSSI 필터링, 거리 계산, 자동 알람)
+     */
+    private void processPairedBeacon(KBeacon beacon, BeaconState state, int currentRssi) {
+        String mac = beacon.getMac();
         
         // RSSI 윈도우 업데이트
         RssiWindow rssiWindow = rssiWindows.get(mac);
@@ -536,8 +599,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 rssiEmaCache.put(mac, rssiFiltered);
                 state.setRssiFiltered(rssiFiltered);
                 
-                // 거리 계산 (저장된 캘리브레이션 값 사용)
-                double distance = calculateDistanceWithSavedCalibration(mac, rssiFiltered);
+                // 거리 계산 (DevicePrefs에서 캘리브레이션 값 사용)
+                double distance = calculateDistanceWithDevicePrefs(mac, rssiFiltered);
                 
                 // 거리 EMA 적용
                 Double prevDistanceEma = distanceEmaCache.get(mac);
@@ -556,8 +619,83 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // KSensor 패킷에서 배터리 정보 추출 (TODO: 실제 구현 필요)
         // extractBatteryFromSensorPacket(beacon, state);
         
-        // 타임스탬프 업데이트
-        state.setLastUpdateTime(System.currentTimeMillis());
+        // Paired 비콘 UI 업데이트
+        publishPairedToUI(state);
+    }
+    
+    /**
+     * DevicePrefs를 사용한 거리 계산
+     */
+    private double calculateDistanceWithDevicePrefs(String mac, double rssiFiltered) {
+        float txPowerAt1m = DevicePrefs.getTxPower1m(getApplicationContext(), mac, (float)DEFAULT_TX_POWER_AT_1M);
+        float pathLossN = DevicePrefs.getPathLossN(getApplicationContext(), mac, (float)DEFAULT_PATH_LOSS_EXPONENT);
+        
+        // distance(m) = 10^((txPowerAt1m - rssiFiltered)/(10 * n))
+        return Math.pow(10, (txPowerAt1m - rssiFiltered) / (10.0 * pathLossN));
+    }
+    
+    /**
+     * Paired 비콘 UI 업데이트 브로드캐스트
+     */
+    private void publishPairedToUI(BeaconState state) {
+        // 기존 브로드캐스트 로직 재사용 (필요시 수정)
+        // Intent intent = new Intent(ACTION_BEACON_UPDATE);
+        // intent.putExtra("paired_beacon", state);
+        // LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+    
+    /**
+     * Candidate 비콘 UI 업데이트 브로드캐스트 (선택사항)
+     */
+    private void publishCandidateToUI(BeaconState state) {
+        // 필요시 구현 (후보 비콘 표시용)
+        // Intent intent = new Intent(ACTION_CANDIDATE_UPDATE);
+        // intent.putExtra("candidate_beacon", state);
+        // LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+    
+    /**
+     * 배터리 레벨을 BeaconState와 DevicePrefs에 동시 저장
+     */
+    public void saveBatteryLevel(String mac, int batteryPercent) {
+        // BeaconState 업데이트
+        BeaconState state = beaconStates.get(mac);
+        if (state != null) {
+            state.setBatteryPercent(batteryPercent);
+            state.setLastBatteryUpdateTime(System.currentTimeMillis());
+        }
+        
+        // DevicePrefs에 영속 저장
+        DevicePrefs.setBattery(getApplicationContext(), mac, batteryPercent);
+        
+        Log.d(TAG, String.format("Battery level saved: %s -> %d%%", mac, batteryPercent));
+    }
+    
+    /**
+     * 거리 임계값을 BeaconState와 DevicePrefs에 동시 저장
+     */
+    public void saveDistanceThreshold(String mac, float thresholdMeters) {
+        // BeaconState 업데이트
+        BeaconState state = beaconStates.get(mac);
+        if (state != null) {
+            state.setDistanceThreshold(thresholdMeters);
+        }
+        
+        // DevicePrefs에 영속 저장
+        DevicePrefs.setDistanceThreshold(getApplicationContext(), mac, thresholdMeters);
+        
+        Log.d(TAG, String.format("Distance threshold saved: %s -> %.1fm", mac, thresholdMeters));
+    }
+    
+    /**
+     * 캘리브레이션 결과를 DevicePrefs에 저장 (프롬프트 4-A용)
+     */
+    public void saveCalibrationResult(String mac, float txPowerAt1m, float pathLossN) {
+        // DevicePrefs에 저장
+        DevicePrefs.setCalibration(getApplicationContext(), mac, txPowerAt1m, pathLossN);
+        
+        Log.d(TAG, String.format("Calibration saved: %s -> tx1m=%.2f, n=%.2f", 
+                                 mac, txPowerAt1m, pathLossN));
     }
     
     /**
@@ -798,8 +936,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         for (BeaconState state : beaconStates.values()) {
             String mac = state.getMac();
             
-            // 등록된 MAC만 배터리 업데이트
-            if (selectedMacToName.containsKey(mac)) {
+            // paired MAC만 배터리 업데이트
+            if (pairedSet.contains(mac)) {
                 // 마지막 배터리 업데이트로부터 1시간 경과 확인
                 long lastUpdate = state.getLastBatteryUpdateTime();
                 long now = System.currentTimeMillis();
@@ -848,12 +986,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         Log.d(TAG, "Restoring saved data...");
         
         try {
-            // MAC 게이트 레지스트리 복원
+            // 레거시 MAC 게이트 레지스트리에서 paired로 마이그레이션
             Map<String, String> savedMacs = servicePrefs.getRegisteredMacs();
-            for (Map.Entry<String, String> entry : savedMacs.entrySet()) {
-                selectedMacToName.put(entry.getKey(), entry.getValue());
+            for (String mac : savedMacs.keySet()) {
+                if (!pairedSet.contains(mac)) {
+                    pairedSet.add(mac);
+                    DevicePrefs.addPaired(getApplicationContext(), mac);
+                }
             }
-            Log.i(TAG, String.format("Restored %d MAC entries from registry", savedMacs.size()));
+            Log.i(TAG, String.format("Migrated %d MAC entries from legacy registry to paired", savedMacs.size()));
             
             // 저장된 BeaconState 복원 (거리 설정값, 배터리 정보, 별칭)
             for (String mac : savedMacs.keySet()) {
@@ -958,34 +1099,26 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * MAC 수집 게이트에 등록 (영속 저장 포함)
+     * 하이브리드 스캔: MAC을 paired 목록에 등록 + DevicePrefs 저장 (레거시 호환)
+     * @deprecated 대신 addPaired(String mac) 사용 (이미 저장 기능 포함)
      */
+    @Deprecated
     public void registerMacForCollectionWithSave(String mac, String displayName) {
-        if (mac != null && displayName != null) {
-            selectedMacToName.put(mac, displayName);
-            
-            // ServicePrefs에도 저장
-            if (servicePrefs != null) {
-                servicePrefs.registerMacForCollection(mac, displayName);
-            }
-            
-            Log.d(TAG, String.format("MAC registered for collection: %s -> %s", mac, displayName));
+        if (mac != null) {
+            addPaired(mac);
+            Log.d(TAG, String.format("MAC registered for collection + saved (deprecated): %s -> %s", mac, displayName));
         }
     }
     
     /**
-     * MAC 수집 게이트에서 해제 (영속 저장 포함)
+     * 하이브리드 스캔: MAC을 paired 목록에서 제거 + DevicePrefs 저장 (레거시 호환)
+     * @deprecated 대신 removePaired(String mac) 사용 (이미 저장 기능 포함)
      */
+    @Deprecated
     public void unregisterMacForCollectionWithSave(String mac) {
         if (mac != null) {
-            String oldName = selectedMacToName.remove(mac);
-            
-            // ServicePrefs에서도 제거
-            if (servicePrefs != null) {
-                servicePrefs.unregisterMacForCollection(mac);
-            }
-            
-            Log.d(TAG, String.format("MAC unregistered from collection: %s (was: %s)", mac, oldName));
+            removePaired(mac);
+            Log.d(TAG, String.format("MAC unregistered from collection + saved (deprecated): %s", mac));
         }
     }
     
@@ -1161,17 +1294,32 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             Log.w(TAG, "Failed to unregister Bluetooth receiver", e);
         }
         
-        // 기존 onDestroy 로직
-        stopScanning();
-        stopAllRingAlarms();
+        // 스캔 중지
+        try { 
+            stopScanning(); 
+        } catch (Throwable ignored) {
+            Log.w(TAG, "Exception during stop scanning", ignored);
+        }
         
+        // Ring 알람 중지
+        try {
+            stopAllRingAlarms();
+        } catch (Throwable ignored) {
+            Log.w(TAG, "Exception during stop ring alarms", ignored);
+        }
+        
+        // 스케줄러 정리
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdownNow();
         }
         
+        // KBeaconsMgr 정리
         if (kBeaconsMgr != null) {
             kBeaconsMgr.delegate = null;
         }
+        
+        // 포그라운드 알림 제거
+        stopForeground(true);
         
         super.onDestroy();
     }

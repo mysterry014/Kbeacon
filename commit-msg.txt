@@ -1,6 +1,10 @@
-  fix(manifest): Android 14 FGS 권한 및 타입 수정으로 앱 크래시 방지
+  feat(ble): 하이브리드 스캔 아키텍처 구현으로 BLE 탐지 문제 해결
 
-  • FOREGROUND_SERVICE_CONNECTED_DEVICE 권한 추가 (Android 14+ 필수)
-  • foregroundServiceType을 dataSync → connectedDevice로 변경
-  • BLE 비콘 장치 통신에 적합한 권한 구성으로 SecurityException 해결
-  • minSdk 26 ~ targetSdk 34 버전 호환성 유지
+  • DevicePrefs 클래스 추가 - MAC 기반 영속 저장소
+  • BleService: pairedSet + candidates 분리, 소프트 필터링 적용
+  • 스캔 제어 일원화: Activity가 KBeaconsMgr 직접 조작 금지
+  • 초기 이름 필터 → 이후 MAC 추적 구조로 변경
+  • 캘리브레이션/거리설정/배터리 정보를 DevicePrefs와 연동
+  • 스캔 충돌 문제 해결 (Activity ↔ Service → Service 단일화)
+  • 하드웨어 레벨 이름 필터 제거로 비콘 누락 방지
+  • 디버깅 로그 추가로 하이브리드 스캔 상태 추적 가능
