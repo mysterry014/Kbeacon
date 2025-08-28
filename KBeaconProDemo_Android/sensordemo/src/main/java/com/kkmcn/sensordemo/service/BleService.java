@@ -5,8 +5,11 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Build;
@@ -178,28 +181,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         return binder;
     }
     
-    @Override
-    public void onDestroy() {
-        Log.d(TAG, "BleService onDestroy");
-        
-        // 스캔 중지
-        stopScanning();
-        
-        // 모든 Ring 작업 중지
-        stopAllRingAlarms();
-        
-        // 스케줄러 종료
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdownNow();
-        }
-        
-        // KBeaconsMgr 정리
-        if (kBeaconsMgr != null) {
-            kBeaconsMgr.delegate = null;
-        }
-        
-        super.onDestroy();
-    }
+    // 첫 번째 onDestroy 제거 (중복 방지) - 두 번째 onDestroy가 모든 기능 포함
     
     /**
      * Notification 채널 생성 (Android 8+)

@@ -1,18 +1,6 @@
-  fix(race-condition): 레이스 컨디션 크래시 완전 해결 - 크래시 스나이퍼 패치
+  fix(build): 컴파일 에러 완전 해결 - missing imports 및 중복 메서드 수정
 
-  • Activity: 권한 + Bluetooth ON 체크 후에만 Service 시작
-    - startBleServiceSafely()로 단계별 안전 검증
-    - Bluetooth 활성화 요청 처리 추가
-    - Handler.post()로 권한 다이얼로그 복귀 레이스 방지
-
-  • Service: 5초 규칙 + 권한 + BT ON 3중 게이트 구축
-    - startAsForegroundNow()로 즉시 Foreground 진입
-    - ensureScanning()에서 모든 BLE 작업 전 안전 게이트
-    - hasAllBlePerms() && isBtOn() 체크로 SecurityException 원천 차단
-
-  • Bluetooth 상태 모니터링으로 자동 복구
-    - ACTION_STATE_CHANGED 리시버로 BT ON/OFF 감지
-    - BT 켜지면 자동으로 스캔 재개
-
-  • Ring 명령도 동일한 3중 게이트 적용
-  • 모든 BLE API 호출을 try-catch로 보호
+  • BluetoothAdapter, BroadcastReceiver, IntentFilter import 추가
+  • DeviceScanActivity에 Handler/Looper import 추가
+  • BleService 중복 onDestroy 메서드 제거
+  • 모든 symbol not found 오류 해결
