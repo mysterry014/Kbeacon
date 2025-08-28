@@ -25,6 +25,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.location.LocationManager;
+import android.provider.Settings;
+import android.net.Uri;
 import android.os.IBinder;
 import android.os.Handler;
 import android.os.Looper;
@@ -98,7 +101,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
  * Activity for scanning and displaying available Bluetooth LE devices.
  */
 public class DeviceScanActivity extends AppBaseActivity implements View.OnClickListener, AdapterView.OnItemClickListener,
-        KBeaconsMgr.KBeaconMgrDelegate, LeDeviceListAdapter.ListDataSource, LeDeviceListAdapter.OnRowActionListener {
+        LeDeviceListAdapter.ListDataSource, LeDeviceListAdapter.OnRowActionListener {
 	private final static String TAG = "Beacon.ScanAct";//DeviceScanActivity.class.getSimpleName();
 
     private static final String LOG_TAG = "ScanExample";
@@ -230,6 +233,56 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     // 태블릿 알람 시작
                     runOnUiThread(() -> startPhoneAlarm());
                     break;
+                    
+                case BleService.ACTION_SCAN_NO_RESULTS:
+                    boolean locEnabled = intent.getBooleanExtra("location_enabled", false);
+                    Log.w(TAG, "SCAN_NO_RESULTS received. location_enabled=" + locEnabled);
+
+                    // 1) 위치 설정 OFF면 설정 화면 유도
+                    if (!isLocationEnabledSafe()) {
+                        Toast.makeText(DeviceScanActivity.this, "스캔 결과가 없어 위치 설정으로 이동합니다.", Toast.LENGTH_SHORT).show();
+                        try {
+                            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                        } catch (Exception ignored) {}
+                    }
+
+                    // 2) 폴백: 12+에서도 ACCESS_FINE_LOCATION을 (한 번만) 요청
+                    if (Build.VERSION.SDK_INT >= 31) {
+
+                        // 보강 #1: '다시 묻지 않음' 상태면 앱 설정으로 이동
+                        if (ActivityCompat.checkSelfPermission(DeviceScanActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
+                                != PackageManager.PERMISSION_GRANTED) {
+
+                            boolean canShow = ActivityCompat.shouldShowRequestPermissionRationale(
+                                    DeviceScanActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
+
+                            if (canShow) {
+                                ActivityCompat.requestPermissions(
+                                    DeviceScanActivity.this,
+                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                    PERMISSION_FINE_LOCATION
+                                );
+                            } else {
+                                // 사용자가 이전에 '다시 묻지 않음'으로 거부했을 가능성
+                                Toast.makeText(DeviceScanActivity.this, "위치 권한이 필요합니다. 앱 권한 설정으로 이동합니다.", Toast.LENGTH_SHORT).show();
+                                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", getPackageName(), null));
+                                startActivity(i);
+                            }
+                        }
+                    }
+
+                    // 3) 보강 #2: 권한/설정 조치 후 재시작을 안정적으로 지연
+                    mListView.postDelayed(() -> {
+                        if (mServiceBound && mBleService != null) {
+                            mBleService.stopScanning();
+                            mBleService.startScanning();
+                        } else {
+                            startBleServiceSafely();
+                        }
+                    }, 2000);
+
+                    break;
             }
         }
     };
@@ -304,15 +357,17 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
         };
 
-        mBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
-        if (mBeaconsMgr == null)
-        {
-            toastShow("make sure the phone has support ble funtion");
-            finish();
-            return;
-        }
-        mBeaconsMgr.delegate = this;
-        mBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+        // KBeaconsMgr는 BleService에서만 사용 - Activity에서는 접근하지 않음
+        // mBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
+        // if (mBeaconsMgr == null)
+        // {
+        //     toastShow("make sure the phone has support ble funtion");
+        //     finish();
+        //     return;
+        // }
+        // delegate는 BleService가 독점 - Activity에서 설정하지 않음
+        // mBeaconsMgr.delegate = this;
+        // mBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
         mListView = (ListView) findViewById(R.id.listview);
         mDevListAdapter = new LeDeviceListAdapter(this, getApplicationContext());
         mDevListAdapter.setOnRowActionListener(this); // Phase 3: 콜백 리스너 연결
@@ -544,127 +599,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mBeaconsMgr.clearBeacons();
     }
 
-    public void onBeaconDiscovered(KBeacon[] beacons)
-    {
-        // Phase 2: 데이터 처리 파이프라인 적용
-        for (KBeacon beacon : beacons)
-        {
-            try {
-                // (a) 이름 필터: 6자리 숫자로 시작하는 비콘만 처리
-                String beaconName = beacon.getName();
-                if (beaconName == null || !beaconName.matches("^\\d{6}_.+")) {
-                    continue; // 필터 통과 실패시 스킵
-                }
-                
-                String mac = beacon.getMac();
-                int rawRssi = beacon.getRssi();
-                
-                // (b) BeaconDataStore에서 BeaconState 조회/생성
-                BeaconState beaconState = mBeaconDataStore.get(mac);
-                boolean isNewBeacon = (beaconState == null);
-                if (isNewBeacon) {
-                    beaconState = new BeaconState(beaconName, mac);
-                    
-                    // 별칭 로딩 (최초 탐지 시에만)
-                    String savedAlias = mPrefs.getAlias(mac);
-                    if (savedAlias != null) {
-                        beaconState.setAliasName(savedAlias);
-                        Log.d("ALIAS", "Loaded alias for " + mac + ": " + savedAlias);
-                    }
-                } else {
-                    // 기존 비콘: 광고 이름만 업데이트, 별칭은 유지
-                    beaconState.setName(beaconName);
-                }
-                
-                // (c) RssiFilter로 rssiFiltered 산출
-                RssiFilter rssiFilter = mRssiFilters.get(mac);
-                if (rssiFilter == null) {
-                    rssiFilter = new RssiFilter();
-                    mRssiFilters.put(mac, rssiFilter);
-                }
-                double rssiFiltered = rssiFilter.addSample(rawRssi);
-                
-                // (d) DistanceEstimator로 distanceFiltered 산출
-                DistanceEstimator distanceEstimator = mDistanceEstimators.get(mac);
-                if (distanceEstimator == null) {
-                    // Phase 2 Part 3: 저장된 캘리브레이션 값 복원 (캘리브레이션 우선)
-                    double txPowerAt1m, pathLossExponent;
-                    
-                    // 캘리브레이션 결과 우선 로드 시도
-                    Prefs.CalibrationParams calibParams = mPrefs.loadCalibration(mac);
-                    if (calibParams != null) {
-                        txPowerAt1m = calibParams.txPowerAt1m;
-                        pathLossExponent = calibParams.pathLossExponent;
-                        Log.d(TAG, String.format("Restored calibration result for %s: tx1m=%.2f, n=%.2f, R²=%.2f", 
-                               beaconName, txPowerAt1m, pathLossExponent, calibParams.rSquared));
-                    } else {
-                        // 캘리브레이션 결과가 없으면 개별 설정값 또는 기본값 사용
-                        txPowerAt1m = mPrefs.getTxPowerAt1m(mac, beaconName, Prefs.getDefaultTxPowerAt1m());
-                        pathLossExponent = mPrefs.getN(mac, beaconName, Prefs.getDefaultPathLossExponent());
-                        Log.d(TAG, "Using default/manual calibration for " + beaconName + ": txPower=" + txPowerAt1m + ", n=" + pathLossExponent);
-                    }
-                    
-                    distanceEstimator = new DistanceEstimator(txPowerAt1m, pathLossExponent, 0.30);
-                    mDistanceEstimators.put(mac, distanceEstimator);
-                }
-                double distanceFiltered = distanceEstimator.estimate(rssiFiltered);
-                
-                // (e) Phase 2 Part 3: 신규 비콘 시 거리 임계값과 배터리 복원
-                if (isNewBeacon) {
-                    // 거리 임계값 복원
-                    double threshold = mPrefs.getDistanceThreshold(mac, beaconName, Prefs.getDefaultDistanceThreshold());
-                    beaconState.setDistanceThreshold(threshold);
-                    
-                    // 배터리 값 복원 (이전에 저장된 값이 있다면)
-                    Integer savedBattery = mPrefs.getBatteryPct(mac, beaconName, null);
-                    if (savedBattery != null) {
-                        beaconState.setBatteryPercent(savedBattery);
-                        Log.d(TAG, "Restored settings for " + beaconName + ": threshold=" + threshold + ", battery=" + savedBattery + "%");
-                    } else {
-                        Log.d(TAG, "Restored threshold for " + beaconName + ": " + threshold + " m");
-                    }
-                }
-                
-                // (f) BeaconState 갱신 후 BeaconDataStore에 저장
-                beaconState.setName(beaconName);
-                beaconState.updateSignalState(rawRssi, rssiFiltered, distanceFiltered);
-                
-                // 현재 비콘에서 배터리 정보가 있다면 업데이트
-                int currentBattery = beacon.getBatteryPercent();
-                if (currentBattery > 0) {
-                    beaconState.setBatteryPercent(currentBattery);
-                }
-                
-                mBeaconDataStore.upsert(beaconState);
-                
-                // Phase 3: 신규 비콘 탐지 시 배터리 스케줄러에 알림
-                if (isNewBeacon && mBatteryScheduler != null) {
-                    mBatteryScheduler.onSeen(mac, beaconName);
-                }
-                
-                // [캘리브레이션] 활성 세션이 있고 대상 MAC이면 샘플 전달
-                if (activeCalibrationSession != null && 
-                    mac.equalsIgnoreCase(activeCalibrationSession.getMac())) {
-                    activeCalibrationSession.onRssiSample(rawRssi);
-                    Log.v(TAG, String.format("Calibration sample: MAC=%s, RSSI=%d", mac, rawRssi));
-                }
-                
-                // 기존 딕셔너리도 유지 (기존 로직 호환)
-                mBeaconsDictory.put(mac, beacon);
-                
-            } catch (Exception e) {
-                Log.d(TAG, "Error processing beacon: " + e.getMessage());
-            }
-        }
-        
-        // 기존 배열 업데이트 (기존 로직 호환)
-        if (mBeaconsDictory.size() > 0) {
-            mBeaconsArray = new KBeacon[mBeaconsDictory.size()];
-            mBeaconsDictory.values().toArray(mBeaconsArray);
-        }
-        
-        // UI 갱신은 500ms 주기로 별도 처리됨 (notifyDataSetChanged 제거)
-    }
+    // onBeaconDiscovered 제거됨 - 이제 BleService가 delegate 독점
 
     public void example_printAllAdvPackets(KBeacon[] beacons)
     {
@@ -761,19 +696,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         }
     }
 
-    public void onCentralBleStateChang(int nNewState)
-    {
-        Log.e(TAG, "centralBleStateChang：" + nNewState);
-    }
-
-    public void onScanFailed(int errorCode)
-    {
-        Log.e(TAG, "Start N scan failed：" + errorCode);
-        if (mScanFailedContinueNum >= MAX_ERROR_SCAN_NUMBER){
-            toastShow("scan encount error, error time:" + mScanFailedContinueNum);
-        }
-        mScanFailedContinueNum++;
-    }
+    // onCentralBleStateChang, onScanFailed 제거됨 - 이제 BleService가 delegate 독점
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -997,6 +920,16 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
             
             List<BeaconState> filteredBeacons = mBleService.getFilteredBeaconStates();
+            
+            // FORCE LOG: UI 업데이트 디버깅
+            Log.e(TAG, "FORCE LOG: UI UPDATE - Found " + filteredBeacons.size() + " beacons");
+            for (BeaconState state : filteredBeacons) {
+                String displayName = state.getDisplayName();
+                String advName = state.getAdvertisedName();
+                Log.e(TAG, "FORCE LOG: UI Beacon - display: " + displayName + 
+                          ", adv: " + advName + ", MAC: " + state.getMac());
+            }
+            
             Log.v("UI_UPDATE", String.format("updateUiFromService: beacons=%d", filteredBeacons.size()));
             
             mDevListAdapter.updateBeaconStates(filteredBeacons);
@@ -1072,60 +1005,58 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     }
 
     private void handleStartScan(){
-        if (!checkBluetoothPermitAllowed())
-        {
-            return;
-        }
-
-        int nStartScan = mBeaconsMgr.startScanning();
-        if (nStartScan == 0)
-        {
-            Log.v(TAG, "start scan success");
-        }
-        else if (nStartScan == KBeaconsMgr.SCAN_ERROR_BLE_NOT_ENABLE)
-        {
-            toastShow("BLE function is not enable");
-        }
-        else if (nStartScan == KBeaconsMgr.SCAN_ERROR_UNKNOWN)
-        {
-            toastShow("Please make sure the app has BLE scan permission");
+        // 권한 체크 및 스캔은 BleService로 완전히 위임
+        if (mServiceBound && mBleService != null) {
+            boolean success = mBleService.startScanning();
+            if (success) {
+                Log.v(TAG, "start scan success via BleService");
+            } else {
+                toastShow("Failed to start BLE scanning");
+            }
+        } else {
+            Log.w(TAG, "BleService not bound, starting service");
+            startBleServiceSafely();
         }
     }
 
     private boolean checkBluetoothPermitAllowed() {
-        boolean bHasPermission = true;
+        boolean ok = true;
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    PERMISSION_FINE_LOCATION);
-            bHasPermission = false;
-        }
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},
-                    PERMISSION_COARSE_LOCATION);
-            bHasPermission = false;
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= 31) {          // Android 12+
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                     != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_SCAN},
-                        PERMISSION_SCAN);
-                bHasPermission = false;
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.BLUETOOTH_SCAN}, PERMISSION_SCAN);
+                ok = false;
             }
-
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
                     != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT},
-                        PERMISSION_CONNECT);
-                bHasPermission = false;
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.BLUETOOTH_CONNECT}, PERMISSION_CONNECT);
+                ok = false;
+            }
+            // Samsung/일부 제조사에서는 Android 12+에서도 위치 권한 필요할 수 있음
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_FINE_LOCATION);
+                ok = false;
+            }
+        } else {                                     // Android 10/11 이하
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_FINE_LOCATION);
+                ok = false;
+            }
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_COARSE_LOCATION);
+                ok = false;
             }
         }
-
-        return bHasPermission;
+        return ok;
     }
     
     /**
@@ -1191,7 +1122,18 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         if (!isBtEnabled()) {
             Log.w(TAG, "Bluetooth OFF, requesting enable...");
             Intent btIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(btIntent, REQ_BT_ON);
+            // Android 12+ BLUETOOTH_CONNECT 권한 확인
+            if (Build.VERSION.SDK_INT >= 31) {
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+                        == PackageManager.PERMISSION_GRANTED) {
+                    startActivityForResult(btIntent, REQ_BT_ON);
+                } else {
+                    Log.w(TAG, "BLUETOOTH_CONNECT permission required for BT enable intent");
+                    // 권한 없으면 그냥 진행 (사용자가 수동으로 BT 켜야 함)
+                }
+            } else {
+                startActivityForResult(btIntent, REQ_BT_ON);
+            }
             return;
         }
         
@@ -1210,6 +1152,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
                 filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
                 filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
+                filter.addAction(BleService.ACTION_SCAN_NO_RESULTS);
                 LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
                 
             } catch (Exception e) {
@@ -1265,7 +1208,17 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
         }
         if (requestCode == PERMISSION_FINE_LOCATION){
-            if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED){
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            Log.i(TAG, "FINE_LOCATION result: " + granted);
+            // 권한 허용 직후 스캔 재시작
+            if (granted) {
+                if (mServiceBound && mBleService != null) {
+                    mBleService.stopScanning();
+                    mBleService.startScanning();
+                } else {
+                    startBleServiceSafely();
+                }
+            } else {
                 toastShow("The app need fine location permission for start ble scanning");
             }
         }
@@ -1645,6 +1598,15 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             
         } catch (Exception e) {
             Log.e(TAG, "Error stopping phone alarm: " + e.getMessage());
+        }
+    }
+    
+    private boolean isLocationEnabledSafe() {
+        try {
+            LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            return lm != null && lm.isLocationEnabled();
+        } catch (Throwable t) {
+            return false;
         }
     }
 }

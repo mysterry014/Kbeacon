@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
@@ -72,6 +73,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public static final String ACTION_SCAN_STATE_CHANGED = "com.kkmcn.sensordemo.SCAN_STATE_CHANGED";
     public static final String ACTION_RING_STATE_CHANGED = "com.kkmcn.sensordemo.RING_STATE_CHANGED";
     public static final String ACTION_AUTO_ALARM_TRIGGERED = "com.kkmcn.sensordemo.AUTO_ALARM_TRIGGERED";
+    public static final String ACTION_SCAN_NO_RESULTS = "com.kkmcn.sensordemo.SCAN_NO_RESULTS";
+    
+    // 스캔 결과 감시
+    private volatile long lastAdvTs = 0L;
+    private static final long NO_RESULT_TIMEOUT_MS = 7000; // 7초
     
     // 필터링 상수
     private static final Pattern NAME_FILTER_PATTERN = Pattern.compile("^\\d{6}_.+");
@@ -162,9 +168,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             if (kBeaconsMgr != null) {
                 kBeaconsMgr.delegate = this;
                 // 스캔 모드 설정은 실제 스캔 시작 시로 지연
-                Log.d(TAG, "KBeaconsMgr initialized successfully");
+                Log.e(TAG, "FORCE LOG: KBeaconsMgr initialized successfully, delegate set to BleService");
+                Log.e(TAG, "FORCE LOG: Current delegate: " + kBeaconsMgr.delegate);
+                Log.e(TAG, "FORCE LOG: Delegate class: " + (kBeaconsMgr.delegate != null ? kBeaconsMgr.delegate.getClass().getSimpleName() : "null"));
             } else {
-                Log.e(TAG, "KBeaconsMgr initialization failed - null returned");
+                Log.e(TAG, "FORCE LOG: KBeaconsMgr initialization failed - null returned");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize KBeaconsMgr", e);
@@ -278,14 +286,30 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
             
             // LOW_LATENCY 모드로 스캔 시작
+            Log.e(TAG, "FORCE LOG: About to start BLE scanning...");
             int result = kBeaconsMgr.startScanning();
+            Log.e(TAG, "FORCE LOG: startScanning() returned: " + result);
             if (result == 0) { // 성공
                 isScanning = true;
-                Log.i(TAG, "BLE scan started successfully");
+                Log.e(TAG, "FORCE LOG: BLE scan started successfully, waiting for onBeaconDiscovered callbacks...");
                 broadcastScanStateChanged(true);
+
+                // 워치독: NO_RESULT_TIMEOUT_MS 안에 광고 없으면 폴백 브로드캐스트
+                mainHandler.postDelayed(() -> {
+                    if (isScanning && (System.currentTimeMillis() - lastAdvTs) > NO_RESULT_TIMEOUT_MS) {
+                        // 상황 로그
+                        Log.w(TAG, "No scan results within timeout. Broadcasting fallback request.");
+                        // 위치 설정 상태도 같이 담아주면 액티비티에서 분기 가능
+                        boolean locationEnabled = isLocationEnabled();
+                        Intent i = new Intent(ACTION_SCAN_NO_RESULTS);
+                        i.putExtra("location_enabled", locationEnabled);
+                        LocalBroadcastManager.getInstance(this).sendBroadcast(i);
+                    }
+                }, NO_RESULT_TIMEOUT_MS);
+
                 return true;
             } else {
-                Log.e(TAG, "Failed to start BLE scan, error: " + result);
+                Log.e(TAG, "FORCE LOG: Failed to start BLE scan, error code: " + result);
                 return false;
             }
         } catch (SecurityException se) {
@@ -481,12 +505,40 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     
     @Override
     public void onBeaconDiscovered(KBeacon[] kBeacons) {
+        lastAdvTs = System.currentTimeMillis();
+        Log.e(TAG, "FORCE LOG: onBeaconDiscovered called with " + (kBeacons != null ? kBeacons.length : 0) + " beacons");
         if (kBeacons == null || kBeacons.length == 0) {
             return;
         }
         
         for (KBeacon beacon : kBeacons) {
             if (beacon != null) {
+                String mac = beacon.getMac();
+                String name = beacon.getName();
+                int rssi = beacon.getRssi();
+                Log.e(TAG, "FORCE LOG: Processing beacon MAC=" + mac + " name=" + name + " rssi=" + rssi);
+                processBeaconAdvertisement(beacon);
+            }
+        }
+    }
+    
+    /**
+     * 라이브러리 버전 호환성을 위한 브릿지 메서드
+     * ArrayList<KBeacon> 시그니처를 사용하는 버전 대응
+     */
+    public void onBeaconDiscovered(java.util.ArrayList<KBeacon> list) {
+        lastAdvTs = System.currentTimeMillis();
+        Log.e(TAG, "FORCE LOG: onBeaconDiscovered(ArrayList) called with " + (list != null ? list.size() : 0) + " beacons");
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+        
+        for (KBeacon beacon : list) {
+            if (beacon != null) {
+                String mac = beacon.getMac();
+                String name = beacon.getName();
+                int rssi = beacon.getRssi();
+                Log.e(TAG, "FORCE LOG: Processing beacon (ArrayList ver) MAC=" + mac + " name=" + name + " rssi=" + rssi);
                 processBeaconAdvertisement(beacon);
             }
         }
@@ -547,14 +599,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         state.setLastRssi(currentRssi);
         state.setLastUpdateTime(System.currentTimeMillis());
         
-        // 디버깅 로그: 하이브리드 스캔 상태
+        // 디버깅 로그: 하이브리드 스캔 상태 (FORCE LOG)
         if (advName != null && NAME_REGEX.matcher(advName).matches()) {
-            Log.d(TAG, "Name filter PASS: " + advName + " (MAC: " + mac + ")");
+            Log.e(TAG, "FORCE LOG: Name filter PASS: " + advName + " (MAC: " + mac + ")");
         } else if (advName != null) {
-            Log.v(TAG, "Name filter FAIL: " + advName + " (MAC: " + mac + ")");
+            Log.e(TAG, "FORCE LOG: Name filter FAIL: " + advName + " (MAC: " + mac + ")");
         }
         
-        Log.d(TAG, String.format("Beacon %s -> Paired: %s, Name: %s, RSSI: %d, " +
+        Log.e(TAG, String.format("FORCE LOG: Beacon %s -> Paired: %s, Name: %s, RSSI: %d, " +
                                  "Paired count: %d, Candidates: %d", 
                                  mac, pairedSet.contains(mac), advName, currentRssi,
                                  pairedSet.size(), candidates.size()));
@@ -1174,14 +1226,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * 크래시 스나이퍼 패치: 전체 BLE 권한 체크
+     * BLE 스캔/연결에 필요한 핵심 권한만 체크 (알림 권한 제외)
      */
     private boolean hasAllBlePerms() {
-        if (Build.VERSION.SDK_INT >= 33) { // Android 13+
-            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
-                && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
-        } else if (Build.VERSION.SDK_INT >= 31) { // Android 12+
+        if (Build.VERSION.SDK_INT >= 31) { // Android 12+
             return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
                 && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
         } else { // Android 10/11
@@ -1322,5 +1370,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         stopForeground(true);
         
         super.onDestroy();
+    }
+    
+    private boolean isLocationEnabled() {
+        try {
+            LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            return lm != null && lm.isLocationEnabled();
+        } catch (Throwable t) {
+            return false;
+        }
     }
 }

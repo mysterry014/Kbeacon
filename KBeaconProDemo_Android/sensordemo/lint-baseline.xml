@@ -1,0 +1,4073 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.5.2" type="baseline" client="gradle" dependencies="false" name="AGP (8.5.2)" variant="all" version="8.5.2">
+
+    <issue
+        id="ResourceAsColor"
+        message="Should pass resolved color instead of resource id here: `getResources().getColor(android.R.color.transparent)`"
+        errorLine1="        mListView.setCacheColorHint(android.R.color.transparent);"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="380"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format("
+        errorLine2="               ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/data/BeaconDataStore.java"
+            line="282"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format("
+        errorLine2="               ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/model/BeaconState.java"
+            line="246"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format("
+        errorLine2="               ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/model/BeaconState.java"
+            line="257"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            stageStatusTexts[i].setText(String.format(&quot;%dm: 대기중&quot;, i + 1));"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="142"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            stageStatusTexts[i].setText(String.format(&quot;%dm: 완료&quot;, i + 1));"
+        errorLine2="                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="156"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                    tvInstructions.setText(String.format(&quot;%.0fm 지점에서 측정 중...\n비콘을 움직이지 마세요.&quot;, distanceMeters));"
+        errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="181"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                        stageStatusTexts[stageIndex].setText(String.format(&quot;%.0fm: 수집중... (%d/%d개)&quot;, "
+        errorLine2="                                                             ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="189"
+            column="62"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                        stageStatusTexts[stageIndex].setText(String.format(&quot;%.0fm: 완료 (RSSI: %.1f dBm)&quot;, "
+        errorLine2="                                                             ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="200"
+            column="62"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                    tvInstructions.setText(String.format(&quot;%.0fm 지점에서 측정 중...\n비콘을 움직이지 마세요.&quot;, distancesFromStage(stageIndex)));"
+        errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="232"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        tvInstructions.setText(String.format(&quot;%dm 지점으로 이동하여 대기해주세요&quot;, stageIndex + 1));"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="263"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        stageStatusTexts[stageIndex].setText(String.format(&quot;%dm: 준비중... %d&quot;, stageIndex + 1, countdownRemaining));"
+        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="264"
+            column="46"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                    stageStatusTexts[stageIndex].setText(String.format(&quot;%dm: 준비중... %d&quot;, stageIndex + 1, countdownRemaining));"
+        errorLine2="                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="274"
+            column="58"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        String resultText = String.format("
+        errorLine2="                            ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="396"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="        String strMacAddress = strMac.replace(&quot;:&quot;, &quot;&quot;).toLowerCase();"
+        errorLine2="                                                       ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/recordhistory/CfgHTRecordFileMgr.java"
+            line="55"
+            column="56"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toUpperCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="                String macA = a.getMac() != null ? a.getMac().toUpperCase() : &quot;&quot;;"
+        errorLine2="                                                              ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="898"
+            column="63"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toUpperCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="                String macB = b.getMac() != null ? b.getMac().toUpperCase() : &quot;&quot;;"
+        errorLine2="                                                              ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="899"
+            column="63"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        editText.setText(String.format(&quot;%.1f&quot;, currentThreshold));"
+        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="1392"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            toastShow(&quot;거리 임계값 &quot; + String.format(&quot;%.1f&quot;, newThreshold) + &quot;m로 저장됨&quot;);"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="1436"
+            column="35"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                              String.format(&quot;보정 완료: %s\ntx1m=%.2f, n=%.2f, R²=%.2f&quot;, "
+        errorLine2="                              ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="1510"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format("
+        errorLine2="               ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/utils/DistanceEstimator.java"
+            line="167"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="   String.format(&quot;%.0f dBm&quot;, rssiFiltered) : &quot;–&quot;;"
+        errorLine2="   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/LeDeviceListAdapter.java"
+            line="216"
+            column="4"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="   String.format(&quot;%d%%&quot;, batteryPercent) : &quot;--%&quot;;"
+        errorLine2="   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/LeDeviceListAdapter.java"
+            line="222"
+            column="4"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="   String.format(&quot;%.1f m&quot;, distanceFiltered) : &quot;–&quot;;"
+        errorLine2="   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/LeDeviceListAdapter.java"
+            line="228"
+            column="4"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toUpperCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="        return mac.toUpperCase().replaceAll(&quot;:&quot;, &quot;&quot;);"
+        errorLine2="                   ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/data/Prefs.java"
+            line="57"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toUpperCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="        String normalizedMac = mac.toUpperCase().replaceAll(&quot;:&quot;, &quot;&quot;);"
+        errorLine2="                                   ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/data/Prefs.java"
+            line="336"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toUpperCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="        String normalizedMac = mac.toUpperCase().replaceAll(&quot;:&quot;, &quot;&quot;);"
+        errorLine2="                                   ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/data/Prefs.java"
+            line="351"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="        return String.format("
+        errorLine2="               ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/utils/RssiFilter.java"
+            line="130"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            return String.format(&quot;CalibrationResult{txPower=%.1f, n=%.2f, R²=%.3f, RMSE=%.1f}&quot;, "
+        errorLine2="                   ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/data/ServicePrefs.java"
+            line="374"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="            return String.format(&quot;BatteryInfo{%d%%, %.2fV, updated:%d}&quot;, percent, voltage, updateTime);"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/data/ServicePrefs.java"
+            line="392"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="        edit.putString(FLD_VRY_CODE_NUM_VALUE + strMacAddress.toLowerCase(), strPassword);"
+        errorLine2="                                                              ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/SharePreferenceMgr.java"
+            line="41"
+            column="63"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="        return shareReference.getString(FLD_VRY_CODE_NUM_VALUE+strMacAddress.toLowerCase(), DEF_VRY_CODE_NUM);"
+        errorLine2="                                                                             ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/SharePreferenceMgr.java"
+            line="46"
+            column="78"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toUpperCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="        hexString = hexString.toUpperCase();"
+        errorLine2="                              ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/Utils.java"
+            line="70"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `toLowerCase(Locale)` instead. For strings meant to be internal use `Locale.ROOT`, otherwise `Locale.getDefault()`."
+        errorLine1="            strUUID = strUUID.toLowerCase();"
+        errorLine2="                              ~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/Utils.java"
+            line="137"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 28 (current min is 26): `android.location.LocationManager#isLocationEnabled`"
+        errorLine1="            return lm != null &amp;&amp; lm.isLocationEnabled();"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/service/BleService.java"
+            line="1378"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 28 (current min is 26): `android.location.LocationManager#isLocationEnabled`"
+        errorLine1="            return lm != null &amp;&amp; lm.isLocationEnabled();"
+        errorLine2="                                    ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="1607"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="OldTargetApi"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        errorLine1="        targetSdkVersion 34"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle"
+            line="11"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="SimpleDateFormat"
+        message="To get local formatting use `getDateInstance()`, `getDateTimeInstance()`, or `getTimeInstance()`, or use `new SimpleDateFormat(String template, Locale locale)` with for example `Locale.US` for ASCII dates."
+        errorLine1="    private static final SimpleDateFormat mRecordTimeFormat = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;);"
+        errorLine2="                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/recordhistory/CfgHTHistoryAdapter.java"
+            line="20"
+            column="63"/>
+    </issue>
+
+    <issue
+        id="SimpleDateFormat"
+        message="To get local formatting use `getDateInstance()`, `getDateTimeInstance()`, or `getTimeInstance()`, or use `new SimpleDateFormat(String template, Locale locale)` with for example `Locale.US` for ASCII dates."
+        errorLine1="    private static SimpleDateFormat mLogFileFmt = new SimpleDateFormat(&quot;yyyy&amp;MM&amp;dd HH&amp;mm&amp;ss&quot;);// 日志文件格式"
+        errorLine2="                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/recordhistory/CfgHTRecordFileMgr.java"
+            line="27"
+            column="51"/>
+    </issue>
+
+    <issue
+        id="SimpleDateFormat"
+        message="To get local formatting use `getDateInstance()`, `getDateTimeInstance()`, or `getTimeInstance()`, or use `new SimpleDateFormat(String template, Locale locale)` with for example `Locale.US` for ASCII dates."
+        errorLine1="    private static final SimpleDateFormat mRecordTimeFormat = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;);"
+        errorLine2="                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/recordhistory/CfgHTRecordFileMgr.java"
+            line="28"
+            column="63"/>
+    </issue>
+
+    <issue
+        id="InflateParams"
+        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
+        errorLine1="        View view = inflater.inflate(R.layout.dialog_calibration, null);"
+        errorLine2="                                                                  ~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="114"
+            column="67"/>
+    </issue>
+
+    <issue
+        id="InflateParams"
+        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
+        errorLine1="            view = inflater.inflate(R.layout.ele_nearby_ht_record, null);"
+        errorLine2="                                                                   ~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/recordhistory/CfgHTHistoryAdapter.java"
+            line="58"
+            column="68"/>
+    </issue>
+
+    <issue
+        id="InflateParams"
+        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
+        errorLine1="   view = LayoutInflater.from(mContext).inflate(R.layout.listitem_device, null);"
+        errorLine2="                                                                          ~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/LeDeviceListAdapter.java"
+            line="136"
+            column="75"/>
+    </issue>
+
+    <issue
+        id="InflateParams"
+        message="Avoid passing `null` as the view root (needed to resolve layout parameters on the inflated layout&apos;s root element)"
+        errorLine1="        View mContentView = LayoutInflater.from(mContext).inflate(R.layout.dialog_update, null, false);"
+        errorLine2="                                                                                          ~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/UploadDialog.java"
+            line="29"
+            column="91"/>
+    </issue>
+
+    <issue
+        id="RedundantLabel"
+        message="Redundant label can be removed"
+        errorLine1="            android:label=&quot;@string/app_name&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="51"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.appcompat:appcompat than 1.7.0 is available: 1.7.1"
+        errorLine1="    implementation &apos;androidx.appcompat:appcompat:1.7.0&apos;"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle"
+            line="35"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.constraintlayout:constraintlayout than 2.1.4 is available: 2.2.1"
+        errorLine1="    implementation &apos;androidx.constraintlayout:constraintlayout:2.1.4&apos;"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle"
+            line="37"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot; />"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="64"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot; />"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot; />"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="76"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Should not restrict activity to fixed orientation. This may not be suitable for different form factors, causing the app to be letterboxed."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="53"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Should not restrict activity to fixed orientation. This may not be suitable for different form factors, causing the app to be letterboxed."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot; />"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="64"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Should not restrict activity to fixed orientation. This may not be suitable for different form factors, causing the app to be letterboxed."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot; />"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Should not restrict activity to fixed orientation. This may not be suitable for different form factors, causing the app to be letterboxed."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot; />"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="76"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseCompatLoadingForDrawables"
+        message="Use `ResourcesCompat.getDrawable()`"
+        errorLine1="            mBtnFilterArrow.setBackground(getResources().getDrawable(R.drawable.uparrow));"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="556"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="UseCompatLoadingForDrawables"
+        message="Use `ResourcesCompat.getDrawable()`"
+        errorLine1="            mBtnFilterArrow.setBackground(getResources().getDrawable(R.drawable.downarrow));"
+        errorLine2="                                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="561"
+            column="43"/>
+    </issue>
+
+    <issue
+        id="Typos"
+        message="Repeated word &quot;sensor&quot; in message: possible typo"
+        errorLine1="    &lt;string name=&quot;other_sensor_command&quot;>Other sensor sensor&lt;/string>"
+        errorLine2="                                              ^">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="253"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;records&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;load_data_complete&quot;>Read data complete, update %1$d records.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="312"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;records&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;load_data_complete_no_more_data&quot;>Read %1$d records, no more data&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="313"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 26"
+        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/service/BleService.java"
+            line="208"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 26"
+        errorLine1="        if (Build.VERSION.SDK_INT >= 26) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/service/BleService.java"
+            line="1212"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 26"
+        errorLine1="        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/dfulibrary/KBeaconDFUActivity.java"
+            line="87"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 23"
+        errorLine1="    @TargetApi(Build.VERSION_CODES.M)"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/Utils.java"
+            line="37"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; SDK_INT is always >= 26"
+        errorLine1="        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M;"
+        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/Utils.java"
+            line="63"
+            column="16"/>
+    </issue>
+
+    <issue
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `SharePreferenceMgr` which has field `mContext` pointing to `Context`); this is a memory leak"
+        errorLine1="    static private SharePreferenceMgr sPrefMgr = null;"
+        errorLine2="    ~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/SharePreferenceMgr.java"
+            line="17"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="HandlerLeak"
+        message="This `Handler` class should be static or leaks might occur (com.kkmcn.sensordemo.recordhistory.CfgHTBeaconHistoryActivity.MainActivityHandler)"
+        errorLine1="    class MainActivityHandler extends Handler {"
+        errorLine2="          ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/recordhistory/CfgHTBeaconHistoryActivity.java"
+            line="129"
+            column="11"/>
+    </issue>
+
+    <issue
+        id="HandlerLeak"
+        message="This `Handler` class should be static or leaks might occur (anonymous android.os.Handler)"
+        errorLine1="    private Handler mHandler = new Handler() {"
+        errorLine2="                               ^">
+        <location
+            file="src/main/java/com/kkmcn/view/DotsMarquee.java"
+            line="25"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="InefficientWeight"
+        message="Use a `layout_width` of `0dp` instead of `match_parent` for better performance"
+        errorLine1="                android:layout_width=&quot;match_parent&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="220"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="InefficientWeight"
+        message="Use a `layout_width` of `0dp` instead of `match_parent` for better performance"
+        errorLine1="                android:layout_width=&quot;match_parent&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="287"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="Overdraw"
+        message="Possible overdraw: Root element paints background `@color/white` with a theme that also paints a background (inferred theme is `@style/IosTheme`)"
+        errorLine1="    android:background=&quot;@color/white&quot;>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/activity_cfg_ht_record_list.xml"
+            line="8"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.back_arrow_gray` appears to be unused">
+        <location
+            file="src/main/res/drawable-xhdpi/back_arrow_gray.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.colorBlue` appears to be unused"
+        errorLine1="    &lt;color name=&quot;colorBlue&quot;>#008b8b&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/color.xml"
+            line="6"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.custom_switch_button` appears to be unused"
+        errorLine1="&lt;selector xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot; >"
+        errorLine2="^">
+        <location
+            file="src/main/res/drawable/custom_switch_button.xml"
+            line="2"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.activity_horizontal_margin` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;activity_horizontal_margin&quot;>16dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="3"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.activity_cell_pad` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;activity_cell_pad&quot;>5dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="4"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.activity_vertical_margin` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;activity_vertical_margin&quot;>16dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="5"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.dimen.navigation_drawer_width` appears to be unused"
+        errorLine1="    &lt;dimen name=&quot;navigation_drawer_width&quot;>240dp&lt;/dimen>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/dimens.xml"
+            line="9"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.drawer_shadow` appears to be unused">
+        <location
+            file="src/main/res/drawable-hdpi/drawer_shadow.9.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.ic_drawer` appears to be unused">
+        <location
+            file="src/main/res/drawable-hdpi/ic_drawer.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.menu.menu_connect` appears to be unused"
+        errorLine1="&lt;menu xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;"
+        errorLine2="^">
+        <location
+            file="src/main/res/menu/menu_connect.xml"
+            line="1"
+            column="1"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.track_setting` appears to be unused"
+        errorLine1="    &lt;string name=&quot;track_setting&quot;>Setting&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="18"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_not_supported` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_not_supported&quot;>Devices does not support ble4.0 &lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="21"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_function_disable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_function_disable&quot;>Bluetooth function is not enable on phone.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="22"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.label_data` appears to be unused"
+        errorLine1="    &lt;string name=&quot;label_data&quot;>Data:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="23"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.label_device_address` appears to be unused"
+        errorLine1="    &lt;string name=&quot;label_device_address&quot;>Address:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.label_state` appears to be unused"
+        errorLine1="    &lt;string name=&quot;label_state&quot;>State:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="25"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.no_data` appears to be unused"
+        errorLine1="    &lt;string name=&quot;no_data&quot;>No data&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.connected` appears to be unused"
+        errorLine1="    &lt;string name=&quot;connected&quot;>Connected&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="27"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.connecting` appears to be unused"
+        errorLine1="    &lt;string name=&quot;connecting&quot;>Connecting&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.disconnected` appears to be unused"
+        errorLine1="    &lt;string name=&quot;disconnected&quot;>Disconnect&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="29"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unknown` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unknown&quot;>Unknown&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="30"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.title_devices` appears to be unused"
+        errorLine1="    &lt;string name=&quot;title_devices&quot;>Test&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="31"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.error_bluetooth_not_supported` appears to be unused"
+        errorLine1="    &lt;string name=&quot;error_bluetooth_not_supported&quot;>Bluetooth not supported.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="32"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unknown_device` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unknown_device&quot;>Unknown device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="34"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unknown_characteristic` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unknown_characteristic&quot;>Unknown characteristic&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="35"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.unknown_service` appears to be unused"
+        errorLine1="    &lt;string name=&quot;unknown_service&quot;>Unknown service&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="36"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.title_activity_lock` appears to be unused"
+        errorLine1="    &lt;string name=&quot;title_activity_lock&quot;>locker&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="38"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.menu_remove` appears to be unused"
+        errorLine1="    &lt;string name=&quot;menu_remove&quot;>Remove&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="45"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.menu_shut` appears to be unused"
+        errorLine1="    &lt;string name=&quot;menu_shut&quot;>TurnOff&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="47"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.menu_setting` appears to be unused"
+        errorLine1="    &lt;string name=&quot;menu_setting&quot;>Setting&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="48"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.test_result_succ` appears to be unused"
+        errorLine1="    &lt;string name=&quot;test_result_succ&quot;>Pass&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="51"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.test_result_fail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;test_result_fail&quot;>WeakSignal&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="52"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.track_mac_address` appears to be unused"
+        errorLine1="    &lt;string name=&quot;track_mac_address&quot;>FF:FF:FF:FF:FF:FF&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="54"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.track_state` appears to be unused"
+        errorLine1="    &lt;string name=&quot;track_state&quot;>Status:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="55"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.title_activity_setting` appears to be unused"
+        errorLine1="    &lt;string name=&quot;title_activity_setting&quot;>Setting&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="56"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.track_setting_save` appears to be unused"
+        errorLine1="    &lt;string name=&quot;track_setting_save&quot;>Save&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="58"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.menu_connect` appears to be unused"
+        errorLine1="    &lt;string name=&quot;menu_connect&quot;>Connect&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="61"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.menu_disconnect` appears to be unused"
+        errorLine1="    &lt;string name=&quot;menu_disconnect&quot;>Disconnect&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="62"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.version_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;version_desc&quot;>Version:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="65"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.battery_level` appears to be unused"
+        errorLine1="    &lt;string name=&quot;battery_level&quot;>Battery Level:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="66"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.conn_error_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;conn_error_title&quot;>Connect Failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.auth_error_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;auth_error_title&quot;>Authentication Failed, new setting an new password&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="69"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.connect_error_timeout` appears to be unused"
+        errorLine1="    &lt;string name=&quot;connect_error_timeout&quot;>Connect failed, please try it again. if it still failed, then reset Phone bluetooth and APP.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="70"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.connect_error_auth_format` appears to be unused"
+        errorLine1="    &lt;string name=&quot;connect_error_auth_format&quot;>Password format error, please input 16 number ascii password..&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="71"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.test_number` appears to be unused"
+        errorLine1="    &lt;string name=&quot;test_number&quot;>TestNum&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="72"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.VIB_ALERT_SW` appears to be unused"
+        errorLine1="    &lt;string name=&quot;VIB_ALERT_SW&quot;>Virbration Alert&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="73"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.LOCK_ALERT_ON` appears to be unused"
+        errorLine1="    &lt;string name=&quot;LOCK_ALERT_ON&quot;>ON&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="74"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.LOCK_ALERT_OFF` appears to be unused"
+        errorLine1="    &lt;string name=&quot;LOCK_ALERT_OFF&quot;>OFF&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="75"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ALERT_TITLE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ALERT_TITLE&quot;>Alert:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="76"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.mdy_pwd_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;mdy_pwd_desc&quot;>Modify Password&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="77"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.name_not_null` appears to be unused"
+        errorLine1="    &lt;string name=&quot;name_not_null&quot;>Name is black&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="78"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.connected_discovered` appears to be unused"
+        errorLine1="    &lt;string name=&quot;connected_discovered&quot;>Discovered&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="79"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.new_name_dlg_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;new_name_dlg_title&quot;>New Name&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="80"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.new_password_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;new_password_desc&quot;>new password&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="81"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.confirm_password` appears to be unused"
+        errorLine1="    &lt;string name=&quot;confirm_password&quot;>Confirm your password&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="82"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.Old_password_wrong` appears to be unused"
+        errorLine1="    &lt;string name=&quot;Old_password_wrong&quot;>Old password is wrong&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="83"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.new_password_not_equal` appears to be unused"
+        errorLine1="    &lt;string name=&quot;new_password_not_equal&quot;>New password is not equal&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="84"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.password_not_6_char` appears to be unused"
+        errorLine1="    &lt;string name=&quot;password_not_6_char&quot;>The password must be 6 characteristics.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="85"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.mdy_lock_name_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;mdy_lock_name_desc&quot;>Modify Name&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="86"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cmd_low_battery_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cmd_low_battery_desc&quot;>Low Battery, not allowed lock!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="87"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cmd_low_battery_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cmd_low_battery_title&quot;>Low Battery&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="88"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.menu_dfu` appears to be unused"
+        errorLine1="    &lt;string name=&quot;menu_dfu&quot;>dfu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="89"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.menu_refresh` appears to be unused"
+        errorLine1="    &lt;string name=&quot;menu_refresh&quot;>refresh&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="90"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.DUF_LABEL_DESC` appears to be unused"
+        errorLine1="    &lt;string name=&quot;DUF_LABEL_DESC&quot;>StartDFU&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="91"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.START_DFU_BUTTON_TITLE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;START_DFU_BUTTON_TITLE&quot;>Start&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="92"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BTN_TURNOFF_TITLE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BTN_TURNOFF_TITLE&quot;>TurnOff&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="93"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cmd_lock_fail_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cmd_lock_fail_title&quot;>Lock failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="95"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cmd_lock_fail_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cmd_lock_fail_desc&quot;>Lock failed, error!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="96"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_failed_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_failed_title&quot;>DFU Failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="98"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_failed_notsupport` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_failed_notsupport&quot;>fareware not support DFU&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="99"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.app_version` appears to be unused"
+        errorLine1="    &lt;string name=&quot;app_version&quot;>version&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="100"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.Old_password_hint` appears to be unused"
+        errorLine1="    &lt;string name=&quot;Old_password_hint&quot;>old password&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="101"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.VIB_CFG_DOWNLOAD_SUCCESS` appears to be unused"
+        errorLine1="    &lt;string name=&quot;VIB_CFG_DOWNLOAD_SUCCESS&quot;>Modify virbration configruation success.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="103"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ENABLE_AUTOUNLOCK_CFG_SUCC` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ENABLE_AUTOUNLOCK_CFG_SUCC&quot;>Modify auto unlock configruation success.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="104"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_MINOR` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_MINOR&quot;>Minor:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="107"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_CONN_ENABLE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_CONN_ENABLE&quot;>Connectable:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="108"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_TX_POWER` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_TX_POWER&quot;>Tx:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="109"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_RTT` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_RTT&quot;>Rtt:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="113"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.EDDYSTONE_URL_DESC` appears to be unused"
+        errorLine1="    &lt;string name=&quot;EDDYSTONE_URL_DESC&quot;>Url:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="115"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.EDDYSTONE_UID` appears to be unused"
+        errorLine1="    &lt;string name=&quot;EDDYSTONE_UID&quot;>UID:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="116"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_MAJOR_EXPLAIN` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_MAJOR_EXPLAIN&quot;>(0~0xFFFF)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="117"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_ADV_TYPE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_ADV_TYPE&quot;>Adv Type:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="118"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_MODEL_TYPE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_MODEL_TYPE&quot;>Model:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="119"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ADV_TYPE_IBEACON` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ADV_TYPE_IBEACON&quot;>iBeacon&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="120"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ADV_TYPE_URL` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ADV_TYPE_URL&quot;>EddyURL&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="122"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ADV_TYPE_UID` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ADV_TYPE_UID&quot;>EddyUID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="123"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_16_HEX` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_16_HEX&quot;>(16 Hex)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="124"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_ADV_PERIOD` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_ADV_PERIOD&quot;>Adv Period:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="125"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_ADV_PRD_EXP` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_ADV_PRD_EXP&quot;>(100~10000ms)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="126"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.EDIT_BEACON_TX_POWER` appears to be unused"
+        errorLine1="    &lt;string name=&quot;EDIT_BEACON_TX_POWER&quot;>TxPower(dBm):&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="127"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_NEW_PWD` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_NEW_PWD&quot;>Change Password:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="128"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_NEW_PWD_EXP` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_NEW_PWD_EXP&quot;>(6 character)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="129"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_DOWNLOAD` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_DOWNLOAD&quot;>Download configruation&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="131"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.DISCOVER_SRV` appears to be unused"
+        errorLine1="    &lt;string name=&quot;DISCOVER_SRV&quot;>DiscoverServing&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="133"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.devMenuUpload` appears to be unused"
+        errorLine1="    &lt;string name=&quot;devMenuUpload&quot;>Save&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="134"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.IBeaconSettingDesc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;IBeaconSettingDesc&quot;>iBeacon Setting:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="135"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.CommonSetting` appears to be unused"
+        errorLine1="    &lt;string name=&quot;CommonSetting&quot;>Common Setting:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="136"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_NAME` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_NAME&quot;>Name:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="138"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_NAME_EXP` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_NAME_EXP&quot;>(1~11 character)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="139"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_PWD_EXP` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_PWD_EXP&quot;>(8~16 character)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="140"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_ADV_PERIOD_FMT_ERROR` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_ADV_PERIOD_FMT_ERROR&quot;>Beacon advertisement period format error(101~10000ms)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="141"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_DEV_NAME_FMT_ERROR` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_DEV_NAME_FMT_ERROR&quot;>Beacon name format error(1~16 character)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="142"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.EDDY_URL_FMT_ERROR` appears to be unused"
+        errorLine1="    &lt;string name=&quot;EDDY_URL_FMT_ERROR&quot;>Eddystone Url format error.Please input like: http://www.kkmcn.com/&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="144"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.IBEACON_MAJOR_FMT_ERROR` appears to be unused"
+        errorLine1="    &lt;string name=&quot;IBEACON_MAJOR_FMT_ERROR&quot;>Apple iBeacon MajorID format error, valid input example: 0x00F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="145"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.IBEACON_MINOR_FMT_ERROR` appears to be unused"
+        errorLine1="    &lt;string name=&quot;IBEACON_MINOR_FMT_ERROR&quot;>Apple iBeacon Minor format error, valid input eexample: 0x00F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="146"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.IBEACON_UUID_FMT_ERROR` appears to be unused"
+        errorLine1="    &lt;string name=&quot;IBEACON_UUID_FMT_ERROR&quot;>Apple iBeacon UUID format error&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="147"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.auth_write_pwd_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;auth_write_pwd_title&quot;>Please input unlock code&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="149"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.authentication_failed_desc` appears to be unused"
+        errorLine1="    &lt;string name=&quot;authentication_failed_desc&quot;>Authentication failed, please check whether the unlock password is right!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="150"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.err_read_check_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;err_read_check_failed&quot;>Reading check failed, please try to upload again&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="152"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.upload_data_success` appears to be unused"
+        errorLine1="    &lt;string name=&quot;upload_data_success&quot;>Upload config paramaters to device successfully!&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="154"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.upload_data_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;upload_data_title&quot;>Upload successful&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="155"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.upload_read_check_paramaters` appears to be unused"
+        errorLine1="    &lt;string name=&quot;upload_read_check_paramaters&quot;>Read paramaters from device to check&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="156"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.upload_ready_paramaters` appears to be unused"
+        errorLine1="    &lt;string name=&quot;upload_ready_paramaters&quot;>Starting&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="157"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.upload_unlock_for_write` appears to be unused"
+        errorLine1="    &lt;string name=&quot;upload_unlock_for_write&quot;>Unlocking device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="158"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.upload_write_paramaters` appears to be unused"
+        errorLine1="    &lt;string name=&quot;upload_write_paramaters&quot;>Write Config Paramaters to device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="159"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.err_no_data_chage_need_cfg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;err_no_data_chage_need_cfg&quot;>&quot;No need upload paramaters to device during no config data changed &quot;&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="160"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_OLD_PWD` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_OLD_PWD&quot;>DevicePassword:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="161"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.beacon_cfg_conn_enalbe` appears to be unused"
+        errorLine1="    &lt;string name=&quot;beacon_cfg_conn_enalbe&quot;>Connect Enable&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="162"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.beacon_load_para_to_template_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;beacon_load_para_to_template_failed&quot;>No template config paramaters exist&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="163"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.beacon_load_para_to_template_success` appears to be unused"
+        errorLine1="    &lt;string name=&quot;beacon_load_para_to_template_success&quot;>Load config paramaters success&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="164"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.beacon_save_para_to_template_success` appears to be unused"
+        errorLine1="    &lt;string name=&quot;beacon_save_para_to_template_success&quot;>Save config paramaters success&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="165"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.common_succ_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;common_succ_title&quot;>Success&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="167"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_MAJOR_LIST` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_MAJOR_LIST&quot;>Major:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="169"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_MINOR_LIST` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_MINOR_LIST&quot;>Minor:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="170"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.KBEACON_ADV_NO_CONNECTABLE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;KBEACON_ADV_NO_CONNECTABLE&quot;>The device is in Un-Connected advertisement and not allowed to be connect. Click the button on KBeacon or reinstall the battery to make it enter connectable advertisement.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="171"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.location_permit_needed_for_ble` appears to be unused"
+        errorLine1="    &lt;string name=&quot;location_permit_needed_for_ble&quot;>The bluetooth need location permission during scan&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="172"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.location_permit_for_ble_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;location_permit_for_ble_failed&quot;>Check location permission failed, start ble scan failed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="173"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.connecting_permit_for_ble_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;connecting_permit_for_ble_failed&quot;>Check BLE connecting permission failed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="174"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.SCAN_FAILED_REBOOT` appears to be unused"
+        errorLine1="    &lt;string name=&quot;SCAN_FAILED_REBOOT&quot;>Start scan failed, please reboot Bluetooth and try it again.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="176"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.list_select_type` appears to be unused"
+        errorLine1="    &lt;string name=&quot;list_select_type&quot;>select&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="177"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ele_value_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ele_value_name&quot;>value&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="178"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.disconnect_notice` appears to be unused"
+        errorLine1="    &lt;string name=&quot;disconnect_notice&quot;>notice&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="179"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.disconnection_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;disconnection_description&quot;>Connection disconnected.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="180"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_device_connecting` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_device_connecting&quot;>Connecting&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="181"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_beacon_detail_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_beacon_detail_title&quot;>Beacon Detail&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="183"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_name_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_name_title&quot;>Beacon Name&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="185"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.name_max_then_12_ascii` appears to be unused"
+        errorLine1="    &lt;string name=&quot;name_max_then_12_ascii&quot;>Tip: Name must less then 17 ASCII characters&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="186"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_advprd_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_advprd_title&quot;>Adv Interval&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="188"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_advprd_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_advprd_tip&quot;>Tip: the beacon is easy to be scaned and conneced if the advertisement interval is short, but the power consumption is higher&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="189"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_advflag_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_advflag_title&quot;>Connectable&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="191"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_advflag_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_advflag_tip&quot;>Tip: 1 means Beacon is connectable, 0 means Beacon is un-connectable.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="192"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_tx_power_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_tx_power_title&quot;>Tx Power:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="194"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_measure_pwr_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_measure_pwr_title&quot;>Measure Power&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="196"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_tx_measure_pwr_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_tx_measure_pwr_tip&quot;>Tip: Rx power at 1 meters, typical value range is -64dBm~-54dBm, Non-professionals are not recommanded to change this value&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="197"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_tx_measure_pwr_set_error` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_tx_measure_pwr_set_error&quot;>Input value range error, the valid range is from -64dBm to -54dBm.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="198"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_beacon_type_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_beacon_type_title&quot;>Beacon Type&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="200"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_beacon_type_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_beacon_type_tip&quot;>Tip: if the beacon type set to iBeacon or Eddystone URL/UID, the Eddystone TLM packet will broadcasting at 10x interval as other beacon type.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="201"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.hex_input_prefex` appears to be unused"
+        errorLine1="    &lt;string name=&quot;hex_input_prefex&quot;>0x&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="203"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.tx_power_uint_dbm` appears to be unused"
+        errorLine1="    &lt;string name=&quot;tx_power_uint_dbm&quot;>dBm&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="204"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_uuid_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_uuid_title&quot;>UUID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="207"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.uuid_air_locate_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;uuid_air_locate_name&quot;>Air Locate&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="208"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.uuid_web_chat_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;uuid_web_chat_name&quot;>Web Chat&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="209"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.uuid_estimote_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;uuid_estimote_name&quot;>Estimote&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="210"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.uuid_kkm_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;uuid_kkm_name&quot;>KKM&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="211"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_ibeacon_majorid_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_ibeacon_majorid_title&quot;>MajorID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="213"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_beacon_majorid_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_beacon_majorid_tip&quot;>Tip: input range 0x0000~0xFFFF, please input hexadecimal format data. for example: 0x00F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="214"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_ibeacon_minorid_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_ibeacon_minorid_title&quot;>MinorID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="216"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_beacon_minorid_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_beacon_minorid_tip&quot;>Tip: input range 0x0000~0xFFFF, please input hexadecimal format data. for example: 0x00F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="217"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_ibeacon_namespaceid_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_ibeacon_namespaceid_title&quot;>NamespaceID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="219"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_beacon_namespace_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_beacon_namespace_tip&quot;>Tip: please input 10 Byte Eddystone UID namespace ID. for example: 0x0000000000A1000000F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="220"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.beacon_namespace_format_error` appears to be unused"
+        errorLine1="    &lt;string name=&quot;beacon_namespace_format_error&quot;>Eddystone UID namespace id format error, make sure it is 10 byte length. for example: 0x0000000000A1000000F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="221"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_ibeacon_serialid_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_ibeacon_serialid_title&quot;>SerialID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="223"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_beacon_serialid_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_beacon_serialid_tip&quot;>Tip: please input 6 Byte Eddystone UID serial ID. for example: 0x00A1000000F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="224"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.beacon_serial_format_error` appears to be unused"
+        errorLine1="    &lt;string name=&quot;beacon_serial_format_error&quot;>Eddystone UID serial id format error, make sure it is 10 byte length. for example: 0x00A1000000F1&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="225"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_filed_namespace_id` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_filed_namespace_id&quot;>Namespace ID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="227"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_filed_instance_id` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_filed_instance_id&quot;>Instance ID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="228"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_filed_uuid` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_filed_uuid&quot;>UUID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="229"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_filed_majorid` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_filed_majorid&quot;>Major ID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="230"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_filed_minorid` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_filed_minorid&quot;>Minor ID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="231"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ble_filed_modify_pwd` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ble_filed_modify_pwd&quot;>Modify password&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="233"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.password_input_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;password_input_tip&quot;>The password should be 16 ascii characteristic, the default password is 0000000000000000&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="234"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.password_length_error` appears to be unused"
+        errorLine1="    &lt;string name=&quot;password_length_error&quot;>The password length is not 16 ascii characteristic.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="235"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.password_not_equal` appears to be unused"
+        errorLine1="    &lt;string name=&quot;password_not_equal&quot;>The confirm new password does not match new password.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="236"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_url_address_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_url_address_title&quot;>URL address&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="238"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.cfg_field_url_tip` appears to be unused"
+        errorLine1="    &lt;string name=&quot;cfg_field_url_tip&quot;>Tip: please input the URL address, example: https://www.google.com/&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="239"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_system_info_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_system_info_title&quot;>System Info&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="241"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_system_info_id` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_system_info_id&quot;>System ID&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="242"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_system_info_model` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_system_info_model&quot;>Model&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="243"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.activity_cfg_system_info_version` appears to be unused"
+        errorLine1="    &lt;string name=&quot;activity_cfg_system_info_version&quot;>Version&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="244"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.double_click_quit` appears to be unused"
+        errorLine1="    &lt;string name=&quot;double_click_quit&quot;>Double click to quit app&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="248"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.button_trigger_command` appears to be unused"
+        errorLine1="    &lt;string name=&quot;button_trigger_command&quot;>Button trigger command:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="250"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.motion_sensor_command` appears to be unused"
+        errorLine1="    &lt;string name=&quot;motion_sensor_command&quot;>Motion trigger command:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="251"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.temp_humidity_sensor_command` appears to be unused"
+        errorLine1="    &lt;string name=&quot;temp_humidity_sensor_command&quot;>TH&amp;amp;Acc KSensor adv&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="252"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.other_sensor_command` appears to be unused"
+        errorLine1="    &lt;string name=&quot;other_sensor_command&quot;>Other sensor sensor&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="253"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ring_device_btn_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ring_device_btn_title&quot;>Ring device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="254"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.co2_calibration` appears to be unused"
+        errorLine1="    &lt;string name=&quot;co2_calibration&quot;>Calibration&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="255"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.co2_baseline_read` appears to be unused"
+        errorLine1="    &lt;string name=&quot;co2_baseline_read&quot;>Read&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="256"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enable_btn_trigger_to_adv` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enable_btn_trigger_to_adv&quot;>TriggerEvt 2 Adv&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="258"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enable_btn_trigger_to_app` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enable_btn_trigger_to_app&quot;>TriggerEvt 2 App&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="259"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.read_btn_trigger` appears to be unused"
+        errorLine1="    &lt;string name=&quot;read_btn_trigger&quot;>Read para&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="260"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enable_th_trigger_adv` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enable_th_trigger_adv&quot;>TriggerEvt 2 Adv&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="263"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enable_th_change_report` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enable_th_change_report&quot;>TriggerEvt 2 App&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="264"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enable_th_periodically_report` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enable_th_periodically_report&quot;>Periodically 2 App&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="265"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.DFU_CONNECT_SERVICE_FAIL` appears to be unused"
+        errorLine1="    &lt;string name=&quot;DFU_CONNECT_SERVICE_FAIL&quot;>Connect to cloud server failed, please check if the network was connected and give the application network permission&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="271"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.DFU_TITLE` appears to be unused"
+        errorLine1="    &lt;string name=&quot;DFU_TITLE&quot;>Update&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="275"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.UPDATE_CONNECTING` appears to be unused"
+        errorLine1="    &lt;string name=&quot;UPDATE_CONNECTING&quot;>Connecting for update&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="277"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.kb_dfu_device` appears to be unused"
+        errorLine1="    &lt;string name=&quot;kb_dfu_device&quot;>Dfu&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="287"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.kb_co2_calibration_level` appears to be unused"
+        errorLine1="    &lt;string name=&quot;kb_co2_calibration_level&quot;>CO2 level&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="288"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.kb_co2_calibration_baseline` appears to be unused"
+        errorLine1="    &lt;string name=&quot;kb_co2_calibration_baseline&quot;>Baseline&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="289"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.update_ibeacon_2_tlm` appears to be unused"
+        errorLine1="    &lt;string name=&quot;update_ibeacon_2_tlm&quot;>iBeacon2TLM&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="302"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_ACC_CO2` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_ACC_CO2&quot;>CO2:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="308"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.BEACON_ACC_VOC` appears to be unused"
+        errorLine1="    &lt;string name=&quot;BEACON_ACC_VOC&quot;>VOC:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="309"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ENABLE_MOTION_TRIGGER` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ENABLE_MOTION_TRIGGER&quot;>TriggerEvt to Adv&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="322"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.disable_motion_trigger` appears to be unused"
+        errorLine1="    &lt;string name=&quot;disable_motion_trigger&quot;>Disable Trigger&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="323"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ENABLE_AXIS_ADVERTISEMENT` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ENABLE_AXIS_ADVERTISEMENT&quot;>Include axis&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="325"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.ENABLE_HT_ADVERTISEMENT` appears to be unused"
+        errorLine1="    &lt;string name=&quot;ENABLE_HT_ADVERTISEMENT&quot;>Include T&amp;amp;H&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="326"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.enable_th_adv_report` appears to be unused"
+        errorLine1="    &lt;string name=&quot;enable_th_adv_report&quot;>T&amp;amp;H data to Adv&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="327"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.TEMP_HUMIDITY_SETTING` appears to be unused"
+        errorLine1="    &lt;string name=&quot;TEMP_HUMIDITY_SETTING&quot;>T&amp;amp;H Setting:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="328"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.TH_MEASURE_INTERVAL` appears to be unused"
+        errorLine1="    &lt;string name=&quot;TH_MEASURE_INTERVAL&quot;>Measure interval:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="329"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.TEMP_CHANGE_THD` appears to be unused"
+        errorLine1="    &lt;string name=&quot;TEMP_CHANGE_THD&quot;>Temperature change threshold:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="330"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.HUMIDITY_CHANGE_THD` appears to be unused"
+        errorLine1="    &lt;string name=&quot;HUMIDITY_CHANGE_THD&quot;>Humidity change threshold:&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="331"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.temp_humidity_sensor_trigger` appears to be unused"
+        errorLine1="    &lt;string name=&quot;temp_humidity_sensor_trigger&quot;>Temperature&amp;amp;humidity trigger&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="333"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.RECEIVE_NOTIFY_DATA` appears to be unused"
+        errorLine1="    &lt;string name=&quot;RECEIVE_NOTIFY_DATA&quot;>Receive T&amp;amp;H notify data, utc:%1$s, temperature:%2$f, humidity: %3$f&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="335"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_action_abort` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_action_abort&quot;>Abort&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="337"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_channel_description` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_channel_description&quot;>Shows DFU progress.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="338"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_channel_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_channel_name&quot;>DFU&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="339"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_aborted` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_aborted&quot;>Aborted&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="340"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_aborted_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_aborted_msg&quot;>Application upload has been canceled.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="341"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_aborting` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_aborting&quot;>Aborting…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="342"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_completed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_completed&quot;>Done&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="343"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_completed_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_completed_msg&quot;>Application has been sent successfully.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="344"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_connecting_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_connecting_msg&quot;>Connecting to %s…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="346"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_disconnecting_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_disconnecting_msg&quot;>Disconnecting from %s…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="348"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_error` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_error&quot;>Upload failed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="349"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_error_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_error_msg&quot;>DFU process failed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="350"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_foreground_content` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_foreground_content&quot;>Update in progress…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="351"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_foreground_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_foreground_title&quot;>Device Firmware Update&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="352"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_initializing` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_initializing&quot;>Initializing…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="353"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_starting_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_starting_msg&quot;>Initializing DFU process…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="355"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_switching_to_dfu` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_switching_to_dfu&quot;>Starting bootloader…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="356"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_switching_to_dfu_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_switching_to_dfu_msg&quot;>Waiting for bootloader…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="357"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_uploading` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_uploading&quot;>Uploading…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="358"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_uploading_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_uploading_msg&quot;>Transmitting firmware to %s…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="359"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_uploading_part` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_uploading_part&quot;>Uploading part %d/%d…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="360"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_validating` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_validating&quot;>Validating…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="361"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_status_validating_msg` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_status_validating_msg&quot;>Validating…&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="362"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.dfu_unknown_name` appears to be unused"
+        errorLine1="    &lt;string name=&quot;dfu_unknown_name&quot;>unnamed device&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="363"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.AppBaseTheme` appears to be unused"
+        errorLine1="    &lt;style name=&quot;AppBaseTheme&quot; parent=&quot;android:Theme.Light&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="7"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.AppTheme` appears to be unused"
+        errorLine1="    &lt;style name=&quot;AppTheme&quot; parent=&quot;AppBaseTheme&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="16"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.IosNoActionBarTheme` appears to be unused"
+        errorLine1="    &lt;style name=&quot;IosNoActionBarTheme&quot; parent=&quot;Theme.AppCompat.Light.NoActionBar&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="20"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.colorPrimaryDark` appears to be unused"
+        errorLine1="    &lt;color name=&quot;colorPrimaryDark&quot;>#303F9F&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="31"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.background_color` appears to be unused"
+        errorLine1="    &lt;color name=&quot;background_color&quot;>#f5f5f5&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="38"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.color.white_color` appears to be unused"
+        errorLine1="    &lt;color name=&quot;white_color&quot;>#f5f5f5&lt;/color>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="39"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.Theme_Holo_Transparent` appears to be unused"
+        errorLine1="    &lt;style name=&quot;Theme.Holo.Transparent&quot; parent=&quot;android:Theme.Holo.Light.Dialog&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="61"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.Theme_myDialogTheme` appears to be unused"
+        errorLine1="    &lt;style name=&quot;Theme.myDialogTheme&quot; parent=&quot;android:Theme.Dialog&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="70"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.divide_line` appears to be unused"
+        errorLine1="    &lt;style name=&quot;divide_line&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="80"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.style.divide_line_full` appears to be unused"
+        errorLine1="    &lt;style name=&quot;divide_line_full&quot;>"
+        errorLine2="           ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="87"
+            column="12"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.switch_off` appears to be unused">
+        <location
+            file="src/main/res/drawable-hdpi/switch_off.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.switch_on` appears to be unused">
+        <location
+            file="src/main/res/drawable-hdpi/switch_on.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.tri_right` appears to be unused">
+        <location
+            file="src/main/res/drawable-hdpi/tri_right.png"/>
+    </issue>
+
+    <issue
+        id="UnusedResources"
+        message="The resource `R.drawable.trig` appears to be unused">
+        <location
+            file="src/main/res/drawable-xhdpi/trig.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/empty_dot.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/empty_dot.png"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/filled_dot.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/filled_dot.png"/>
+    </issue>
+
+    <issue
+        id="IconDensities"
+        message="Missing the following drawables in `drawable-hdpi`: back_arrow_gray.png, downarrow.png, ic_launcher.png, remove.png, trig.png... (1 more)">
+        <location
+            file="src/main/res/drawable-hdpi"/>
+    </issue>
+
+    <issue
+        id="IconDensities"
+        message="Missing the following drawables in `drawable-mdpi`: back_arrow_gray.png, downarrow.png, ic_launcher.png, remove.png, switch_off.png... (4 more)">
+        <location
+            file="src/main/res/drawable-mdpi"/>
+    </issue>
+
+    <issue
+        id="IconDensities"
+        message="Missing the following drawables in `drawable-xhdpi`: switch_off.png, switch_on.png, tri_right.png">
+        <location
+            file="src/main/res/drawable-xhdpi"/>
+    </issue>
+
+    <issue
+        id="IconDensities"
+        message="Missing the following drawables in `drawable-xxhdpi`: back_arrow_gray.png, downarrow.png, ic_launcher.png, remove.png, switch_off.png... (4 more)">
+        <location
+            file="src/main/res/drawable-xxhdpi"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="113"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="121"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="105"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="116"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="127"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="138"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="25"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="38"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="            &lt;Button"
+        errorLine2="             ~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="47"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="        &lt;Button"
+        errorLine2="         ~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="162"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="ButtonStyle"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)"
+        errorLine1="        &lt;Button"
+        errorLine2="         ~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="170"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="Autofill"
+        message="Missing `autofillHints` attribute"
+        errorLine1="            &lt;EditText"
+        errorLine2="             ~~~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="67"
+            column="14"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view ``ListView`` has `setOnTouchListener` called on it but does not override `performClick`"
+        errorLine1="        mListView.setOnTouchListener((v, e) -> {"
+        errorLine2="        ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="384"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="ClickableViewAccessibility"
+        message="`onTouch` lambda should call `View#performClick` when a click is detected"
+        errorLine1="        mListView.setOnTouchListener((v, e) -> {"
+        errorLine2="                                     ^">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/DeviceScanActivity.java"
+            line="384"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="        tvTitle.setText(&quot;거리보정 - &quot; + displayName);"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="100"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="SetTextI18n"
+        message="Do not concatenate text displayed with `setText`. Use resource string with placeholders."
+        errorLine1="                    tvInstructions.setText(&quot;측정 실패: &quot; + errorMessage + &quot;\n재측정을 시도해주세요.&quot;);"
+        errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/kkmcn/sensordemo/cal/CalibrationDialog.java"
+            line="220"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;거리보정&quot;, should use `@string` resource"
+        errorLine1="            android:text=&quot;거리보정&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="17"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;비콘으로부터 정확히 1m, 2m, 3m 떨어진 지점에서\n각각 측정을 진행합니다.&quot;, should use `@string` resource"
+        errorLine1="            android:text=&quot;비콘으로부터 정확히 1m, 2m, 3m 떨어진 지점에서\n각각 측정을 진행합니다.&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="28"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;측정 단계&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;측정 단계&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="47"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;1m: 대기중&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;1m: 대기중&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="56"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;2m: 대기중&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;2m: 대기중&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="64"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;3m: 대기중&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;3m: 대기중&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="72"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;보정 결과&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;보정 결과&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="92"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;취소&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;취소&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="118"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;측정 시작&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;측정 시작&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/dialog_calibration.xml"
+            line="126"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;2020-04-01 10:10&quot;, should use `@string` resource"
+        errorLine1="        android:text=&quot;2020-04-01 10:10&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/ele_nearby_ht_record.xml"
+            line="16"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;string/BEACON_HUM&quot;, should use `@string` resource"
+        errorLine1="        android:text=&quot;string/BEACON_HUM&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/ele_nearby_ht_record.xml"
+            line="37"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;비콘 이름&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;비콘 이름&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="58"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;거리: 0.0m&quot;, should use `@string` resource"
+        errorLine1="                    android:text=&quot;거리: 0.0m&quot;"
+        errorLine2="                    ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="74"
+            column="21"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;-0.0dBm&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;-0.0dBm&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="85"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;배터리: 0%&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;배터리: 0%&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="95"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;알람&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;알람&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="110"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;알람 중지&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;알람 중지&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="121"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;거리설정&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;거리설정&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="132"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;거리보정&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;거리보정&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="143"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;Loading...&quot;, should use `@string` resource"
+        errorLine1="            android:text=&quot;Loading...&quot;/>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/load_more.xml"
+            line="26"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;-100dBm&quot;, should use `@string` resource"
+        errorLine1="                android:text=&quot;-100dBm&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="124"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;폰 알람&quot;, should use `@string` resource"
+        errorLine1="            android:text=&quot;폰 알람&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="167"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="HardcodedText"
+        message="Hardcoded string &quot;폰 알람 중지&quot;, should use `@string` resource"
+        errorLine1="            android:text=&quot;폰 알람 중지&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="176"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="RtlSymmetry"
+        message="When you define `paddingEnd` you should probably also define `paddingStart` for right-to-left symmetry"
+        errorLine1="                android:paddingEnd=&quot;5dp&quot;"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/main_activity.xml"
+            line="76"
+            column="17"/>
+    </issue>
+
+    <issue
+        id="RtlHardcoded"
+        message="Use &quot;`end`&quot; instead of &quot;`right`&quot; to ensure correct behavior in right-to-left locales"
+        errorLine1="                android:layout_gravity=&quot;bottom|right&quot;"
+        errorLine2="                                        ~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="176"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="RtlHardcoded"
+        message="Consider replacing `android:layout_marginLeft` with `android:layout_marginStart=&quot;10dp&quot;` to better support right-to-left layouts"
+        errorLine1="            android:layout_marginLeft=&quot;10dp&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="186"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="RtlHardcoded"
+        message="Use &quot;`end`&quot; instead of &quot;`right`&quot; to ensure correct behavior in right-to-left locales"
+        errorLine1="                android:layout_gravity=&quot;right&quot;"
+        errorLine2="                                        ~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="195"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="RtlHardcoded"
+        message="Use &quot;`end`&quot; instead of &quot;`right`&quot; to ensure correct behavior in right-to-left locales"
+        errorLine1="                android:layout_gravity=&quot;right&quot;"
+        errorLine2="                                        ~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="204"
+            column="41"/>
+    </issue>
+
+    <issue
+        id="RtlHardcoded"
+        message="Consider replacing `android:layout_marginLeft` with `android:layout_marginStart=&quot;10dp&quot;` to better support right-to-left layouts"
+        errorLine1="            android:layout_marginLeft=&quot;10dp&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/listitem_device.xml"
+            line="264"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="RtlHardcoded"
+        message="Consider replacing `android:layout_marginLeft` with `android:layout_marginStart=&quot;20dp&quot;` to better support right-to-left layouts"
+        errorLine1="            android:layout_marginLeft=&quot;20dp&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/layout/load_more.xml"
+            line="25"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="RtlEnabled"
+        message="The project references RTL attributes, but does not explicitly enable or disable RTL support with `android:supportsRtl` in the manifest">
+        <location
+            file="src/main/AndroidManifest.xml"/>
+    </issue>
+
+</issues>

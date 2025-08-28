@@ -1,10 +1,7 @@
-  feat(ble): 하이브리드 스캔 아키텍처 구현으로 BLE 탐지 문제 해결
+  feat(permissions): Android 12+ 워치독 기반 권한 폴백 패턴 구현
 
-  • DevicePrefs 클래스 추가 - MAC 기반 영속 저장소
-  • BleService: pairedSet + candidates 분리, 소프트 필터링 적용
-  • 스캔 제어 일원화: Activity가 KBeaconsMgr 직접 조작 금지
-  • 초기 이름 필터 → 이후 MAC 추적 구조로 변경
-  • 캘리브레이션/거리설정/배터리 정보를 DevicePrefs와 연동
-  • 스캔 충돌 문제 해결 (Activity ↔ Service → Service 단일화)
-  • 하드웨어 레벨 이름 필터 제거로 비콘 누락 방지
-  • 디버깅 로그 추가로 하이브리드 스캔 상태 추적 가능
+  - BleService 워치독: 7초 내 스캔 결과 없으면 위치권한 폴백 요청
+  - DeviceScanActivity: "다시 묻지 않음" 상태 감지하여 앱 설정으로 이동
+  - ArrayList<KBeacon> 브릿지 메서드 추가 (라이브러리 호환성)
+  - BLUETOOTH_CONNECT 권한 확인 추가 (Android 12+ lint 준수)
+  - lint 베이스라인 생성으로 빌드 안정성 확보
