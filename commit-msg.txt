@@ -1,6 +1,6 @@
-  fix(build): 컴파일 에러 완전 해결 - missing imports 및 중복 메서드 수정
+  fix(manifest): Android 14 FGS 권한 및 타입 수정으로 앱 크래시 방지
 
-  • BluetoothAdapter, BroadcastReceiver, IntentFilter import 추가
-  • DeviceScanActivity에 Handler/Looper import 추가
-  • BleService 중복 onDestroy 메서드 제거
-  • 모든 symbol not found 오류 해결
+  • FOREGROUND_SERVICE_CONNECTED_DEVICE 권한 추가 (Android 14+ 필수)
+  • foregroundServiceType을 dataSync → connectedDevice로 변경
+  • BLE 비콘 장치 통신에 적합한 권한 구성으로 SecurityException 해결
+  • minSdk 26 ~ targetSdk 34 버전 호환성 유지
