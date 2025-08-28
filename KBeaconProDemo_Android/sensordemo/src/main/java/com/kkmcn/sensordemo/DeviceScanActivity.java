@@ -18,8 +18,15 @@ package com.kkmcn.sensordemo;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
+import android.os.IBinder;
 import android.widget.Toast;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.content.pm.PackageManager;
@@ -65,6 +72,7 @@ import com.kkmcn.sensordemo.ring.RingManager;
 import com.kkmcn.sensordemo.battery.BatteryScheduler;
 import com.kkmcn.sensordemo.cal.CalibrationSession;
 import com.kkmcn.sensordemo.cal.CalibrationDialog;
+import com.kkmcn.sensordemo.service.BleService;
 
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
@@ -105,7 +113,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private final static int  MAX_ERROR_SCAN_NUMBER = 2;
     private HashMap<String, KBeacon> mBeaconsDictory;
     private KBeacon[] mBeaconsArray;
-    private KBeaconsMgr mBeaconsMgr;
+    private KBeaconsMgr mBeaconsMgr; // TODO: BleService로 대체 예정
+    
+    // BleService 바인딩
+    private BleService mBleService;
+    private boolean mServiceBound = false;
 
 
     private Button mBtnFilterTotal, mBtnRmvAllFilter, mBtnFilterArrow, mBtnRmvNameFilter;
@@ -144,16 +156,96 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     // [캘리브레이션] 가드 플래그 및 세션 관리
     private volatile boolean isCalibrating = false;
     private CalibrationSession activeCalibrationSession = null;
+    
+    // BleService 연결 관리
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            Log.d(TAG, "BleService connected");
+            BleService.BleServiceBinder binder = (BleService.BleServiceBinder) iBinder;
+            mBleService = binder.getService();
+            mServiceBound = true;
+            
+            // Service 연결 후 초기 상태 동기화
+            if (mBleService != null) {
+                // Activity의 UI를 Service 상태와 동기화
+                invalidateOptionsMenu();
+            }
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+            Log.d(TAG, "BleService disconnected");
+            mBleService = null;
+            mServiceBound = false;
+        }
+    };
+    
+    // BleService 브로드캐스트 리시버
+    private final BroadcastReceiver mServiceBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action == null) return;
+            
+            switch (action) {
+                case BleService.ACTION_BEACON_UPDATE:
+                    // 비콘 목록 업데이트 (500ms 주기)
+                    if (mServiceBound && mBleService != null) {
+                        runOnUiThread(() -> updateUiFromService());
+                    }
+                    break;
+                    
+                case BleService.ACTION_SCAN_STATE_CHANGED:
+                    boolean scanning = intent.getBooleanExtra("scanning", false);
+                    Log.d(TAG, "Scan state changed: " + scanning);
+                    runOnUiThread(() -> {
+                        invalidateOptionsMenu();
+                        if (swipeRefreshLayout != null) {
+                            swipeRefreshLayout.setRefreshing(scanning);
+                        }
+                    });
+                    break;
+                    
+                case BleService.ACTION_RING_STATE_CHANGED:
+                    String mac = intent.getStringExtra("mac");
+                    String state = intent.getStringExtra("state");
+                    Log.d(TAG, String.format("Ring state changed: MAC=%s, state=%s", mac, state));
+                    // TODO: 개별 버튼 상태 업데이트
+                    break;
+                    
+                case BleService.ACTION_AUTO_ALARM_TRIGGERED:
+                    String triggerMac = intent.getStringExtra("mac");
+                    double distance = intent.getDoubleExtra("distance", 0.0);
+                    double threshold = intent.getDoubleExtra("threshold", 0.0);
+                    Log.w(TAG, String.format("Auto alarm triggered: MAC=%s, distance=%.1fm > threshold=%.1fm", 
+                        triggerMac, distance, threshold));
+                    
+                    // 태블릿 알람 시작
+                    runOnUiThread(() -> startPhoneAlarm());
+                    break;
+            }
+        }
+    };
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-        if (mBeaconsMgr.isScanning()) {
+        
+        // BleService 기반 스캔 상태 확인
+        boolean isScanning = false;
+        if (mServiceBound && mBleService != null) {
+            isScanning = mBleService.isScanningActive();
+        } else if (mBeaconsMgr != null) {
+            // 폴백: 기존 KBeaconsMgr 사용
+            isScanning = mBeaconsMgr.isScanning();
+        }
+        
+        if (isScanning) {
             menu.findItem(R.id.menu_stop).setVisible(true);
             menu.findItem(R.id.menu_scan).setVisible(false);
             menu.findItem(R.id.menu_refresh).setActionView(
                     R.layout.actionbar_indeterminate_progress);
-
         } else {
             menu.findItem(R.id.menu_stop).setVisible(false);
             menu.findItem(R.id.menu_scan).setVisible(true);
@@ -184,7 +276,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         // Phase 2 Part 3: 영속화 컴포넌트 초기화
         mPrefs = new Prefs(getApplicationContext());
         
-        // 500ms UI 갱신 시스템 초기화
+        // 500ms UI 갱신 시스템 초기화 (Service 기반으로 변경)
         mUiUpdateHandler = new Handler();
         mUiUpdateRunnable = new Runnable() {
             @Override
@@ -192,7 +284,12 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 // [터치디바운스] 사용자 터치 중이거나 프리즈 기간에는 UI 갱신 스킵
                 final long now = SystemClock.uptimeMillis();
                 if (!userTouchingList && now >= uiFreezeUntilMs) {
-                    updateUiFromDataStore();
+                    // BleService 연결 시 Service에서, 아니면 기존 DataStore에서 데이터 취득
+                    if (mServiceBound && mBleService != null) {
+                        updateUiFromService();
+                    } else {
+                        updateUiFromDataStore();
+                    }
                 } else {
                     Log.v("UI_UPDATE", String.format("Skipping UI update - touching=%s, frozen=%s", 
                         userTouchingList, (now < uiFreezeUntilMs)));
@@ -325,6 +422,19 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 }, 500);
             }
         });
+        
+        // BleService 시작 및 바인딩
+        Intent serviceIntent = new Intent(this, BleService.class);
+        startService(serviceIntent); // Foreground Service 시작
+        bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE); // 바인딩
+        
+        // 브로드캐스트 리시버 등록
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BleService.ACTION_BEACON_UPDATE);
+        filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
+        filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
+        filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
+        LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
     }
 
     @Override
@@ -865,6 +975,28 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             Log.d(TAG, "Error updating UI from data store: " + e.getMessage());
         }
     }
+    
+    /**
+     * BleService에서 필터링된 비콘 목록을 받아와 UI 업데이트
+     * - Service가 이름 필터링과 정렬을 모두 담당
+     * - Activity는 UI 업데이트만 담당
+     */
+    private void updateUiFromService() {
+        try {
+            if (!mServiceBound || mBleService == null) {
+                Log.v("UI_UPDATE", "Service not bound, skipping UI update");
+                return;
+            }
+            
+            List<BeaconState> filteredBeacons = mBleService.getFilteredBeaconStates();
+            Log.v("UI_UPDATE", String.format("updateUiFromService: beacons=%d", filteredBeacons.size()));
+            
+            mDevListAdapter.updateBeaconStates(filteredBeacons);
+            mDevListAdapter.notifyDataSetChanged();
+        } catch (Exception e) {
+            Log.d(TAG, "Error updating UI from service: " + e.getMessage());
+        }
+    }
 
     @Override
     protected void onResume() {
@@ -893,6 +1025,23 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        
+        // 브로드캐스트 리시버 해제
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(mServiceBroadcastReceiver);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to unregister broadcast receiver", e);
+        }
+        
+        // BleService 바인딩 해제
+        if (mServiceBound) {
+            try {
+                unbindService(mServiceConnection);
+                mServiceBound = false;
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to unbind service", e);
+            }
+        }
 
         // Phase 3: 기능 컴포넌트 정리
         if (mRingManager != null) {
@@ -903,7 +1052,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         }
         stopPhoneAlarm();
 
-        mBeaconsMgr.clearBeacons();
+        if (mBeaconsMgr != null) {
+            mBeaconsMgr.clearBeacons();
+        }
     }
 
     private void handlePeriodChk(){
@@ -1079,25 +1230,27 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             return;
         }
         
-        // [디버깅] 비콘 정보와 함께 상세 로깅
-        BeaconState beaconState = mBeaconDataStore.get(mac);
-        String displayName = (beaconState != null) ? beaconState.getDisplayName() : "Unknown";
-        Log.d("RING", String.format("UI onRingStart: MAC=%s, name=%s, beaconExists=%s", 
-            mac, displayName, (beaconState != null)));
-        Toast.makeText(this, "부저 알람: " + displayName, Toast.LENGTH_SHORT).show();
+        Log.d("RING", String.format("UI onRingStart: MAC=%s", mac));
         
         // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
         
-        if (mRingManager != null) {
-            Log.d("RING", String.format("Before RingManager.start: MAC=%s, manager=%s", mac, mRingManager.getClass().getSimpleName()));
-            boolean started = mRingManager.start(mac, 2000);
-            Log.i("RING", String.format("RingManager.start result: %s for MAC=%s", started, mac));
-            if (!started) {
-                Log.w("RING", "RingManager.start failed - already running or busy?");
-            }
+        // BleService 기반 Ring 시작
+        if (mServiceBound && mBleService != null) {
+            mBleService.startRingAlarm(mac);
+            Log.i("RING", "BleService.startRingAlarm called for MAC: " + mac);
         } else {
-            Log.e("RING", "RingManager is null!");
+            // 폴백: 기존 RingManager 사용
+            if (mRingManager != null) {
+                Log.d("RING", String.format("Fallback: RingManager.start for MAC=%s", mac));
+                boolean started = mRingManager.start(mac, 2000);
+                Log.i("RING", String.format("RingManager.start result: %s for MAC=%s", started, mac));
+                if (!started) {
+                    Log.w("RING", "RingManager.start failed - already running or busy?");
+                }
+            } else {
+                Log.e("RING", "Both BleService and RingManager are unavailable!");
+            }
         }
     }
     
@@ -1109,21 +1262,23 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             return;
         }
         
-        // [디버깅] 비콘 정보와 함께 상세 로깅
-        BeaconState beaconState = mBeaconDataStore.get(mac);
-        String displayName = (beaconState != null) ? beaconState.getDisplayName() : "Unknown";
-        Log.d("RING", String.format("UI onRingStop: MAC=%s, name=%s, beaconExists=%s", 
-            mac, displayName, (beaconState != null)));
-        Toast.makeText(this, "부저 중지 요청: " + displayName, Toast.LENGTH_SHORT).show();
+        Log.d("RING", String.format("UI onRingStop: MAC=%s", mac));
         
         // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
         
-        if (mRingManager != null) {
-            boolean stopped = mRingManager.stop(mac);
-            Log.i("RING_STOP", "RingManager.stop result: " + stopped + " for " + displayName);
+        // BleService 기반 Ring 중지
+        if (mServiceBound && mBleService != null) {
+            mBleService.stopRingAlarm(mac);
+            Log.i("RING", "BleService.stopRingAlarm called for MAC: " + mac);
         } else {
-            Log.e("RING", "RingManager is null!");
+            // 폴백: 기존 RingManager 사용
+            if (mRingManager != null) {
+                boolean stopped = mRingManager.stop(mac);
+                Log.i("RING_STOP", "RingManager.stop result: " + stopped + " for MAC: " + mac);
+            } else {
+                Log.e("RING", "Both BleService and RingManager are unavailable!");
+            }
         }
     }
     

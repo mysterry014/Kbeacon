@@ -79,6 +79,12 @@ limitations under the License.
             android:enabled="true"
             android:exported="false" />
 
+        <service
+            android:name="com.kkmcn.sensordemo.service.BleService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>
