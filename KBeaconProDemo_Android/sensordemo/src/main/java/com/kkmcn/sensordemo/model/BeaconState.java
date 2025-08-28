@@ -269,6 +269,112 @@ public class BeaconState {
         );
     }
     
+    // ========== BleService에서 사용하는 추가 메서드들 ==========
+    
+    // 광고 이름 관리
+    private String advertisedName; // 광고에서 받은 원본 이름
+    
+    /**
+     * 광고된 이름 설정 (BLE 광고에서 받은 원본 이름)
+     * @param advertisedName 광고 이름
+     */
+    public void setAdvertisedName(String advertisedName) {
+        this.advertisedName = advertisedName;
+        // 기본 name이 없으면 광고 이름으로 설정
+        if (this.name == null || this.name.isEmpty()) {
+            this.name = advertisedName;
+        }
+        this.updatedAt = System.currentTimeMillis();
+    }
+    
+    /**
+     * 광고된 이름 조회
+     * @return 광고 이름
+     */
+    public String getAdvertisedName() {
+        return advertisedName;
+    }
+    
+    // 배터리 관련
+    private float batteryVoltage;
+    private long lastBatteryUpdateTime;
+    
+    /**
+     * 배터리 전압 설정
+     * @param voltage 배터리 전압 (V)
+     */
+    public void setBatteryVoltage(float voltage) {
+        this.batteryVoltage = voltage;
+        this.lastBatteryUpdateTime = System.currentTimeMillis();
+        this.updatedAt = System.currentTimeMillis();
+    }
+    
+    /**
+     * 배터리 전압 조회
+     * @return 배터리 전압 (V)
+     */
+    public float getBatteryVoltage() {
+        return batteryVoltage;
+    }
+    
+    /**
+     * 마지막 배터리 업데이트 시간 설정
+     * @param updateTime 업데이트 시간 (밀리초)
+     */
+    public void setLastBatteryUpdateTime(long updateTime) {
+        this.lastBatteryUpdateTime = updateTime;
+    }
+    
+    /**
+     * 마지막 배터리 업데이트 시간 조회
+     * @return 업데이트 시간 (밀리초)
+     */
+    public long getLastBatteryUpdateTime() {
+        return lastBatteryUpdateTime;
+    }
+    
+    // 일반적인 업데이트 시간 관리
+    /**
+     * 마지막 업데이트 시간 설정 (일반적인 상태 변경)
+     * @param updateTime 업데이트 시간 (밀리초)
+     */
+    public void setLastUpdateTime(long updateTime) {
+        this.updatedAt = updateTime;
+    }
+    
+    /**
+     * 마지막 업데이트 시간 조회
+     * @return 업데이트 시간 (밀리초)
+     */
+    public long getLastUpdateTime() {
+        return updatedAt;
+    }
+    
+    // 별칭 관리 (BleService용 메서드명)
+    /**
+     * 별칭 설정 (BleService 호환용 메서드)
+     * @param alias 별칭
+     */
+    public void setAlias(String alias) {
+        setAliasName(alias);
+    }
+    
+    /**
+     * 별칭 조회 (BleService 호환용 메서드)
+     * @return 별칭
+     */
+    public String getAlias() {
+        return getAliasName();
+    }
+    
+    /**
+     * 거리 설정값 조회 (BleService 호환용 메서드)
+     * @return 거리 설정값 (m)
+     */
+    public double getDistanceThreshold() {
+        return distanceThresholdMeters;
+    }
+    
     // TODO: 추후 확장 포인트
     // - JSON 직렬화/역직렬화 지원
     // - 상태 변화 히스토리 추적

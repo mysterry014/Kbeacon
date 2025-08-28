@@ -307,18 +307,14 @@ public class ServicePrefs {
     public void unregisterMacForCollection(String mac) {
         if (mac == null) return;
         
-        try {
-            JSONObject registry = getMacGateRegistryJson();
-            registry.remove(mac);
+        JSONObject registry = getMacGateRegistryJson();
+        registry.remove(mac);
+        
+        prefs.edit()
+            .putString(KEY_MAC_GATE_REGISTRY, registry.toString())
+            .apply();
             
-            prefs.edit()
-                .putString(KEY_MAC_GATE_REGISTRY, registry.toString())
-                .apply();
-                
-            Log.d(TAG, "MAC unregistered from collection: " + mac);
-        } catch (JSONException e) {
-            Log.e(TAG, "Failed to unregister MAC from collection", e);
-        }
+        Log.d(TAG, "MAC unregistered from collection: " + mac);
     }
     
     /**

@@ -21,6 +21,7 @@ import com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor;
 import com.kkmcn.kbeaconlib2.KBException;
 import com.kkmcn.kbeaconlib2.KBeacon;
 import com.kkmcn.kbeaconlib2.KBeaconsMgr;
+import com.kkmcn.kbeaconlib2.KBConnState;
 import com.kkmcn.sensordemo.R;
 import com.kkmcn.sensordemo.model.BeaconState;
 import com.kkmcn.sensordemo.utils.RssiWindow;
@@ -141,11 +142,12 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // Foreground Service 시작
         startForeground(NOTIFICATION_ID, createNotification());
         
-        // KBeaconsMgr 초기화
+        // KBeaconsMgr 초기화 (올바른 API 사용)
         try {
-            kBeaconsMgr = KBeaconsMgr.sharedInstance(this);
+            kBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
             if (kBeaconsMgr != null) {
-                kBeaconsMgr.setDelegate(this);
+                kBeaconsMgr.delegate = this;
+                kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
                 Log.d(TAG, "KBeaconsMgr initialized successfully");
             }
         } catch (Exception e) {
@@ -192,7 +194,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // KBeaconsMgr 정리
         if (kBeaconsMgr != null) {
-            kBeaconsMgr.setDelegate(null);
+            kBeaconsMgr.delegate = null;
         }
         
         super.onDestroy();
@@ -272,8 +274,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         try {
             // LOW_LATENCY 모드로 스캔 시작 (사용자 분석 결과 반영)
-            int result = kBeaconsMgr.startBLEScan(null, KBeaconsMgr.SCAN_ALL_DEVICE);
-            if (result == KBeaconsMgr.BEACON_MANAGER_OK) {
+            int result = kBeaconsMgr.startScanning();
+            if (result == 0) { // 성공
                 isScanning = true;
                 Log.i(TAG, "BLE scan started successfully");
                 broadcastScanStateChanged(true);
@@ -304,7 +306,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         }
         
         try {
-            kBeaconsMgr.stopBLEScan();
+            kBeaconsMgr.stopScanning();
             isScanning = false;
             Log.i(TAG, "BLE scan stopped");
             broadcastScanStateChanged(false);
@@ -470,8 +472,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     @Override
-    public void onCentralBleDisconnected() {
-        Log.w(TAG, "Central BLE disconnected");
+    public void onCentralBleStateChang(int nNewState) {
+        Log.i(TAG, "Central BLE state changed: " + nNewState);
     }
     
     // ========== Private Methods ==========
@@ -552,19 +554,21 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             }
         }
         
-        // KSensor 패킷에서 배터리 정보 추출
-        extractBatteryFromSensorPacket(beacon, state);
+        // KSensor 패킷에서 배터리 정보 추출 (TODO: 실제 구현 필요)
+        // extractBatteryFromSensorPacket(beacon, state);
         
         // 타임스탬프 업데이트
         state.setLastUpdateTime(System.currentTimeMillis());
     }
     
     /**
-     * KSensor 패킷에서 배터리 정보 추출
+     * KSensor 패킷에서 배터리 정보 추출 (TODO: 실제 API 확인 후 구현)
      */
     private void extractBatteryFromSensorPacket(KBeacon beacon, BeaconState state) {
         try {
-            // KSensor 패킷 확인
+            // TODO: KBeacon API 확인 후 실제 구현
+            // 현재는 임시로 주석 처리
+            /*
             if (beacon.getAdvPackets() != null) {
                 for (int i = 0; i < beacon.getAdvPackets().size(); i++) {
                     if (beacon.getAdvPackets().get(i) instanceof KBAdvPacketSensor) {
@@ -584,6 +588,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     }
                 }
             }
+            */
         } catch (Exception e) {
             Log.w(TAG, "Failed to extract battery from sensor packet: " + e.getMessage());
         }
@@ -667,13 +672,107 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return;
         }
         
-        // TODO: 실제 Ring 명령 구현
-        // 1. KBeacon 연결
-        // 2. ringDevice 명령 송신
-        // 3. 연결 해제
-        // 4. 상태 업데이트
+        try {
+            // KBeacon 인스턴스 찾기
+            KBeacon beacon = findBeaconByMac(mac);
+            if (beacon == null) {
+                Log.e(TAG, "Beacon not found for MAC: " + mac);
+                broadcastRingStateChanged(mac, "알람"); // 실패시 기본 상태로
+                return;
+            }
+            
+            // 연결 상태 확인 후 연결 또는 바로 명령 전송
+            if (beacon.getState() != KBConnState.Connected) {
+                Log.d(TAG, "Connecting to beacon: " + mac);
+                broadcastRingStateChanged(mac, "연결됨");
+                
+                // 패스워드를 사용한 인증된 연결 (기본 패스워드)
+                beacon.connect("0000000000000000", 20000, new KBeacon.ConnStateDelegate() {
+                    @Override
+                    public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
+                        Log.i(TAG, "Connection state changed: " + state + ", reason: " + nReason);
+                        if (state == KBConnState.Connected) {
+                            Log.i(TAG, "Connected successfully, sending ring command");
+                            sendRingJson(beacon, mac, 3000); // 3초 부저
+                        } else if (state == KBConnState.Disconnected && nReason != 0) {
+                            Log.e(TAG, "Connection failed, reason: " + nReason);
+                            broadcastRingStateChanged(mac, "알람"); // 실패시 기본 상태로
+                        }
+                    }
+                });
+            } else {
+                // 이미 연결됨, 바로 명령 전송
+                Log.i(TAG, "Beacon already connected, sending ring command directly");
+                sendRingJson(beacon, mac, 3000);
+            }
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error executing ring command for " + mac + ": " + e.getMessage());
+            broadcastRingStateChanged(mac, "알람"); // 실패시 기본 상태로
+        }
+    }
+    
+    /**
+     * 실제 Ring JSON 명령 전송
+     */
+    private void sendRingJson(KBeacon beacon, String mac, int ringMs) {
+        try {
+            org.json.JSONObject cmd = new org.json.JSONObject();
+            cmd.put("msg", "ring");
+            cmd.put("ringTime", ringMs); // ms
+            cmd.put("ringType", 0x1);    // 0x1=beep only (부저)
+            
+            Log.i(TAG, "Sending ring command: ringTime=" + ringMs + "ms, ringType=0x1");
+            
+            beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
+                @Override
+                public void onActionComplete(boolean bConfigSuccess, KBException error) {
+                    if (bConfigSuccess) {
+                        Log.i(TAG, "Ring command sent successfully for MAC: " + mac);
+                        broadcastRingStateChanged(mac, "알람중");
+                    } else {
+                        Log.e(TAG, "Ring command failed: " + (error != null ? error.errorCode : "unknown"));
+                        broadcastRingStateChanged(mac, "알람"); // 실패시 기본 상태로
+                    }
+                    
+                    // 연결 해제 (명령 완료 후)
+                    if (beacon.getState() == KBConnState.Connected) {
+                        beacon.disconnect();
+                        Log.d(TAG, "Disconnected after ring command");
+                    }
+                }
+            });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "sendRingJson error: " + e.getMessage());
+            broadcastRingStateChanged(mac, "알람");
+        }
+    }
+    
+    /**
+     * MAC 주소로 KBeacon 인스턴스 찾기
+     * RingManager 패턴을 따라 KBeaconsMgr.getBeacon() 사용
+     */
+    private KBeacon findBeaconByMac(String mac) {
+        if (kBeaconsMgr == null || mac == null) {
+            Log.w(TAG, "findBeaconByMac: kBeaconsMgr or mac is null");
+            return null;
+        }
         
-        broadcastRingStateChanged(mac, "알람중");
+        try {
+            // KBeaconsMgr.getBeacon()으로 MAC 기반 KBeacon 인스턴스 조회
+            KBeacon beacon = kBeaconsMgr.getBeacon(mac);
+            if (beacon != null) {
+                Log.d(TAG, String.format("Found beacon: %s, name=%s, state=%s", 
+                    mac, beacon.getName(), beacon.getState()));
+            } else {
+                Log.w(TAG, "Beacon not found in KBeaconsMgr for MAC: " + mac);
+            }
+            return beacon;
+        } catch (Exception e) {
+            Log.e(TAG, "Error finding beacon by MAC " + mac + ": " + e.getMessage());
+            return null;
+        }
     }
     
     /**
