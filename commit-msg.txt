@@ -1,7 +1,17 @@
-  feat(service): Ring 명령 기능 완성 - MAC 기반 KBeacon 인스턴스 조회 구현
+fix(crash): 앱 크래시 3대 원인 완전 해결 - 권한/Foreground Service/의존성
 
-  • KBConnState import 추가로 연결 상태 검증 활성화
-  • findBeaconByMac()에서 kBeaconsMgr.getBeacon() 사용하여 실제 KBeacon 인스턴스 조회
-  • RingManager 패턴을 따라 안정적인 비콘 검색 구현
-  • 연결→명령→해제 시퀀스가 정상적으로 동작하도록 개선
-  • 다중 비콘 동시 부저 제어 지원
+  • 권한 체크 없는 Service 시작으로 인한 SecurityException 해결
+    - Activity에서 Android 버전별 필수 권한 미리 체크
+    - 권한 승인 후에만 BleService 시작하도록 수정
+
+  • Foreground Service 5초 규칙 위반 해결
+    - BleService.onCreate()에서 즉시 startForeground() 호출
+    - Notification 채널 생성 후 즉시 Foreground 상태 진입
+
+  • LocalBroadcastManager 의존성 누락 해결
+    - build.gradle에 androidx.localbroadcastmanager 의존성 추가
+    - ClassNotFoundException 원천 차단
+
+  • 모든 BLE 작업에 권한 게이트 적용 (스캔/연결/Ring)
+  • SecurityException 방지를 위한 try-catch 보호막 추가
+  • Activity-Service 권한 재요청 브로드캐스트 시스템 구축

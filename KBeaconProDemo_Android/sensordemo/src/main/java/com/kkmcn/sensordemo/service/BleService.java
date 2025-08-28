@@ -1,11 +1,13 @@
 package com.kkmcn.sensordemo.service;
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
@@ -124,6 +126,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         super.onCreate();
         Log.d(TAG, "BleService onCreate");
         
+        // 크래시 방지: 5초 룰 방지를 위해 즉시 startForeground 호출
+        createNotificationChannel();
+        startForeground(NOTIFICATION_ID, createNotification());
+        Log.d(TAG, "Foreground service started immediately");
+        
         // 핸들러 초기화
         mainHandler = new Handler(Looper.getMainLooper());
         
@@ -136,19 +143,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // 저장된 MAC 게이트 레지스트리 복원
         restoreSavedData();
         
-        // Notification 채널 생성
-        createNotificationChannel();
-        
-        // Foreground Service 시작
-        startForeground(NOTIFICATION_ID, createNotification());
-        
-        // KBeaconsMgr 초기화 (올바른 API 사용)
+        // KBeaconsMgr 초기화 (권한 체크 없이)
         try {
             kBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
             if (kBeaconsMgr != null) {
                 kBeaconsMgr.delegate = this;
-                kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+                // 스캔 모드 설정은 실제 스캔 시작 시로 지연
                 Log.d(TAG, "KBeaconsMgr initialized successfully");
+            } else {
+                Log.e(TAG, "KBeaconsMgr initialization failed - null returned");
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to initialize KBeaconsMgr", e);
@@ -162,9 +165,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "BleService onStartCommand");
         
-        // 자동 스캔 시작 (CLAUDE.md 요구사항)
-        if (!isScanning) {
+        // 크래시 방지: 권한 체크 후 자동 스캔 시작
+        if (!isScanning && hasBluetoothScanPermission()) {
+            Log.i(TAG, "Starting automatic scanning with permissions verified");
             startScanning();
+        } else if (!hasBluetoothScanPermission()) {
+            Log.w(TAG, "Cannot start scanning - missing BLUETOOTH_SCAN permission");
+            // Activity에 권한 요청 신호
+            Intent permIntent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(permIntent);
         }
         
         return START_STICKY; // 서비스 재시작 허용
@@ -257,10 +266,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // ========== Public API ==========
     
     /**
-     * BLE 스캔 시작
+     * BLE 스캔 시작 (권한 게이트 적용)
      */
     public boolean startScanning() {
         Log.d(TAG, "startScanning called");
+        
+        // 크래시 방지: 권한 없으면 스캔 금지
+        if (!hasBluetoothScanPermission()) {
+            Log.w(TAG, "No BLUETOOTH_SCAN permission, sending permission request broadcast");
+            Intent intent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+            return false;
+        }
         
         if (kBeaconsMgr == null) {
             Log.e(TAG, "KBeaconsMgr not initialized");
@@ -273,7 +290,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         }
         
         try {
-            // LOW_LATENCY 모드로 스캔 시작 (사용자 분석 결과 반영)
+            // 스캔 모드 설정 (이제 권한이 있으므로 안전)
+            kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+            
+            // LOW_LATENCY 모드로 스캔 시작
             int result = kBeaconsMgr.startScanning();
             if (result == 0) { // 성공
                 isScanning = true;
@@ -284,6 +304,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 Log.e(TAG, "Failed to start BLE scan, error: " + result);
                 return false;
             }
+        } catch (SecurityException se) {
+            Log.e(TAG, "SecurityException during BLE scan start: " + se.getMessage());
+            Intent intent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+            return false;
         } catch (Exception e) {
             Log.e(TAG, "Exception during BLE scan start", e);
             return false;
@@ -662,10 +687,19 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * Ring 명령 실행 (연결 → 명령 → 연결 해제)
+     * Ring 명령 실행 (연결 → 명령 → 연결 해제) - 권한 게이트 적용
      */
     private void performRingCommand(String mac) {
         Log.d(TAG, "performRingCommand: " + mac);
+        
+        // 크래시 방지: BLUETOOTH_CONNECT 권한 체크
+        if (!hasBluetoothConnectPermission()) {
+            Log.w(TAG, "No BLUETOOTH_CONNECT permission for ring command: " + mac);
+            Intent intent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+            broadcastRingStateChanged(mac, "알람");
+            return;
+        }
         
         if (!ringInProgress.containsKey(mac)) {
             Log.w(TAG, "Ring command called but not in progress for MAC: " + mac);
@@ -706,6 +740,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 sendRingJson(beacon, mac, 3000);
             }
             
+        } catch (SecurityException se) {
+            Log.e(TAG, "SecurityException in ring command for " + mac + ": " + se.getMessage());
+            Intent intent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+            broadcastRingStateChanged(mac, "알람");
         } catch (Exception e) {
             Log.e(TAG, "Error executing ring command for " + mac + ": " + e.getMessage());
             broadcastRingStateChanged(mac, "알람"); // 실패시 기본 상태로
@@ -972,6 +1011,32 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             }
             
             Log.d(TAG, String.format("MAC unregistered from collection: %s (was: %s)", mac, oldName));
+        }
+    }
+    
+    // ========== 권한 체크 헬퍼 메서드들 (크래시 방지) ==========
+    
+    /**
+     * BLUETOOTH_SCAN 권한 체크 (Android 버전별)
+     * @return true if 권한 있음
+     */
+    private boolean hasBluetoothScanPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12+
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
+        } else { // Android 10/11
+            return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+    
+    /**
+     * BLUETOOTH_CONNECT 권한 체크 (Android 버전별)
+     * @return true if 권한 있음
+     */
+    private boolean hasBluetoothConnectPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) { // Android 12+
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        } else { // Android 10/11 - 연결에도 ACCESS_FINE_LOCATION 필요
+            return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         }
     }
 }

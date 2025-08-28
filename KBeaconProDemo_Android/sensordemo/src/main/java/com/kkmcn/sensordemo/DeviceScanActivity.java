@@ -103,6 +103,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private static final int PERMISSION_FINE_LOCATION = 23;
     private static final int PERMISSION_SCAN = 24;
     private static final int PERMISSION_CONNECT = 25;
+    private static final int REQ_PERMS = 1001; // 통합 권한 요청
 
 
     private ListView mListView;
@@ -423,18 +424,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
         });
         
-        // BleService 시작 및 바인딩
-        Intent serviceIntent = new Intent(this, BleService.class);
-        startService(serviceIntent); // Foreground Service 시작
-        bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE); // 바인딩
+        // 크래시 방지: 권한 체크 후 Service 시작
+        if (!hasAllRequiredPermissions()) {
+            Log.w(TAG, "Requesting permissions before starting BleService");
+            ActivityCompat.requestPermissions(this, getRequiredPermissions(), REQ_PERMS);
+            return; // 권한 승인 전에는 Service 시작 금지
+        }
         
-        // 브로드캐스트 리시버 등록
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(BleService.ACTION_BEACON_UPDATE);
-        filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
-        filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
-        filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
-        LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
+        startAndBindBleService();
     }
 
     @Override
@@ -1117,11 +1114,88 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
 
         return bHasPermission;
     }
+    
+    /**
+     * 크래시 방지: Android 버전별 필수 권한 배열 반환
+     * @return 필수 권한 배열
+     */
+    private String[] getRequiredPermissions() {
+        if (Build.VERSION.SDK_INT >= 33) { // Android 13+
+            return new String[]{
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.POST_NOTIFICATIONS // 알림 권한 추가
+            };
+        } else if (Build.VERSION.SDK_INT >= 31) { // Android 12+
+            return new String[]{
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT
+            };
+        } else { // Android 10/11
+            return new String[]{
+                Manifest.permission.ACCESS_FINE_LOCATION
+            };
+        }
+    }
+    
+    /**
+     * 크래시 방지: 모든 필수 권한이 승인되었는지 확인
+     * @return true if 모든 권한 승인됨
+     */
+    private boolean hasAllRequiredPermissions() {
+        for (String permission : getRequiredPermissions()) {
+            if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                Log.w(TAG, "Missing permission: " + permission);
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * 크래시 방지: 권한 승인 후 BleService 시작 및 바인딩
+     */
+    private void startAndBindBleService() {
+        try {
+            Log.i(TAG, "Starting BleService with permissions verified");
+            
+            // BleService 시작 및 바인딩
+            Intent serviceIntent = new Intent(this, BleService.class);
+            startService(serviceIntent); // Foreground Service 시작
+            bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE); // 바인딩
+            
+            // 브로드캐스트 리시버 등록
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(BleService.ACTION_BEACON_UPDATE);
+            filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
+            filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
+            filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
+            LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start BleService", e);
+            Toast.makeText(this, "서비스 시작 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
+        // 통합 권한 요청 처리 (크래시 방지)
+        if (requestCode == REQ_PERMS) {
+            if (hasAllRequiredPermissions()) {
+                Log.i(TAG, "All permissions granted, starting BleService");
+                startAndBindBleService();
+            } else {
+                Log.w(TAG, "Required permissions denied");
+                Toast.makeText(this, "필수 권한이 필요합니다. 앱을 다시 시작하여 권한을 승인해주세요.", Toast.LENGTH_LONG).show();
+                finish();
+            }
+            return;
+        }
+
+        // 기존 개별 권한 처리 (backward compatibility)
         if (requestCode == PERMISSION_SCAN){
             if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED){
                 toastShow("The app need ble scanning permission for start ble scanning");
