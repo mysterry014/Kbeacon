@@ -1,8 +1,24 @@
-fix(calibration): 타이머 분리로 25개 샘플 수집 보장 및 연장 로직 추가
+feat(service): BleService 아키텍처 구현으로 MAC 기반 안정적 데이터 수집
 
-  • 타이머 분리: stageWaitStartMs(카운트다운) + intakeStartMs(수집)
-  • 수집 타임아웃을 카운트다운 제외한 순수 수집 시간 기준으로 변경
-  • 20초 내 25개 미달 시 10초 자동 연장 로직 추가 (extendedOnce)
-  • 느린 BLE 광고 주기 및 이상치 제거 환경에서도 안정적 샘플 확보
-  • 상세 디버깅 로그로 수집 시간/샘플 수/연장 상태 추적 가능
-  • resetStageBuffers에서 연장 플래그도 함께 리셋하여 단계별 독립성 보장
+  주요 변경사항:
+  - BleService Foreground Service 생성 (MAC 기반 수집 게이트)
+  - Activity-Service 바인딩 및 브로드캐스트 통신 구현
+  - ServicePrefs 영속 저장소 (캘리브레이션/설정값/배터리)
+  - 이름 필터를 표시 전용으로 분리, 데이터 수집은 MAC 기반
+  - AndroidManifest.xml에 BleService 등록
+
+  문제 해결:
+  - 캘리브레이션 반복 시 5-14개 샘플만 수집되는 문제 해결
+  - 거리 0.1m 고정 문제의 근본 원인인 이름 기반 필터링 개선
+  - Scan Response 없는 광고에서도 안정적 RSSI 수집 가능
+
+  기술적 개선:
+  - MAC 수집 게이트로 이름 없는 광고 프레임도 처리
+  - Foreground Service로 백그라운드 안정성 보장
+  - JSON 기반 SharedPreferences로 설정값 영속화
+  - 브로드캐스트를 통한 Service-Activity 간 실시간 통신
+
+  파일:
+  - 추가: BleService.java, ServicePrefs.java
+  - 수정: DeviceScanActivity.java, LeDeviceListAdapter.java
+  - 수정: AndroidManifest.xml
