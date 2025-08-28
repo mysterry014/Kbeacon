@@ -165,16 +165,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "BleService onStartCommand");
         
-        // 크래시 방지: 권한 체크 후 자동 스캔 시작
-        if (!isScanning && hasBluetoothScanPermission()) {
-            Log.i(TAG, "Starting automatic scanning with permissions verified");
-            startScanning();
-        } else if (!hasBluetoothScanPermission()) {
-            Log.w(TAG, "Cannot start scanning - missing BLUETOOTH_SCAN permission");
-            // Activity에 권한 요청 신호
-            Intent permIntent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
-            LocalBroadcastManager.getInstance(this).sendBroadcast(permIntent);
-        }
+        // 크래시 스나이퍼 패치: ③ 3중 게이트 적용
+        ensureScanning();
         
         return START_STICKY; // 서비스 재시작 허용
     }
@@ -687,14 +679,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * Ring 명령 실행 (연결 → 명령 → 연결 해제) - 권한 게이트 적용
+     * Ring 명령 실행 - 크래시 스나이퍼 패치 적용
      */
     private void performRingCommand(String mac) {
         Log.d(TAG, "performRingCommand: " + mac);
         
-        // 크래시 방지: BLUETOOTH_CONNECT 권한 체크
-        if (!hasBluetoothConnectPermission()) {
-            Log.w(TAG, "No BLUETOOTH_CONNECT permission for ring command: " + mac);
+        // 크래시 스나이퍼 패치: 3중 게이트 (권한 + BT ON)
+        if (!hasAllBlePerms() || !isBtOn()) {
+            Log.w(TAG, String.format("Ring prerequisites not met for %s: perms=%s, btOn=%s", 
+                mac, hasAllBlePerms(), isBtOn()));
             Intent intent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
             broadcastRingStateChanged(mac, "알람");
@@ -1038,5 +1031,166 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         } else { // Android 10/11 - 연결에도 ACCESS_FINE_LOCATION 필요
             return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         }
+    }
+    
+    // ========== 크래시 스나이퍼 패치 메서드들 ==========
+    
+    /**
+     * 크래시 스나이퍼 패치: 즉시 Foreground 시작 (5초 룰 회피)
+     */
+    private void startAsForegroundNow() {
+        String channelId = "ble_scanner";
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channel = new NotificationChannel(channelId, "BLE Scanner", NotificationManager.IMPORTANCE_LOW);
+            nm.createNotificationChannel(channel);
+        }
+        
+        Notification notification = new NotificationCompat.Builder(this, channelId)
+            .setContentTitle("Scanning beacons")
+            .setContentText("Foreground scanning in progress")
+            .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+            .setOngoing(true)
+            .build();
+            
+        startForeground(1001, notification);
+        Log.d(TAG, "Foreground service started immediately (5-sec rule bypassed)");
+    }
+    
+    /**
+     * 크래시 스나이퍼 패치: 전체 BLE 권한 체크
+     */
+    private boolean hasAllBlePerms() {
+        if (Build.VERSION.SDK_INT >= 33) { // Android 13+
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        } else if (Build.VERSION.SDK_INT >= 31) { // Android 12+
+            return checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+        } else { // Android 10/11
+            return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+    
+    /**
+     * 크래시 스나이퍼 패치: Bluetooth ON 체크
+     */
+    private boolean isBtOn() {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        return adapter != null && adapter.isEnabled();
+    }
+    
+    /**
+     * 크래시 스나이퍼 패치: 모든 BLE 작업의 공통 3중 게이트
+     */
+    public void ensureScanning() {
+        Log.d(TAG, "ensureScanning called");
+        
+        // ③ 모든 BLE 작업의 공통 게이트
+        if (!hasAllBlePerms() || !isBtOn()) {
+            Log.w(TAG, String.format("BLE prerequisites not met: perms=%s, btOn=%s", 
+                hasAllBlePerms(), isBtOn()));
+            Intent intent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+            return;
+        }
+        
+        if (isScanning) {
+            Log.d(TAG, "Already scanning");
+            return;
+        }
+        
+        try {
+            // 스캔 모드 설정 (이제 권한이 있으므로 안전)
+            if (kBeaconsMgr != null) {
+                kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+            } else {
+                kBeaconsMgr = KBeaconsMgr.sharedBeaconManager(getApplicationContext());
+                if (kBeaconsMgr != null) {
+                    kBeaconsMgr.delegate = this;
+                    kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+                }
+            }
+            
+            // 실제 스캔 시작
+            if (kBeaconsMgr != null) {
+                int result = kBeaconsMgr.startScanning();
+                if (result == 0) {
+                    isScanning = true;
+                    Log.i(TAG, "BLE scan started successfully via ensureScanning");
+                    broadcastScanStateChanged(true);
+                } else {
+                    Log.e(TAG, "Failed to start BLE scan via ensureScanning, error: " + result);
+                }
+            } else {
+                Log.e(TAG, "KBeaconsMgr is null, cannot start scanning");
+            }
+            
+        } catch (SecurityException se) {
+            Log.e(TAG, "ensureScanning SecurityException: " + se.getMessage());
+            Intent intent = new Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        } catch (Throwable t) {
+            Log.e(TAG, "ensureScanning fatal error", t);
+        }
+    }
+    
+    /**
+     * 크래시 스나이퍼 패치: Bluetooth 상태 모니터링 시작
+     */
+    private void registerBtStateReceiver() {
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        registerReceiver(btStateReceiver, filter);
+        Log.d(TAG, "Bluetooth state receiver registered");
+    }
+    
+    /**
+     * 크래시 스나이퍼 패치: Bluetooth 상태 변경 리시버
+     */
+    private final BroadcastReceiver btStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
+                int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+                Log.d(TAG, "Bluetooth state changed: " + state);
+                
+                if (state == BluetoothAdapter.STATE_ON) {
+                    Log.i(TAG, "Bluetooth turned ON, ensuring scanning");
+                    ensureScanning(); // BT가 나중에 켜져도 자동 재개
+                } else if (state == BluetoothAdapter.STATE_OFF) {
+                    Log.w(TAG, "Bluetooth turned OFF, stopping scanning");
+                    isScanning = false;
+                    broadcastScanStateChanged(false);
+                }
+            }
+        }
+    };
+    
+    @Override
+    public void onDestroy() {
+        Log.d(TAG, "BleService onDestroy");
+        
+        // Bluetooth 리시버 해제
+        try {
+            unregisterReceiver(btStateReceiver);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to unregister Bluetooth receiver", e);
+        }
+        
+        // 기존 onDestroy 로직
+        stopScanning();
+        stopAllRingAlarms();
+        
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdownNow();
+        }
+        
+        if (kBeaconsMgr != null) {
+            kBeaconsMgr.delegate = null;
+        }
+        
+        super.onDestroy();
     }
 }

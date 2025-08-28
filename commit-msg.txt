@@ -1,17 +1,18 @@
-fix(crash): 앱 크래시 3대 원인 완전 해결 - 권한/Foreground Service/의존성
+  fix(race-condition): 레이스 컨디션 크래시 완전 해결 - 크래시 스나이퍼 패치
 
-  • 권한 체크 없는 Service 시작으로 인한 SecurityException 해결
-    - Activity에서 Android 버전별 필수 권한 미리 체크
-    - 권한 승인 후에만 BleService 시작하도록 수정
+  • Activity: 권한 + Bluetooth ON 체크 후에만 Service 시작
+    - startBleServiceSafely()로 단계별 안전 검증
+    - Bluetooth 활성화 요청 처리 추가
+    - Handler.post()로 권한 다이얼로그 복귀 레이스 방지
 
-  • Foreground Service 5초 규칙 위반 해결
-    - BleService.onCreate()에서 즉시 startForeground() 호출
-    - Notification 채널 생성 후 즉시 Foreground 상태 진입
+  • Service: 5초 규칙 + 권한 + BT ON 3중 게이트 구축
+    - startAsForegroundNow()로 즉시 Foreground 진입
+    - ensureScanning()에서 모든 BLE 작업 전 안전 게이트
+    - hasAllBlePerms() && isBtOn() 체크로 SecurityException 원천 차단
 
-  • LocalBroadcastManager 의존성 누락 해결
-    - build.gradle에 androidx.localbroadcastmanager 의존성 추가
-    - ClassNotFoundException 원천 차단
+  • Bluetooth 상태 모니터링으로 자동 복구
+    - ACTION_STATE_CHANGED 리시버로 BT ON/OFF 감지
+    - BT 켜지면 자동으로 스캔 재개
 
-  • 모든 BLE 작업에 권한 게이트 적용 (스캔/연결/Ring)
-  • SecurityException 방지를 위한 try-catch 보호막 추가
-  • Activity-Service 권한 재요청 브로드캐스트 시스템 구축
+  • Ring 명령도 동일한 3중 게이트 적용
+  • 모든 BLE API 호출을 try-catch로 보호

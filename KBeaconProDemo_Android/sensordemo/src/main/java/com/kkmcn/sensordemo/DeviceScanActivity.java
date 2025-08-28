@@ -18,6 +18,7 @@ package com.kkmcn.sensordemo;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -28,6 +29,7 @@ import android.os.IBinder;
 import android.widget.Toast;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.os.SystemClock;
+import androidx.core.content.ContextCompat;
 import android.view.MotionEvent;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -104,6 +106,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private static final int PERMISSION_SCAN = 24;
     private static final int PERMISSION_CONNECT = 25;
     private static final int REQ_PERMS = 1001; // 통합 권한 요청
+    private static final int REQ_BT_ON = 1002; // 블루투스 활성화 요청
 
 
     private ListView mListView;
@@ -424,14 +427,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
         });
         
-        // 크래시 방지: 권한 체크 후 Service 시작
-        if (!hasAllRequiredPermissions()) {
-            Log.w(TAG, "Requesting permissions before starting BleService");
-            ActivityCompat.requestPermissions(this, getRequiredPermissions(), REQ_PERMS);
-            return; // 권한 승인 전에는 Service 시작 금지
-        }
-        
-        startAndBindBleService();
+        // 크래시 스나이퍼 패치: 권한 + Bluetooth ON 안전 체크
+        startBleServiceSafely();
     }
 
     @Override
@@ -1153,28 +1150,73 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     }
     
     /**
-     * 크래시 방지: 권한 승인 후 BleService 시작 및 바인딩
+     * 크래시 스나이퍼 패치: Bluetooth ON 체크
+     * @return true if Bluetooth 활성화됨
      */
-    private void startAndBindBleService() {
-        try {
-            Log.i(TAG, "Starting BleService with permissions verified");
-            
-            // BleService 시작 및 바인딩
-            Intent serviceIntent = new Intent(this, BleService.class);
-            startService(serviceIntent); // Foreground Service 시작
-            bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE); // 바인딩
-            
-            // 브로드캐스트 리시버 등록
-            IntentFilter filter = new IntentFilter();
-            filter.addAction(BleService.ACTION_BEACON_UPDATE);
-            filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
-            filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
-            filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
-            LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
-            
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to start BleService", e);
-            Toast.makeText(this, "서비스 시작 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+    private boolean isBtEnabled() {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        return adapter != null && adapter.isEnabled();
+    }
+    
+    /**
+     * 크래시 스나이퍼 패치: 권한 + Bluetooth ON 안전 체크 후 Service 시작
+     */
+    private void startBleServiceSafely() {
+        Log.d(TAG, "startBleServiceSafely called");
+        
+        // 1) 권한 확인
+        if (!hasAllRequiredPermissions()) {
+            Log.w(TAG, "Missing permissions, requesting...");
+            ActivityCompat.requestPermissions(this, getRequiredPermissions(), REQ_PERMS);
+            return;
+        }
+        
+        // 2) 블루투스 ON 확인 (OFF면 먼저 요청)
+        if (!isBtEnabled()) {
+            Log.w(TAG, "Bluetooth OFF, requesting enable...");
+            Intent btIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(btIntent, REQ_BT_ON);
+            return;
+        }
+        
+        // 3) 한 프레임 늦춰서 시작(권한 다이얼로그 복귀 타이밍 레이스 방지)
+        new Handler(Looper.getMainLooper()).post(() -> {
+            try {
+                Log.i(TAG, "Starting BleService with all safety checks passed");
+                
+                Intent serviceIntent = new Intent(this, BleService.class);
+                ContextCompat.startForegroundService(this, serviceIntent);
+                bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
+                
+                // 브로드캐스트 리시버 등록
+                IntentFilter filter = new IntentFilter();
+                filter.addAction(BleService.ACTION_BEACON_UPDATE);
+                filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
+                filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
+                filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
+                LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
+                
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to start BleService safely", e);
+                Toast.makeText(this, "서비스 시작 실패: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        
+        // 크래시 스나이퍼 패치: Bluetooth 활성화 결과 처리
+        if (requestCode == REQ_BT_ON) {
+            if (isBtEnabled()) {
+                Log.i(TAG, "Bluetooth enabled, retrying safe service start");
+                startBleServiceSafely();
+            } else {
+                Log.w(TAG, "Bluetooth enable denied");
+                Toast.makeText(this, "블루투스를 켜야 합니다.", Toast.LENGTH_LONG).show();
+                finish();
+            }
         }
     }
 
@@ -1182,16 +1224,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        // 통합 권한 요청 처리 (크래시 방지)
+        // 크래시 스나이퍼 패치: 권한 승인 후 안전 재체크
         if (requestCode == REQ_PERMS) {
-            if (hasAllRequiredPermissions()) {
-                Log.i(TAG, "All permissions granted, starting BleService");
-                startAndBindBleService();
-            } else {
-                Log.w(TAG, "Required permissions denied");
-                Toast.makeText(this, "필수 권한이 필요합니다. 앱을 다시 시작하여 권한을 승인해주세요.", Toast.LENGTH_LONG).show();
-                finish();
-            }
+            startBleServiceSafely(); // 권한 상태 다시 체크 + BT ON 확인
             return;
         }
 
