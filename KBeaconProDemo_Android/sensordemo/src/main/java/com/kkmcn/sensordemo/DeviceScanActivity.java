@@ -165,6 +165,10 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private Runnable mUiUpdateRunnable;
     private static final int UI_UPDATE_INTERVAL_MS = 500;
     
+    // [패치 D] UI 갱신 스로틀링 - 연타 방지용
+    private volatile long lastUiUpdateTime = 0;
+    private static final long UI_UPDATE_THROTTLE_MS = 500;
+    
     // [터치디바운스] UI 갱신 제어 플래그
     private volatile boolean userTouchingList = false;
     private volatile long uiFreezeUntilMs = 0L;
@@ -370,11 +374,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 // [터치디바운스] 사용자 터치 중이거나 프리즈 기간에는 UI 갱신 스킵
                 final long now = SystemClock.uptimeMillis();
                 if (!userTouchingList && now >= uiFreezeUntilMs) {
-                    // BleService 연결 시 Service에서, 아니면 기존 DataStore에서 데이터 취득
-                    if (mServiceBound && mBleService != null) {
-                        updateUiFromService();
+                    // [패치 B] 서비스 바운드되어 있으면 타이머 갱신은 스킵 → 중복 notifyDataSetChanged() 제거
+                    // 서비스 미바운드/중단일 때만 폴백 갱신 수행
+                    if (!(mServiceBound && mBleService != null)) {
+                        updateUiFromDataStore(); // 폴백만
+                        Log.v(TAG, "UI update from DataStore (fallback mode)");
                     } else {
-                        updateUiFromDataStore();
+                        // 서비스 바운드 상태에서는 브로드캐스트만 신뢰
+                        Log.v(TAG, "UI update skipped - using broadcast from service");
                     }
                 } else {
                     Log.v("UI_UPDATE", String.format("Skipping UI update - touching=%s, frozen=%s", 
@@ -959,8 +966,16 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             
             Log.v("UI_UPDATE", String.format("updateUiFromService: beacons=%d", filteredBeacons.size()));
             
-            mDevListAdapter.updateBeaconStates(filteredBeacons);
-            mDevListAdapter.notifyDataSetChanged();
+            // [패치 D] 스로틀링 적용 - 빈번한 갱신 시 병합
+            long now = System.currentTimeMillis();
+            if (now - lastUiUpdateTime >= UI_UPDATE_THROTTLE_MS) {
+                mDevListAdapter.updateBeaconStates(filteredBeacons);
+                mDevListAdapter.notifyDataSetChanged();
+                lastUiUpdateTime = now;
+                Log.v(TAG, "UI updated and throttle timestamp updated");
+            } else {
+                Log.v(TAG, "UI update throttled - too frequent");
+            }
         } catch (Exception e) {
             Log.d(TAG, "Error updating UI from service: " + e.getMessage());
         }
@@ -1363,8 +1378,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         Log.d("RING", String.format("UI onRingStart: MAC=%s", mac));
         
-        // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
-        uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
+        // [터치디바운스] 클릭 직후 100ms 프리즈로 리스너 재설정 레이스 추가 차단 (250ms → 100ms 단축)
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 100;
         
         // Command Gate 패턴: 플래그만 설정, 실제 명령은 게이트에서 처리
         if (mServiceBound && mBleService != null) {
@@ -1395,8 +1410,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         Log.d("RING", String.format("UI onRingStop: MAC=%s", mac));
         
-        // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
-        uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
+        // [터치디바운스] 클릭 직후 100ms 프리즈로 리스너 재설정 레이스 추가 차단 (250ms → 100ms 단축)
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 100;
         
         // Command Gate 패턴: 플래그만 설정, 실제 명령은 게이트에서 처리
         if (mServiceBound && mBleService != null) {

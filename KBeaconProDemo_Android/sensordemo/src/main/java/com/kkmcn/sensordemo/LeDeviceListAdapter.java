@@ -55,10 +55,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	
 	// 클릭 디바운싱을 위한 마지막 클릭 시간 추적 (MAC + 버튼타입별)
 	private final Map<String, Long> mLastClickTimes = new HashMap<>();
-	private static final long CLICK_DEBOUNCE_MS = 500; // 500ms 디바운스
+	private static final long CLICK_DEBOUNCE_MS = 200; // [패치 C] 500ms → 200ms로 단축
 
 	public LeDeviceListAdapter(ListDataSource c, Context ctx) {
 		super();
+		// [패치 C] Stable IDs 활성화 - hasStableIds() 메서드 오버라이드로 처리
 		mDataSource = c;
 		mContext = ctx;
 		mBeaconStates = new ArrayList<>();
@@ -130,19 +131,13 @@ public class LeDeviceListAdapter extends BaseAdapter {
 
 	@Override
 	public long getItemId(int i) {
-		// [D2] MAC → 고정 long ID: "AA:BB:CC:DD:EE:FF" → AABBCCDDEEFF(16진) → long
+		// [패치 C] Stable ID 구현 - MAC 기반 안정적인 ID 제공
 		if (i >= 0 && i < mBeaconStates.size()) {
 			BeaconState state = mBeaconStates.get(i);
 			if (state != null && state.getMac() != null) {
 				String mac = state.getMac();
-				try {
-					// MAC 콜론 제거 후 16진수 → long 변환
-					String hexMac = mac.replace(":", "");
-					return Long.parseLong(hexMac, 16);
-				} catch (Exception e) {
-					// 파싱 실패 시 해시코드 폴백
-					return mac.hashCode();
-				}
+				// MAC 주소를 해시코드로 변환 (안정적이고 간단한 방법)
+				return mac.hashCode();
 			}
 		}
 		return i;
@@ -150,7 +145,7 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	
 	@Override
 	public boolean hasStableIds() {
-		// [B] 안정적 ID 활성화: ListView 재활용 최적화
+		// [패치 C] 안정적 ID 활성화: ListView 재활용 최적화
 		return true;
 	}
 
@@ -289,12 +284,13 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder.btnRingAlarm.setOnClickListener(v -> {
 				if (!isClickAllowed(captureMac, "ring")) {
 					Log.d("LeDeviceListAdapter", "Ring alarm click debounced for MAC: " + captureMac);
+					// 시각적 피드백 추가 - 사용자가 왜 반응 없는지 알 수 있도록
+					android.widget.Toast.makeText(v.getContext(), "잠시만 기다려주세요...", android.widget.Toast.LENGTH_SHORT).show();
 					return;
 				}
 				
-				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
-				v.setEnabled(false);
-				v.postDelayed(() -> v.setEnabled(true), 300);
+				// [패치 C] 촉각 피드백만 제공, 버튼 비활성화 제거로 반응성 향상
+				v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
 				
 				Log.d("RingAlarm", String.format("CLICK: position=%d, MAC=%s, name=%s", 
 					i, captureMac, beaconState.getDisplayName()));
@@ -312,12 +308,13 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
 				if (!isClickAllowed(captureMac, "stop")) {
 					Log.d("LeDeviceListAdapter", "Ring stop click debounced for MAC: " + captureMac);
+					// 시각적 피드백 추가
+					android.widget.Toast.makeText(v.getContext(), "잠시만 기다려주세요...", android.widget.Toast.LENGTH_SHORT).show();
 					return;
 				}
 				
-				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
-				v.setEnabled(false);
-				v.postDelayed(() -> v.setEnabled(true), 300);
+				// [패치 C] 촉각 피드백만 제공, 버튼 비활성화 제거로 반응성 향상
+				v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
 				
 				Log.d("RingStop", String.format("CLICK: position=%d, MAC=%s, name=%s", 
 					i, captureMac, beaconState.getDisplayName()));
@@ -334,12 +331,13 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder.btnDistanceSetting.setOnClickListener(v -> {
 				if (!isClickAllowed(captureMac, "distance")) {
 					Log.d("LeDeviceListAdapter", "Distance setting click debounced for MAC: " + captureMac);
+					// 시각적 피드백 추가
+					android.widget.Toast.makeText(v.getContext(), "잠시만 기다려주세요...", android.widget.Toast.LENGTH_SHORT).show();
 					return;
 				}
 				
-				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
-				v.setEnabled(false);
-				v.postDelayed(() -> v.setEnabled(true), 300);
+				// [패치 C] 촉각 피드백만 제공, 버튼 비활성화 제거로 반응성 향상
+				v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
 				
 				if (mOnRowActionListener != null && captureMac != null) {
 					mOnRowActionListener.onDistanceSetting(captureMac);
@@ -350,12 +348,13 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder.btnCalibration.setOnClickListener(v -> {
 				if (!isClickAllowed(captureMac, "calibration")) {
 					Log.d("LeDeviceListAdapter", "Calibration click debounced for MAC: " + captureMac);
+					// 시각적 피드백 추가
+					android.widget.Toast.makeText(v.getContext(), "잠시만 기다려주세요...", android.widget.Toast.LENGTH_SHORT).show();
 					return;
 				}
 				
-				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
-				v.setEnabled(false);
-				v.postDelayed(() -> v.setEnabled(true), 300);
+				// [패치 C] 촉각 피드백만 제공, 버튼 비활성화 제거로 반응성 향상
+				v.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
 				
 				if (mOnRowActionListener != null && captureMac != null) {
 					mOnRowActionListener.onCalibration(captureMac);

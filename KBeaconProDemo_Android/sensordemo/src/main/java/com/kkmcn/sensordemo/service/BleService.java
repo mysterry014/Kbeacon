@@ -834,10 +834,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem sys = 
                         (com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem) pkt;
                     int pct = sys.getBatteryPercent();
+                    Log.i(TAG, String.format("DEBUG Battery %s: sys=%d, model=%s, version=%s", 
+                        state.getMac(), pct, sys.getModel(), sys.getVersion()));
+                    
                     if (pct >= 0 && pct <= 100) {
                         batteryPercent = pct;
-                        Log.v(TAG, "Battery from System packet: " + state.getMac() + " = " + pct + "%");
+                        Log.i(TAG, "Battery ACCEPTED from System: " + state.getMac() + " = " + pct + "%");
                         break; // 가장 신뢰도 높은 경로 → 바로 채택
+                    } else {
+                        Log.w(TAG, "Battery REJECTED from System: " + state.getMac() + " pct=" + pct);
                     }
                 }
 
@@ -848,7 +853,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     Integer vInt = sensor.getBatteryLevel();
                     if (vInt != null && vInt > 0) {
                         batteryVoltage = vInt.floatValue() / 1000f; // mV → V 변환
-                        Log.v(TAG, "Battery voltage from Sensor packet: " + state.getMac() + " = " + batteryVoltage + "V");
+                        Log.i(TAG, String.format("DEBUG Battery %s: sensorV=%.3f", state.getMac(), batteryVoltage));
                         // System 패킷이 같이 있으면 그걸 우선하므로 계속 탐색
                     }
                 }
@@ -861,7 +866,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     if (vInt != null && vInt > 0) {
                         // TLM이 mV 단위로 오므로 V로 변환
                         batteryVoltage = vInt.floatValue() / 1000f; // mV → V 변환
-                        Log.v(TAG, "Battery voltage from TLM packet: " + state.getMac() + " = " + batteryVoltage + "V");
+                        Log.i(TAG, String.format("DEBUG Battery %s: tlmV=%.3f", state.getMac(), batteryVoltage));
                     }
                 }
             }
@@ -880,7 +885,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 state.setBatteryPercent(batteryPercent);
                 state.setLastBatteryUpdateTime(System.currentTimeMillis());
                 DevicePrefs.setBattery(getApplicationContext(), state.getMac(), batteryPercent);
-                Log.v(TAG, "Battery updated from ADV: " + state.getMac() + " = " + batteryPercent + "%");
+                Log.i(TAG, "Battery FINAL updated from ADV: " + state.getMac() + " = " + batteryPercent + "%");
+            } else {
+                Log.w(TAG, String.format("Battery FINAL skipped from ADV: MAC=%s, percent=%s (invalid/null)", 
+                    state.getMac(), batteryPercent));
+            }
+
+            // System 패킷에서 0%인 경우 Scan Response 0x8020 Service Data 체크 시도
+            if (batteryPercent != null && batteryPercent == 0) {
+                Log.i(TAG, "Attempting Scan Response 0x8020 check for " + state.getMac());
+                checkScanResponseBattery(beacon, state);
             }
 
         } catch (Throwable t) {
@@ -1005,6 +1019,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         } else {
             return Math.max(0, (int) ((voltage - 2.3f) / 0.4f * 20));
         }
+    }
+    
+    /**
+     * Scan Response 0x8020 Service Data 체크 (현재 SDK에서 미지원)
+     * 추후 SDK 업데이트 시 구현 예정
+     */
+    private void checkScanResponseBattery(KBeacon beacon, BeaconState state) {
+        Log.d(TAG, "checkScanResponseBattery: SDK에서 getScanRecord() 미지원 - 스킵");
+        Log.d(TAG, "System/Sensor/TLM 패킷에서 배터리 정보를 우선 활용하세요");
     }
     
     /**
@@ -1263,14 +1286,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             // KBeaconsMgr.getBeacon()으로 MAC 기반 KBeacon 인스턴스 조회
             KBeacon beacon = kBeaconsMgr.getBeacon(mac);
             if (beacon != null) {
-                Log.d(TAG, String.format("Found beacon: %s, name=%s, state=%s", 
+                Log.d(TAG, String.format("Found existing beacon: %s, name=%s, state=%s", 
                     mac, beacon.getName(), beacon.getState()));
-            } else {
-                Log.w(TAG, "Beacon not found in KBeaconsMgr for MAC: " + mac);
+                return beacon;
             }
-            return beacon;
+            
+            // 매니저에서 찾을 수 없는 경우 - null 반환 (SDK 정책 준수)
+            Log.w(TAG, "Beacon not found in KBeaconsMgr for MAC: " + mac);
+            Log.w(TAG, "Cannot create KBeacon object directly - must be discovered through scanning");
+            return null;
+            
         } catch (Exception e) {
-            Log.e(TAG, "Error finding beacon by MAC " + mac + ": " + e.getMessage());
+            Log.e(TAG, "Error in findBeaconByMac for " + mac + ": " + e.getMessage());
             return null;
         }
     }
@@ -1840,23 +1867,53 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             // 이미 연결됨 - 바로 명령 전송
             sendCommandToConnectedBeacon(finalBeacon, cmd, successMsg, failMsg, onFinally);
         } else {
-            // 연결 시도
+            // 연결 시도 - 권한/예외 가드 적용
             Log.d(TAG, "performConnectAndCommand: connecting to " + mac);
-            beacon.connect(null, 10000, new KBeacon.ConnStateDelegate() {
-                @Override
-                public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
-                    if (state == KBConnState.Connected) {
-                        Log.d(TAG, "performConnectAndCommand: connected to " + mac);
-                        sendCommandToConnectedBeacon(finalBeacon, cmd, successMsg, failMsg, onFinally);
-                    } else if (state == KBConnState.Disconnected) {
-                        Log.w(TAG, "performConnectAndCommand: connection failed for " + mac + ", retry " + (currentRetry + 1));
-                        // 재시도
-                        new Handler(Looper.getMainLooper()).postDelayed(() -> 
-                            performConnectAndCommand(mac, cmd, currentRetry + 1, maxRetry, successMsg, failMsg, onFinally), 
-                            1000);
-                    }
+            
+            try {
+                // Android 12+ BLUETOOTH_CONNECT 권한 체크
+                if (android.os.Build.VERSION.SDK_INT >= 31 &&
+                    androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "BLUETOOTH_CONNECT permission not granted for " + mac);
+                    android.content.Intent intent = new android.content.Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+                    androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+                    return;
                 }
-            });
+                
+                // 기본 패스워드로 연결 시도
+                final String defaultPassword = "0000000000000000";
+                beacon.connect(defaultPassword, 20000, new KBeacon.ConnStateDelegate() {
+                    @Override
+                    public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
+                        if (state == KBConnState.Connected) {
+                            Log.d(TAG, "performConnectAndCommand: connected to " + mac);
+                            sendCommandToConnectedBeacon(finalBeacon, cmd, successMsg, failMsg, onFinally);
+                        } else if (state == KBConnState.Disconnected) {
+                            Log.w(TAG, "performConnectAndCommand: connection failed for " + mac + ", retry " + (currentRetry + 1));
+                            // 재시도
+                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> 
+                                performConnectAndCommand(mac, cmd, currentRetry + 1, maxRetry, successMsg, failMsg, onFinally), 
+                                1000);
+                        }
+                    }
+                });
+                
+            } catch (SecurityException se) {
+                Log.e(TAG, "SecurityException during connect for " + mac + ": " + se.getMessage());
+                android.content.Intent intent = new android.content.Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+                androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+            } catch (Throwable t) {
+                Log.e(TAG, "connect() threw exception for " + mac + ": " + t.getMessage(), t);
+                // 재시도 또는 실패 처리
+                if (currentRetry + 1 < maxRetry) {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> 
+                        performConnectAndCommand(mac, cmd, currentRetry + 1, maxRetry, successMsg, failMsg, onFinally), 
+                        2000); // 예외 시 더 긴 대기시간
+                } else {
+                    Log.e(TAG, "All connection attempts failed for " + mac);
+                }
+            }
         }
     }
     

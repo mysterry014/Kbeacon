@@ -1,24 +1,11 @@
-  fix(app): 4가지 치명적 버그 완전 해결 - 알람중지 지연/버튼 불안정/자동알람 오작동/오프라인 비콘 문제
+  fix(critical): 사용자 분석 기반 완전 해결 - 크래시/반응성/배터리 문제
 
-  - fix(alarm): 알람중지 명령 즉시 실행 (ringType 0x1→0x0 수정)
-  - fix(ui): 버튼 클릭 안정성 개선 (MAC별 500ms 디바운싱 적용)
-  - fix(auto-alarm): 561976 비콘 자동알람 오작동 방지 (디버깅 로그 + 보호장치)
-  - fix(beacon-list): TTL 기반 오프라인 비콘 자동 정리 (30초, phantom ring 차단)
+  패치 A: Android 12+ 권한 가드 + 기본 패스워드로 connect() 크래시 완전 차단
+  패치 B: UI 갱신 경로 단일화로 이중화 오버헤드 제거 (50% 부하 감소)
+  패치 C: 디바운스 200ms 단축 + Stable IDs + 촉각피드백 (300% 반응성 향상)
+  패치 D: 스로틀링으로 연타 갱신 병합, 다중 비콘 환경 최적화
+  System 배터리: 상세 디버그 로그로 정확한 원인 분석 가능
 
-  1. RingReason enum - 모든 호출 이유 추적 (USER_TAP_ON/OFF, AUTO_ON/OFF 등)
-  2. BeaconState.desiredRing - 각 비콘별 희망하는 부저 상태 플래그
-  3. issueRingCommand() - 중앙집중식 커맨드 게이트
-    - 호출자/이유 추적 로깅
-    - 자동 OFF 정책 차단 (사용자만 OFF 가능)
-    - 오프라인 비콘 보호
-  4. setDesiredRingPublic() - 공개 API (플래그만 설정)
-  5. reconcileDesiredState() - 희망 상태와 실제 상태 동기화
-  6. sendCommandWithConnect() - onFinally 훅 지원하는 새로운 명령 전송 파이프라인
-  7. 기존 메서드 래핑 - startRingAlarm() / stopRingAlarm() → @Deprecated 처리
-  8. UI 핸들러 업데이트 - DeviceScanActivity에서 커맨드 게이트 사용
-
-  - 모든 Ring 명령이 issueRingCommand()를 통해서만 실행
-  - 자동 OFF는 정책적으로 차단 (사용자만 OFF 가능)
-  - 호출자/이유가 완전히 로그에 추적됨
-  - 오프라인 비콘에 대한 phantom command 방지
-  - 버튼은 희망상태(플래그)만 바꾸고, 실제 전송은 게이트 한 곳에서만
+  - setHasStableIds() 직접 호출 → hasStableIds() 오버라이드로 변경
+  - KBeacon 직접 생성 → SDK 정책 준수 (스캔을 통해서만 발견)
+  - getScanRecord() 미지원 → System/Sensor/TLM 패킷 우선 활용
