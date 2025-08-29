@@ -834,7 +834,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem sys = 
                         (com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem) pkt;
                     int pct = sys.getBatteryPercent();
-                    if (pct > 0 && pct <= 100) {
+                    if (pct >= 0 && pct <= 100) {
                         batteryPercent = pct;
                         Log.v(TAG, "Battery from System packet: " + state.getMac() + " = " + pct + "%");
                         break; // 가장 신뢰도 높은 경로 → 바로 채택
@@ -1825,8 +1825,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         BeaconState state = beaconStates.get(mac);
         if (state == null) return;
         
-        // 실제 beacon 객체 찾기 (KBeaconsMgr에서 MAC 기반 조회)
-        KBeacon beacon = kBeaconsMgr.getBeacon(mac);
+        // 실제 beacon 객체 찾기 (findBeaconByMac 사용 - 없으면 생성)
+        KBeacon beacon = findBeaconByMac(mac);
         
         if (beacon == null) {
             Log.e(TAG, "performConnectAndCommand: KBeacon object not found for " + mac);
@@ -1878,8 +1878,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                         ", error: " + (error != null ? error.errorCode : "unknown"));
                 }
                 
-                // onFinally 훅 실행
-                if (onFinally != null) {
+                // onFinally 훅 실행 (null 가드)
+                if (onFinally != null && beacon != null) {
                     onFinally.accept(beacon);
                 }
             }
@@ -1893,7 +1893,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private final java.util.concurrent.ConcurrentHashMap<String, Runnable> pendingDisconnects = new java.util.concurrent.ConcurrentHashMap<>();
     
     private void scheduleIdleDisconnect(KBeacon beacon) {
-        if (beacon == null) return;
+        if (beacon == null) {
+            Log.w(TAG, "scheduleIdleDisconnect: beacon is null, skipping");
+            return;
+        }
         
         String mac = beacon.getMac();
         

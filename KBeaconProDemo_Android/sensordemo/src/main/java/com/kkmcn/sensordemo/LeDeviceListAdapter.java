@@ -247,7 +247,7 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		
 		// 3. 배터리 표시
 		int batteryPercent = beaconState.getBatteryPercent();
-		String batteryText = batteryPercent > 0 ? 
+		String batteryText = batteryPercent >= 0 ? 
 			String.format("%d%%", batteryPercent) : "--%";
 		viewHolder.tvBattery.setText(batteryText);
 		
