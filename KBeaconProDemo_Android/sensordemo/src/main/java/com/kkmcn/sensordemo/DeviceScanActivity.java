@@ -112,6 +112,13 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private static final int PERMISSION_CONNECT = 25;
     private static final int REQ_PERMS = 1001; // 통합 권한 요청
     private static final int REQ_BT_ON = 1002; // 블루투스 활성화 요청
+    
+    // 권한 요청 이력 관리용 SharedPreferences 키
+    private static final String PREF_PERM = "perm_prefs";
+    private static final String KEY_ASKED_FINE = "asked_fine_once";
+    
+    // 권한 요청 디바운스 플래그
+    private boolean askingRuntimePerms = false;
 
 
     private ListView mListView;
@@ -240,39 +247,43 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
 
                     // 1) 위치 설정 OFF면 설정 화면 유도
                     if (!isLocationEnabledSafe()) {
-                        Toast.makeText(DeviceScanActivity.this, "스캔 결과가 없어 위치 설정으로 이동합니다.", Toast.LENGTH_SHORT).show();
-                        try {
-                            startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-                        } catch (Exception ignored) {}
+                        try { startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)); } catch (Exception ignored) {}
                     }
 
-                    // 2) 폴백: 12+에서도 ACCESS_FINE_LOCATION을 (한 번만) 요청
+                    // 2) 12+ 폴백: FINE_LOCATION 최초 요청 보장 + '다시 묻지 않음' 구분
                     if (Build.VERSION.SDK_INT >= 31) {
-
-                        // 보강 #1: '다시 묻지 않음' 상태면 앱 설정으로 이동
                         if (ActivityCompat.checkSelfPermission(DeviceScanActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
                                 != PackageManager.PERMISSION_GRANTED) {
 
-                            boolean canShow = ActivityCompat.shouldShowRequestPermissionRationale(
-                                    DeviceScanActivity.this, Manifest.permission.ACCESS_FINE_LOCATION);
+                            android.content.SharedPreferences sp = DeviceScanActivity.this.getSharedPreferences(PREF_PERM, MODE_PRIVATE);
+                            boolean askedBefore = sp.getBoolean(KEY_ASKED_FINE, false);
 
-                            if (canShow) {
-                                ActivityCompat.requestPermissions(
-                                    DeviceScanActivity.this,
+                            if (!askedBefore) {
+                                // 최초 요청: 무조건 다이얼로그
+                                requestPermsOnce(
                                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                                     PERMISSION_FINE_LOCATION
                                 );
+                                sp.edit().putBoolean(KEY_ASKED_FINE, true).apply();
                             } else {
-                                // 사용자가 이전에 '다시 묻지 않음'으로 거부했을 가능성
-                                Toast.makeText(DeviceScanActivity.this, "위치 권한이 필요합니다. 앱 권한 설정으로 이동합니다.", Toast.LENGTH_SHORT).show();
-                                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        Uri.fromParts("package", getPackageName(), null));
-                                startActivity(i);
+                                // 이전에 거절한 적 있음 → '다시 묻지 않음' 여부 판단
+                                if (ActivityCompat.shouldShowRequestPermissionRationale(DeviceScanActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                                    requestPermsOnce(
+                                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                        PERMISSION_FINE_LOCATION
+                                    );
+                                } else {
+                                    // '다시 묻지 않음'
+                                    Toast.makeText(DeviceScanActivity.this, "위치 권한을 켜야 근처 기기를 스캔할 수 있습니다. 앱 설정으로 이동합니다.", Toast.LENGTH_SHORT).show();
+                                    Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            Uri.fromParts("package", DeviceScanActivity.this.getPackageName(), null));
+                                    DeviceScanActivity.this.startActivity(i);
+                                }
                             }
                         }
                     }
 
-                    // 3) 보강 #2: 권한/설정 조치 후 재시작을 안정적으로 지연
+                    // 3) 권한/설정 조치 후 재시작 (2s 지연)
                     mListView.postDelayed(() -> {
                         if (mServiceBound && mBleService != null) {
                             mBleService.stopScanning();
@@ -938,6 +949,13 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             Log.d(TAG, "Error updating UI from service: " + e.getMessage());
         }
     }
+    
+    @Override
+    protected void onStart() {
+        super.onStart();
+        // 최초 진입/복귀 시 권한 체크 + 서비스 바인드/시작
+        startBleServiceSafely();
+    }
 
     @Override
     protected void onResume() {
@@ -1065,15 +1083,19 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
      */
     private String[] getRequiredPermissions() {
         if (Build.VERSION.SDK_INT >= 33) { // Android 13+
+            // ★ 일부 단말 호환을 위해 FINE_LOCATION도 같이 요청(필요 없으면 주석처리 가능)
             return new String[]{
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.POST_NOTIFICATIONS // 알림 권한 추가
+                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.ACCESS_FINE_LOCATION
             };
         } else if (Build.VERSION.SDK_INT >= 31) { // Android 12+
+            // ★ 삼성 등 제조사 호환: 초기부터 FINE_LOCATION도 같이 묻기
             return new String[]{
                 Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
             };
         } else { // Android 10/11
             return new String[]{
@@ -1114,7 +1136,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         // 1) 권한 확인
         if (!hasAllRequiredPermissions()) {
             Log.w(TAG, "Missing permissions, requesting...");
-            ActivityCompat.requestPermissions(this, getRequiredPermissions(), REQ_PERMS);
+            requestPermsOnce(getRequiredPermissions(), REQ_PERMS);
             return;
         }
         
@@ -1179,9 +1201,24 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         }
     }
 
+    /**
+     * 권한 요청 디바운스 함수 (중복 요청 방지)
+     */
+    private void requestPermsOnce(String[] perms, int reqCode) {
+        if (askingRuntimePerms) {
+            Log.d(TAG, "Already asking permissions, ignoring duplicate request");
+            return;
+        }
+        askingRuntimePerms = true;
+        ActivityCompat.requestPermissions(this, perms, reqCode);
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults){
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        
+        // 반드시 디바운스 플래그 해제
+        askingRuntimePerms = false;
 
         // 크래시 스나이퍼 패치: 권한 승인 후 안전 재체크
         if (requestCode == REQ_PERMS) {
@@ -1367,10 +1404,13 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         // [터치디바운스] 다이얼로그 띄우는 동안 UI 갱신 금지
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 300;
         
-        // [A] 별칭 기준 일관화: 거리설정 다이얼로그도 별칭 우선
+        // 서비스 바인더를 통한 통일된 거리 조회
+        float currentThreshold = 50.0f; // 기본값
+        if (mServiceBound && mBleService != null) {
+            currentThreshold = mBleService.getDistanceThreshold(mac);
+        }
+        
         BeaconState beaconState = mBeaconDataStore.get(mac);
-        double currentThreshold = (beaconState != null) ? 
-            beaconState.getDistanceThresholdMeters() : Prefs.getDefaultDistanceThreshold();
         String displayName = (beaconState != null) ? 
             beaconState.getDisplayName() : "Unknown"; // 별칭 우선 사용
             
@@ -1422,10 +1462,15 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 return;
             }
             
-            // 거리 임계값 저장
-            saveDistanceThreshold(mac, beaconName, newThreshold);
+            // 서비스 바인더를 통한 통일된 저장
+            if (mServiceBound && mBleService != null) {
+                mBleService.saveDistanceThreshold(mac, (float)newThreshold);
+            } else {
+                // 폴백: DevicePrefs에 직접 저장
+                com.kkmcn.sensordemo.prefs.DevicePrefs.setDistanceThreshold(getApplicationContext(), mac, (float)newThreshold);
+            }
             
-            // BeaconState 즉시 갱신
+            // BeaconState 즉시 갱신 (UI 반영용)
             BeaconState beaconState = mBeaconDataStore.get(mac);
             if (beaconState != null) {
                 beaconState.setDistanceThreshold(newThreshold);

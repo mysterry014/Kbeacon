@@ -186,6 +186,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "BleService onStartCommand");
         
+        // 알림에서 "중지" 액션 클릭 시 서비스 종료
+        if (intent != null && "ACTION_STOP_FGS".equals(intent.getAction())) {
+            Log.d(TAG, "Stop foreground service requested from notification");
+            stopForeground(true);
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        
         // 크래시 스나이퍼 패치: ③ 3중 게이트 적용
         ensureScanning();
         
@@ -225,12 +233,25 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * Foreground Service Notification 생성
      */
     private Notification createNotification() {
+        // 알림 클릭 시 앱으로 복귀하는 Intent
+        Intent openApp = new Intent(this, com.kkmcn.sensordemo.DeviceScanActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        android.app.PendingIntent openPendingIntent = android.app.PendingIntent.getActivity(
+            this, 1001, openApp, android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+
+        // 서비스 중지 Intent (선택사항)
+        Intent stopService = new Intent(this, BleService.class).setAction("ACTION_STOP_FGS");
+        android.app.PendingIntent stopPendingIntent = android.app.PendingIntent.getService(
+            this, 1002, stopService, android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("KBeacon 모니터링 활성")
             .setContentText("BLE 비콘 거리 모니터링 중...")
             .setSmallIcon(R.drawable.ic_launcher)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(openPendingIntent)  // 알림 클릭 시 앱 복귀
+            .addAction(new NotificationCompat.Action(0, "중지", stopPendingIntent))  // 중지 액션
             .build();
     }
     
@@ -310,6 +331,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 return true;
             } else {
                 Log.e(TAG, "FORCE LOG: Failed to start BLE scan, error code: " + result);
+                // ★ 추가: 실패 시에도 폴백 브로드캐스트 발송
+                boolean locationEnabled = isLocationEnabled();
+                Intent i = new Intent(ACTION_SCAN_NO_RESULTS);
+                i.putExtra("location_enabled", locationEnabled);
+                LocalBroadcastManager.getInstance(this).sendBroadcast(i);
                 return false;
             }
         } catch (SecurityException se) {
@@ -362,7 +388,20 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * UI에서 paired/candidate 분기 처리
      */
     public List<BeaconState> getFilteredBeaconStates() {
-        return new ArrayList<>(beaconStates.values());
+        List<BeaconState> filtered = new ArrayList<>();
+        for (BeaconState state : beaconStates.values()) {
+            String mac = state.getMac();
+            String name = state.getAdvertisedName();
+            
+            // 이름이 6자리 숫자로 시작하거나, 이전에 paired로 저장된 MAC이면 표시
+            boolean nameMatches = name != null && NAME_REGEX.matcher(name.trim()).matches();
+            boolean isPaired = pairedSet.contains(mac);
+            
+            if (nameMatches || isPaired) {
+                filtered.add(state);
+            }
+        }
+        return filtered;
     }
     
     /**
@@ -383,6 +422,36 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             
             // candidates에서 제거 (이미 paired로 승격)
             candidates.remove(mac);
+        }
+    }
+    
+    /**
+     * 20개 제한을 위해 가장 오래된 paired 비콘 제거 (LRU 방식)
+     */
+    private void removeOldestPaired() {
+        String oldestMac = null;
+        long oldestTime = Long.MAX_VALUE;
+        
+        // BeaconState의 lastUpdateTime을 기준으로 가장 오래된 것 찾기
+        for (String mac : pairedSet) {
+            BeaconState state = beaconStates.get(mac);
+            if (state != null) {
+                long lastUpdate = state.getLastUpdateTime();
+                if (lastUpdate < oldestTime) {
+                    oldestTime = lastUpdate;
+                    oldestMac = mac;
+                }
+            }
+        }
+        
+        if (oldestMac != null) {
+            pairedSet.remove(oldestMac);
+            beaconStates.remove(oldestMac);
+            rssiWindows.remove(oldestMac);
+            rssiEmaCache.remove(oldestMac);
+            distanceEmaCache.remove(oldestMac);
+            DevicePrefs.removePaired(getApplicationContext(), oldestMac);
+            Log.d(TAG, "Removed oldest paired beacon: " + oldestMac);
         }
     }
     
@@ -611,16 +680,26 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                                  mac, pairedSet.contains(mac), advName, currentRssi,
                                  pairedSet.size(), candidates.size()));
         
+        // 이름 필터 통과 시 자동으로 paired에 추가 (최대 20개 유지)
+        boolean nameMatches = advName != null && NAME_REGEX.matcher(advName).matches();
+        if (nameMatches && !pairedSet.contains(mac)) {
+            // 20개 제한 확인
+            if (pairedSet.size() >= 20) {
+                removeOldestPaired();
+            }
+            addPaired(mac);
+            Log.d(TAG, "Auto-paired new beacon: " + mac + " (" + advName + ")");
+        }
+        
         // 하이브리드 분기 처리
         if (pairedSet.contains(mac)) {
             // Paired 비콘: 전체 처리 (RSSI 필터링, 거리 계산, 자동 알람)
             processPairedBeacon(beacon, state, currentRssi);
+            publishPairedToUI(state);
         } else {
-            // 신규 비콘: 이름 필터 확인
-            if (advName != null && NAME_REGEX.matcher(advName).matches()) {
+            // 이름 미일치인 잡음은 후보에만 유지
+            if (nameMatches) {
                 candidates.put(mac, state);
-                Log.d(TAG, "New candidate added: " + mac + " (" + advName + ")");
-                // UI에 candidate 업데이트 신호 (필요시)
                 publishCandidateToUI(state);
             }
         }
@@ -668,8 +747,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             }
         }
         
-        // KSensor 패킷에서 배터리 정보 추출 (TODO: 실제 구현 필요)
-        // extractBatteryFromSensorPacket(beacon, state);
+        // KSensor/시스템/TLM 광고 패킷에서 배터리 정보 추출
+        extractBatteryFromAdvPackets(beacon, state);
         
         // Paired 비콘 UI 업데이트
         publishPairedToUI(state);
@@ -690,10 +769,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * Paired 비콘 UI 업데이트 브로드캐스트
      */
     private void publishPairedToUI(BeaconState state) {
-        // 기존 브로드캐스트 로직 재사용 (필요시 수정)
-        // Intent intent = new Intent(ACTION_BEACON_UPDATE);
-        // intent.putExtra("paired_beacon", state);
-        // LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        Intent intent = new Intent(ACTION_BEACON_UPDATE);
+        // 필요하면 최소 정보 putExtra, 아니면 신호만
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
     
     /**
@@ -706,6 +784,78 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
     
+    /**
+     * 광고 패킷에서 배터리 정보 추출 및 저장
+     */
+    private void extractBatteryFromAdvPackets(KBeacon beacon, BeaconState state) {
+        try {
+            if (beacon.allAdvPackets() == null) return;
+
+            Integer batteryPercent = null;
+            Float batteryVoltage = null;
+
+            // 광고 패킷 순회하여 배터리 정보 추출
+            for (com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketBase pkt : beacon.allAdvPackets()) {
+                
+                // 1) System 패킷: 퍼센트 바로 제공 (가장 신뢰도 높음)
+                if (pkt instanceof com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem) {
+                    com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem sys = 
+                        (com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSystem) pkt;
+                    int pct = sys.getBatteryPercent();
+                    if (pct > 0 && pct <= 100) {
+                        batteryPercent = pct;
+                        Log.v(TAG, "Battery from System packet: " + state.getMac() + " = " + pct + "%");
+                        break; // 가장 신뢰도 높은 경로 → 바로 채택
+                    }
+                }
+
+                // 2) Sensor 패킷: 전압(V) 제공 → 퍼센트 환산
+                if (pkt instanceof com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor) {
+                    com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor sensor = 
+                        (com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketSensor) pkt;
+                    Integer vInt = sensor.getBatteryLevel();
+                    if (vInt != null && vInt > 0) {
+                        batteryVoltage = vInt.floatValue() / 1000f; // mV → V 변환
+                        Log.v(TAG, "Battery voltage from Sensor packet: " + state.getMac() + " = " + batteryVoltage + "V");
+                        // System 패킷이 같이 있으면 그걸 우선하므로 계속 탐색
+                    }
+                }
+
+                // 3) Eddystone TLM: 전압 제공 → 퍼센트 환산
+                if (pkt instanceof com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyTLM) {
+                    com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyTLM tlm = 
+                        (com.kkmcn.kbeaconlib2.KBAdvPackage.KBAdvPacketEddyTLM) pkt;
+                    Integer vInt = tlm.getBatteryLevel();
+                    if (vInt != null && vInt > 0) {
+                        // TLM이 mV 단위로 오므로 V로 변환
+                        batteryVoltage = vInt.floatValue() / 1000f; // mV → V 변환
+                        Log.v(TAG, "Battery voltage from TLM packet: " + state.getMac() + " = " + batteryVoltage + "V");
+                    }
+                }
+            }
+
+            // 전압 → 퍼센트 변환 (System 패킷이 없는 경우)
+            if (batteryPercent == null && batteryVoltage != null) {
+                batteryPercent = calculateBatteryPercent(batteryVoltage);
+                if (batteryPercent != null) {
+                    state.setBatteryVoltage(batteryVoltage);
+                    Log.v(TAG, "Converted voltage to percent: " + batteryVoltage + "V → " + batteryPercent + "%");
+                }
+            }
+
+            // 배터리 정보 저장 (상태 + 영속 저장)
+            if (batteryPercent != null && batteryPercent >= 0 && batteryPercent <= 100) {
+                state.setBatteryPercent(batteryPercent);
+                state.setLastBatteryUpdateTime(System.currentTimeMillis());
+                DevicePrefs.setBattery(getApplicationContext(), state.getMac(), batteryPercent);
+                Log.v(TAG, "Battery updated from ADV: " + state.getMac() + " = " + batteryPercent + "%");
+            }
+
+        } catch (Throwable t) {
+            Log.w(TAG, "extractBatteryFromAdvPackets error for " + state.getMac() + ": " + t.getMessage());
+        }
+    }
+
     /**
      * 배터리 레벨을 BeaconState와 DevicePrefs에 동시 저장
      */
@@ -737,6 +887,17 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         DevicePrefs.setDistanceThreshold(getApplicationContext(), mac, thresholdMeters);
         
         Log.d(TAG, String.format("Distance threshold saved: %s -> %.1fm", mac, thresholdMeters));
+    }
+    
+    /**
+     * 거리 임계값 조회 (BeaconState 우선, 없으면 DevicePrefs에서)
+     */
+    public float getDistanceThreshold(String mac) {
+        BeaconState state = beaconStates.get(mac);
+        if (state != null && state.getDistanceThresholdMeters() > 0) {
+            return (float)state.getDistanceThresholdMeters();
+        }
+        return DevicePrefs.getDistanceThreshold(getApplicationContext(), mac, 50.0f);
     }
     
     /**
@@ -1286,6 +1447,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     broadcastScanStateChanged(true);
                 } else {
                     Log.e(TAG, "Failed to start BLE scan via ensureScanning, error: " + result);
+                    // ★ 추가: 실패 시에도 폴백 브로드캐스트 발송
+                    boolean locationEnabled = isLocationEnabled();
+                    Intent i = new Intent(ACTION_SCAN_NO_RESULTS);
+                    i.putExtra("location_enabled", locationEnabled);
+                    LocalBroadcastManager.getInstance(this).sendBroadcast(i);
                 }
             } else {
                 Log.e(TAG, "KBeaconsMgr is null, cannot start scanning");
