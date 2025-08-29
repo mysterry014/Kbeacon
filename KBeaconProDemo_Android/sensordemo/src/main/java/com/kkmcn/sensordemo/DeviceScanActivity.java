@@ -227,7 +227,18 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     String mac = intent.getStringExtra("mac");
                     String state = intent.getStringExtra("state");
                     Log.d(TAG, String.format("Ring state changed: MAC=%s, state=%s", mac, state));
-                    // TODO: 개별 버튼 상태 업데이트
+                    
+                    // 토스트 피드백 표시
+                    String beaconName = getBeaconDisplayName(mac);
+                    if ("알람중".equals(state)) {
+                        toastShow(beaconName + " 부저 알람 시작");
+                    } else if ("알람".equals(state)) {
+                        toastShow(beaconName + " 부저 알람 중지");
+                    } else if ("연결됨".equals(state)) {
+                        toastShow(beaconName + " 연결됨");
+                    } else if ("동작중".equals(state)) {
+                        toastShow(beaconName + " 알람 처리 중...");
+                    }
                     break;
                     
                 case BleService.ACTION_AUTO_ALARM_TRIGGERED:
@@ -236,6 +247,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     double threshold = intent.getDoubleExtra("threshold", 0.0);
                     Log.w(TAG, String.format("Auto alarm triggered: MAC=%s, distance=%.1fm > threshold=%.1fm", 
                         triggerMac, distance, threshold));
+                    
+                    // 토스트 피드백 표시
+                    String triggerBeaconName = getBeaconDisplayName(triggerMac);
+                    toastShow(String.format("⚠️ 자동 알람: %s (%.1fm > %.1fm)", 
+                        triggerBeaconName, distance, threshold));
                     
                     // 태블릿 알람 시작
                     runOnUiThread(() -> startPhoneAlarm());
@@ -1608,6 +1624,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 mPhoneAlarmPlayer.start();
                 Log.d(TAG, "Phone alarm started (looping)");
                 
+                // 토스트 피드백 표시
+                toastShow("🔊 태블릿 알람 시작");
+                
                 // 버튼 상태 업데이트
                 if (mBtnPhoneAlarm != null) {
                     mBtnPhoneAlarm.setText("알람중");
@@ -1634,6 +1653,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 mPhoneAlarmPlayer.release();
                 mPhoneAlarmPlayer = null;
                 Log.d(TAG, "Phone alarm stopped");
+                
+                // 토스트 피드백 표시
+                toastShow("🔇 태블릿 알람 중지");
             }
             
             // 버튼 상태 복원
@@ -1653,5 +1675,28 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         } catch (Throwable t) {
             return false;
         }
+    }
+    
+    /**
+     * 토스트 메시지 표시 헬퍼 메서드
+     */
+    public void toastShow(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
+    
+    /**
+     * 비콘 표시명 조회 헬퍼 메서드
+     */
+    private String getBeaconDisplayName(String mac) {
+        if (mBleService != null) {
+            List<BeaconState> beaconStates = mBleService.getFilteredBeaconStates();
+            for (BeaconState state : beaconStates) {
+                if (mac.equalsIgnoreCase(state.getMac())) {
+                    String displayName = state.getDisplayName();
+                    return displayName != null && !displayName.isEmpty() ? displayName : state.getMac();
+                }
+            }
+        }
+        return mac != null && mac.length() > 6 ? mac.substring(mac.length() - 6) : "Unknown";
     }
 }

@@ -401,6 +401,17 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 filtered.add(state);
             }
         }
+        
+        // MAC 기반 안정 정렬 (앱 재실행 시에도 동일한 순서 유지)
+        Collections.sort(filtered, (a, b) -> {
+            String macA = a.getMac();
+            String macB = b.getMac();
+            if (macA == null && macB == null) return 0;
+            if (macA == null) return 1;
+            if (macB == null) return -1;
+            return macA.compareToIgnoreCase(macB);
+        });
+        
         return filtered;
     }
     
@@ -541,6 +552,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // Ring 상태 해제
         ringInProgress.remove(mac);
+        
+        // 실제 비콘에 중지 명령 송신
+        stopBeaconRing(mac);
+        
         broadcastRingStateChanged(mac, "알람");
     }
     
@@ -1077,6 +1092,89 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         }
     }
     
+    /**
+     * Ring 알람 중지 명령을 비콘에 직접 송신
+     */
+    private void stopBeaconRing(String mac) {
+        Log.d(TAG, "stopBeaconRing: " + mac);
+        
+        // 크래시 스나이퍼 패치: 권한 및 BT 상태 확인
+        if (!hasAllBlePerms() || !isBtOn()) {
+            Log.w(TAG, String.format("Stop ring prerequisites not met for %s: perms=%s, btOn=%s", 
+                mac, hasAllBlePerms(), isBtOn()));
+            return;
+        }
+        
+        try {
+            KBeacon beacon = findBeaconByMac(mac);
+            if (beacon == null) {
+                Log.e(TAG, "Beacon not found for stop ring MAC: " + mac);
+                return;
+            }
+            
+            // 연결 상태 확인 후 연결 또는 바로 명령 전송
+            if (beacon.getState() != KBConnState.Connected) {
+                Log.d(TAG, "Connecting to beacon for stop command: " + mac);
+                
+                // 패스워드를 사용한 인증된 연결 (기본 패스워드)
+                beacon.connect("0000000000000000", 20000, new KBeacon.ConnStateDelegate() {
+                    @Override
+                    public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
+                        if (state == KBConnState.Connected) {
+                            Log.i(TAG, "Connected successfully, sending stop ring command");
+                            sendStopRingJson(beacon, mac);
+                        } else if (state == KBConnState.Disconnected && nReason != 0) {
+                            Log.e(TAG, "Stop ring connection failed, reason: " + nReason);
+                        }
+                    }
+                });
+            } else {
+                // 이미 연결됨, 바로 중지 명령 전송
+                Log.i(TAG, "Beacon already connected, sending stop ring command directly");
+                sendStopRingJson(beacon, mac);
+            }
+            
+        } catch (SecurityException se) {
+            Log.e(TAG, "SecurityException in stop ring command for " + mac + ": " + se.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "Error executing stop ring command for " + mac + ": " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Ring 중지 JSON 명령 전송
+     */
+    private void sendStopRingJson(KBeacon beacon, String mac) {
+        try {
+            org.json.JSONObject cmd = new org.json.JSONObject();
+            cmd.put("msg", "ring");
+            cmd.put("ringTime", 0); // 0ms = 즉시 중지
+            cmd.put("ringType", 0x1); // 0x1=beep only (부저)
+            
+            Log.i(TAG, "Sending stop ring command: ringTime=0ms, ringType=0x1");
+            
+            beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
+                @Override
+                public void onActionComplete(boolean bConfigSuccess, KBException error) {
+                    if (bConfigSuccess) {
+                        Log.i(TAG, "Stop ring command sent successfully for MAC: " + mac);
+                    } else {
+                        Log.e(TAG, "Stop ring command failed: " + (error != null ? error.errorCode : "unknown"));
+                    }
+                    
+                    // 연결 해제 (명령 완료 후)
+                    if (beacon.getState() == KBConnState.Connected) {
+                        beacon.disconnect();
+                        Log.d(TAG, "Disconnected after stop ring command");
+                    }
+                }
+            });
+            
+        } catch (Exception e) {
+            Log.e(TAG, "sendStopRingJson error: " + e.getMessage());
+        }
+    }
+
     /**
      * 실제 Ring JSON 명령 전송
      */

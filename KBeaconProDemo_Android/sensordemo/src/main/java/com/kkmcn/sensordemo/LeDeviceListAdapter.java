@@ -26,7 +26,7 @@ import java.util.List;
 
 public class LeDeviceListAdapter extends BaseAdapter {
 
-	// Adapter for holding devices found through scanning.
+	// Adapter for holding devices found through scanning
 	public interface ListDataSource {
 		KBeacon getBeaconDevice(int nIndex);
 
