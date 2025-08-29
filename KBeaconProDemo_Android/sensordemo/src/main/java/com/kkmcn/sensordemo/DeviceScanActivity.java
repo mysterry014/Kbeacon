@@ -1366,10 +1366,10 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
         
-        // BleService 기반 Ring 시작
+        // Command Gate 패턴: 플래그만 설정, 실제 명령은 게이트에서 처리
         if (mServiceBound && mBleService != null) {
-            mBleService.startRingAlarm(mac);
-            Log.i("RING", "BleService.startRingAlarm called for MAC: " + mac);
+            mBleService.setDesiredRingPublic(mac, true, BleService.RingReason.USER_TAP_ON);
+            Log.i("RING", "BleService.setDesiredRingPublic(true) called for MAC: " + mac);
         } else {
             // 폴백: 기존 RingManager 사용
             if (mRingManager != null) {
@@ -1398,10 +1398,10 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         // [터치디바운스] 클릭 직후 250ms 프리즈로 리스너 재설정 레이스 추가 차단
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 250;
         
-        // BleService 기반 Ring 중지
+        // Command Gate 패턴: 플래그만 설정, 실제 명령은 게이트에서 처리
         if (mServiceBound && mBleService != null) {
-            mBleService.stopRingAlarm(mac);
-            Log.i("RING", "BleService.stopRingAlarm called for MAC: " + mac);
+            mBleService.setDesiredRingPublic(mac, false, BleService.RingReason.USER_TAP_OFF);
+            Log.i("RING", "BleService.setDesiredRingPublic(false) called for MAC: " + mac);
         } else {
             // 폴백: 기존 RingManager 사용
             if (mRingManager != null) {

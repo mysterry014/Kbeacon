@@ -14,7 +14,8 @@
       "Bash(adb logcat:*)",
       "Bash(adb:*)",
       "Bash(gradlew:*)",
-      "Bash(.gradlew:*)"
+      "Bash(.gradlew:*)",
+      "Bash(cmd /c:*)"
     ],
     "deny": [],
     "ask": [],

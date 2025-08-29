@@ -68,6 +68,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private static final String CHANNEL_ID = "BLE_SERVICE_CHANNEL";
     private static final int NOTIFICATION_ID = 1001;
     
+    // Command Gate 패턴용 Ring 호출 이유 추적
+    public enum RingReason {
+        USER_TAP_ON, USER_TAP_OFF, AUTO_ON, AUTO_OFF, WATCHDOG, PURGE_OFFLINE, OTHER
+    }
+    
     // Broadcast Action 상수
     public static final String ACTION_BEACON_UPDATE = "com.kkmcn.sensordemo.BEACON_UPDATE";
     public static final String ACTION_SCAN_STATE_CHANGED = "com.kkmcn.sensordemo.SCAN_STATE_CHANGED";
@@ -94,6 +99,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // 기본 캘리브레이션 값
     private static final double DEFAULT_TX_POWER_AT_1M = -59.0;
     private static final double DEFAULT_PATH_LOSS_EXPONENT = 2.0;
+    
+    // TTL 관련 상수 (Issue 4)
+    private static final long BEACON_TTL_MS = 30000; // 30초 후 오프라인 비콘 제거
     
     // Service 바인더
     public class BleServiceBinder extends Binder {
@@ -388,6 +396,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * UI에서 paired/candidate 분기 처리
      */
     public List<BeaconState> getFilteredBeaconStates() {
+        // Issue 4: 스테일 비콘 정리 (UI 업데이트 전에 실행)
+        removeStaleBeacons();
+        
         List<BeaconState> filtered = new ArrayList<>();
         for (BeaconState state : beaconStates.values()) {
             String mac = state.getMac();
@@ -413,6 +424,44 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         });
         
         return filtered;
+    }
+    
+    /**
+     * Issue 4: TTL 기반 스테일(오프라인) 비콘 정리
+     * 마지막 업데이트로부터 BEACON_TTL_MS 이상 경과된 비콘을 제거
+     */
+    private void removeStaleBeacons() {
+        long currentTime = System.currentTimeMillis();
+        List<String> staleBeacons = new ArrayList<>();
+        
+        for (Map.Entry<String, BeaconState> entry : beaconStates.entrySet()) {
+            String mac = entry.getKey();
+            BeaconState state = entry.getValue();
+            
+            if (currentTime - state.getUpdatedAt() > BEACON_TTL_MS) {
+                staleBeacons.add(mac);
+                Log.i(TAG, String.format("Removing stale beacon: MAC=%s, name=%s, offline=%.1fs", 
+                    mac, state.getDisplayName(), (currentTime - state.getUpdatedAt()) / 1000.0));
+            }
+        }
+        
+        // 스테일 비콘 제거
+        for (String staleMac : staleBeacons) {
+            beaconStates.remove(staleMac);
+            
+            // 연관 데이터도 정리
+            rssiEmaCache.remove(staleMac);
+            distanceEmaCache.remove(staleMac);
+            
+            // Ring 상태도 정리 (오프라인 비콘의 phantom ring 방지)
+            ringInProgress.remove(staleMac);
+            
+            Log.d(TAG, "Cleaned up stale beacon data: " + staleMac);
+        }
+        
+        if (!staleBeacons.isEmpty()) {
+            Log.i(TAG, String.format("Removed %d stale beacons", staleBeacons.size()));
+        }
     }
     
     /**
@@ -502,61 +551,21 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * Ring 알람 시작 (특정 MAC)
+     * Ring 알람 시작 (하위 호환용 - @Deprecated)
      */
+    @Deprecated
     public void startRingAlarm(String mac) {
-        if (mac == null) {
-            Log.w(TAG, "startRingAlarm: MAC is null");
-            return;
-        }
-        
-        Log.d(TAG, "startRingAlarm: " + mac);
-        
-        // 이미 실행 중인지 확인
-        if (activeRingTasks.containsKey(mac)) {
-            Log.w(TAG, "Ring alarm already active for MAC: " + mac);
-            return;
-        }
-        
-        // Ring 상태 설정
-        ringInProgress.put(mac, true);
-        broadcastRingStateChanged(mac, "동작중");
-        
-        // 반복 Ring 작업 스케줄링
-        ScheduledFuture<?> ringTask = scheduler.scheduleWithFixedDelay(
-            () -> performRingCommand(mac),
-            0, // 즉시 시작
-            RING_RETRY_INTERVAL,
-            TimeUnit.MILLISECONDS
-        );
-        
-        activeRingTasks.put(mac, ringTask);
+        Log.d(TAG, "startRingAlarm (deprecated): " + mac);
+        setDesiredRingPublic(mac, true, RingReason.OTHER);
     }
     
     /**
-     * Ring 알람 중지 (특정 MAC)
+     * Ring 알람 중지 (하위 호환용 - @Deprecated)
      */
+    @Deprecated
     public void stopRingAlarm(String mac) {
-        if (mac == null) {
-            Log.w(TAG, "stopRingAlarm: MAC is null");
-            return;
-        }
-        
-        Log.d(TAG, "stopRingAlarm: " + mac);
-        
-        // Ring 작업 취소
-        ScheduledFuture<?> task = activeRingTasks.remove(mac);
-        if (task != null) {
-            task.cancel(true);
-        }
-        
-        // Ring 상태 해제
-        ringInProgress.remove(mac);
-        
-        // 실제 비콘에 중지 명령 송신
-        stopBeaconRing(mac);
-        
-        broadcastRingStateChanged(mac, "알람");
+        Log.d(TAG, "stopRingAlarm (deprecated): " + mac);
+        setDesiredRingPublic(mac, false, RingReason.USER_TAP_OFF);
     }
     
     /**
@@ -777,7 +786,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         float pathLossN = DevicePrefs.getPathLossN(getApplicationContext(), mac, (float)DEFAULT_PATH_LOSS_EXPONENT);
         
         // distance(m) = 10^((txPowerAt1m - rssiFiltered)/(10 * n))
-        return Math.pow(10, (txPowerAt1m - rssiFiltered) / (10.0 * pathLossN));
+        double distance = Math.pow(10, (txPowerAt1m - rssiFiltered) / (10.0 * pathLossN));
+        
+        // [Issue 3 Debug] 문제의 비콘에 대한 거리 계산 상세 로깅
+        if (mac != null && mac.toLowerCase().contains("561976")) {
+            Log.e(TAG, String.format("[561976_DISTANCE] MAC=%s, rssi=%.1f, txPower=%.1f, n=%.2f, distance=%.3fm", 
+                mac, rssiFiltered, txPowerAt1m, pathLossN, distance));
+        }
+        
+        return distance;
     }
     
     /**
@@ -1009,13 +1026,33 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return; // 설정값 없음
         }
         
+        // [Issue 3 Debug] 문제의 비콘에 대한 상세 로깅
+        String beaconName = state.getDisplayName();
+        boolean is561976Beacon = mac != null && (mac.toLowerCase().contains("561976") || 
+            (beaconName != null && beaconName.contains("561976")));
+        
+        if (is561976Beacon) {
+            Log.e(TAG, String.format("[561976_DEBUG] Auto-alarm check: MAC=%s, name=%s, distance=%.3fm, threshold=%.1fm, rssi=%.1fdBm, txPower=%.1f, n=%.2f", 
+                mac, beaconName, distanceFiltered, thresholdDistance, 
+                state.getRssiFiltered(), state.getTxPowerAt1m(), state.getPathLossExponent()));
+        }
+        
+        // [Issue 3 Safeguard] 의심스러운 거리 계산 감지 및 차단
+        double rssiFiltered = state.getRssiFiltered();
+        if (rssiFiltered > -30.0 && distanceFiltered > 10.0) {
+            // 매우 강한 신호(-30dBm 이상)인데 거리가 10m 이상으로 계산된 경우
+            Log.w(TAG, String.format("Suspicious distance calculation blocked: MAC=%s, rssi=%.1f, distance=%.1f", 
+                mac, rssiFiltered, distanceFiltered));
+            return; // 자동 알람 차단
+        }
+        
         // 거리 초과 감지
         if (distanceFiltered > thresholdDistance) {
-            Log.w(TAG, String.format("Auto alarm triggered: MAC=%s, distance=%.1fm > threshold=%.1fm", 
-                mac, distanceFiltered, thresholdDistance));
+            Log.w(TAG, String.format("Auto alarm triggered: MAC=%s, name=%s, distance=%.1fm > threshold=%.1fm", 
+                mac, beaconName, distanceFiltered, thresholdDistance));
             
-            // 비콘 부저 알람 시작
-            startRingAlarm(mac);
+            // 비콘 부저 알람 시작 (Command Gate 패턴 사용)
+            setDesiredRingPublic(mac, true, RingReason.AUTO_ON);
             
             // 태블릿 알람 브로드캐스트
             Intent intent = new Intent(ACTION_AUTO_ALARM_TRIGGERED);
@@ -1149,9 +1186,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             org.json.JSONObject cmd = new org.json.JSONObject();
             cmd.put("msg", "ring");
             cmd.put("ringTime", 0); // 0ms = 즉시 중지
-            cmd.put("ringType", 0x1); // 0x1=beep only (부저)
+            cmd.put("ringType", 0x0); // 0x0=turn off (즉시 중지)
             
-            Log.i(TAG, "Sending stop ring command: ringTime=0ms, ringType=0x1");
+            Log.i(TAG, "Sending stop ring command: ringTime=0ms, ringType=0x0");
             
             beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
                 @Override
@@ -1644,4 +1681,250 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return false;
         }
     }
+    
+    // ==================== COMMAND GATE 패턴 구현 ====================
+    
+    /**
+     * 커맨드 게이트: 모든 Ring 명령은 반드시 여기를 통해서만 실행
+     * - 호출자/이유 추적 로깅
+     * - 자동 OFF 정책 차단 (사용자만 OFF 가능)
+     * - 오프라인 비콘 보호
+     */
+    private void issueRingCommand(String mac, boolean on, RingReason reason) {
+        // 호출자/이유 로깅
+        StackTraceElement caller = new Throwable().getStackTrace()[1];
+        Log.i(TAG, String.format("[RING_CMD] mac=%s on=%s reason=%s at %s:%d",
+                mac, on, reason, caller.getClassName(), caller.getLineNumber()));
+
+        // 정책: 자동 OFF 금지 (사용자만 OFF 가능)
+        if (!on && reason != RingReason.USER_TAP_OFF) {
+            Log.w(TAG, "[RING_CMD] auto OFF blocked by policy, reason: " + reason);
+            return;
+        }
+
+        // 오프라인 가드
+        if (!isOnline(mac)) {
+            setDesiredRingFlag(mac, on);
+            String message = on ? "오프라인: 알람 시작 예약됨" : "오프라인: 알람 중지 예약됨";
+            broadcastToast(message);
+            Log.i(TAG, String.format("[RING_CMD] offline beacon %s, desired=%s", mac, on));
+            return;
+        }
+
+        // JSON 명령 작성 (STOP=0x0 / START=0x1)
+        org.json.JSONObject cmd = new org.json.JSONObject();
+        try {
+            cmd.put("msg", "ring");
+            cmd.put("ringTime", on ? 3000 : 0);
+            cmd.put("ringType", on ? 0x1 : 0x0);
+        } catch (Exception e) {
+            Log.e(TAG, "[RING_CMD] JSON creation error: " + e.getMessage());
+            return;
+        }
+
+        // 기존 파이프라인 사용 (타임아웃/재시도)
+        sendCommandWithConnect(
+            mac, cmd, 3,
+            on ? "알람 시작됨" : "알람 중지됨",
+            on ? "알람 시작 실패" : "알람 중지 실패",
+            beacon -> scheduleIdleDisconnect(beacon)
+        );
+    }
+    
+    /**
+     * 비콘이 온라인 상태인지 확인
+     */
+    private boolean isOnline(String mac) {
+        BeaconState state = beaconStates.get(mac);
+        if (state == null) return false;
+        
+        long timeSinceLastSeen = System.currentTimeMillis() - state.getUpdatedAt();
+        return timeSinceLastSeen <= BEACON_TTL_MS;
+    }
+    
+    /**
+     * 내부 플래그 설정 (상태 변경)
+     */
+    private void setDesiredRingFlag(String mac, boolean desired) {
+        BeaconState state = beaconStates.get(mac);
+        if (state != null) {
+            state.desiredRing = desired;
+            Log.d(TAG, String.format("setDesiredRingFlag: %s -> %s", mac, desired));
+        }
+    }
+    
+    /**
+     * 공개 API: 플래그만 바꾸고, reconcile에서 커맨드 게이트 호출
+     */
+    public void setDesiredRingPublic(String mac, boolean on, RingReason reason) {
+        BeaconState state = beaconStates.get(mac);
+        if (state == null) {
+            Log.w(TAG, "setDesiredRingPublic: beacon not found: " + mac);
+            return;
+        }
+        
+        if (state.desiredRing == on) {
+            Log.v(TAG, String.format("setDesiredRingPublic: no change %s=%s", mac, on));
+            return; // 변화 없으면 무시
+        }
+        
+        state.desiredRing = on;
+        Log.d(TAG, String.format("setDesiredRingPublic: %s -> %s (reason=%s)", mac, on, reason));
+        
+        reconcileDesiredState(mac, reason);
+    }
+    
+    /**
+     * 희망 상태와 실제 상태 동기화
+     */
+    private void reconcileDesiredState(String mac, RingReason reason) {
+        BeaconState state = beaconStates.get(mac);
+        if (state == null) return;
+
+        // 자동 OFF는 금지(사용자 OFF만 허용)
+        if (!state.desiredRing && reason != RingReason.USER_TAP_OFF) {
+            Log.d(TAG, String.format("reconcileDesiredState: auto OFF blocked for %s, reason=%s", mac, reason));
+            return;
+        }
+
+        issueRingCommand(mac, state.desiredRing, reason);
+    }
+    
+    /**
+     * 향상된 명령 전송 (onFinally 훅 지원)
+     */
+    private void sendCommandWithConnect(
+        String mac, org.json.JSONObject cmd, int maxRetry,
+        String successMsg, String failMsg,
+        java.util.function.Consumer<KBeacon> onFinally
+    ) {
+        BeaconState state = beaconStates.get(mac);
+        if (state == null) {
+            Log.w(TAG, "sendCommandWithConnect: beacon not found: " + mac);
+            return;
+        }
+        
+        // 기존 연결 로직 재사용하되 onFinally 훅 추가
+        performConnectAndCommand(mac, cmd, 0, maxRetry, successMsg, failMsg, onFinally);
+    }
+    
+    /**
+     * 실제 연결 및 명령 수행 (재귀 재시도 지원)
+     */
+    private void performConnectAndCommand(
+        String mac, org.json.JSONObject cmd, int currentRetry, int maxRetry,
+        String successMsg, String failMsg,
+        java.util.function.Consumer<KBeacon> onFinally
+    ) {
+        if (currentRetry >= maxRetry) {
+            Log.e(TAG, String.format("performConnectAndCommand: max retry exceeded for %s", mac));
+            return;
+        }
+        
+        // 연결 시도
+        BeaconState state = beaconStates.get(mac);
+        if (state == null) return;
+        
+        // 실제 beacon 객체 찾기 (KBeaconsMgr에서 MAC 기반 조회)
+        KBeacon beacon = kBeaconsMgr.getBeacon(mac);
+        
+        if (beacon == null) {
+            Log.e(TAG, "performConnectAndCommand: KBeacon object not found for " + mac);
+            return;
+        }
+        
+        final KBeacon finalBeacon = beacon;
+        
+        // 연결 상태 확인
+        if (beacon.getState() == KBConnState.Connected) {
+            // 이미 연결됨 - 바로 명령 전송
+            sendCommandToConnectedBeacon(finalBeacon, cmd, successMsg, failMsg, onFinally);
+        } else {
+            // 연결 시도
+            Log.d(TAG, "performConnectAndCommand: connecting to " + mac);
+            beacon.connect(null, 10000, new KBeacon.ConnStateDelegate() {
+                @Override
+                public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
+                    if (state == KBConnState.Connected) {
+                        Log.d(TAG, "performConnectAndCommand: connected to " + mac);
+                        sendCommandToConnectedBeacon(finalBeacon, cmd, successMsg, failMsg, onFinally);
+                    } else if (state == KBConnState.Disconnected) {
+                        Log.w(TAG, "performConnectAndCommand: connection failed for " + mac + ", retry " + (currentRetry + 1));
+                        // 재시도
+                        new Handler(Looper.getMainLooper()).postDelayed(() -> 
+                            performConnectAndCommand(mac, cmd, currentRetry + 1, maxRetry, successMsg, failMsg, onFinally), 
+                            1000);
+                    }
+                }
+            });
+        }
+    }
+    
+    /**
+     * 연결된 비콘에 명령 전송
+     */
+    private void sendCommandToConnectedBeacon(
+        KBeacon beacon, org.json.JSONObject cmd,
+        String successMsg, String failMsg,
+        java.util.function.Consumer<KBeacon> onFinally
+    ) {
+        beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
+            @Override
+            public void onActionComplete(boolean success, KBException error) {
+                if (success) {
+                    Log.i(TAG, successMsg + " for MAC: " + beacon.getMac());
+                } else {
+                    Log.e(TAG, failMsg + " for MAC: " + beacon.getMac() + 
+                        ", error: " + (error != null ? error.errorCode : "unknown"));
+                }
+                
+                // onFinally 훅 실행
+                if (onFinally != null) {
+                    onFinally.accept(beacon);
+                }
+            }
+        });
+    }
+    
+    /**
+     * 유휴 연결 해제 스케줄링
+     */
+    private static final long IDLE_DISCONNECT_MS = 1500;
+    private final java.util.concurrent.ConcurrentHashMap<String, Runnable> pendingDisconnects = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    private void scheduleIdleDisconnect(KBeacon beacon) {
+        if (beacon == null) return;
+        
+        String mac = beacon.getMac();
+        
+        // 기존 예약 취소
+        Runnable existing = pendingDisconnects.remove(mac);
+        if (existing != null) {
+            mainHandler.removeCallbacks(existing);
+        }
+        
+        // 새로운 연결 해제 예약
+        Runnable disconnectTask = () -> {
+            if (beacon.getState() == KBConnState.Connected) {
+                beacon.disconnect();
+                Log.d(TAG, "scheduleIdleDisconnect: disconnected " + mac);
+            }
+            pendingDisconnects.remove(mac);
+        };
+        
+        pendingDisconnects.put(mac, disconnectTask);
+        mainHandler.postDelayed(disconnectTask, IDLE_DISCONNECT_MS);
+        
+        Log.d(TAG, "scheduleIdleDisconnect: scheduled for " + mac + " in " + IDLE_DISCONNECT_MS + "ms");
+    }
+    
+    /**
+     * 토스트 브로드캐스트
+     */
+    private void broadcastToast(String message) {
+        // UI에 토스트 메시지 전달 (필요시 구현)
+        Log.i(TAG, "[TOAST] " + message);
+    }
+    
+    // ==================== 기존 메서드 래핑 (하위 호환성) ====================
 }

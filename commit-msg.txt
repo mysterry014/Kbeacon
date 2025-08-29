@@ -1,16 +1,24 @@
-feat(ui): 버튼 응답성 및 알람 제어 개선
+  fix(app): 4가지 치명적 버그 완전 해결 - 알람중지 지연/버튼 불안정/자동알람 오작동/오프라인 비콘 문제
 
-  - 버튼 클릭 여러 번 눌러야 하는 문제 해결
-    * LeDeviceListAdapter에 boundMac 기반 리스너 재바인딩 최적화
-    * 300ms 버튼 디바운싱으로 연타 방지
+  - fix(alarm): 알람중지 명령 즉시 실행 (ringType 0x1→0x0 수정)
+  - fix(ui): 버튼 클릭 안정성 개선 (MAC별 500ms 디바운싱 적용)
+  - fix(auto-alarm): 561976 비콘 자동알람 오작동 방지 (디버깅 로그 + 보호장치)
+  - fix(beacon-list): TTL 기반 오프라인 비콘 자동 정리 (30초, phantom ring 차단)
 
-  - 알람중지 즉시 꺼지지 않는 문제 해결
-    * BleService.stopRingAlarm에 stopBeaconRing 호출 추가
-    * ringTime=0 명령으로 비콘에 직접 중지 신호 송신
+  1. RingReason enum - 모든 호출 이유 추적 (USER_TAP_ON/OFF, AUTO_ON/OFF 등)
+  2. BeaconState.desiredRing - 각 비콘별 희망하는 부저 상태 플래그
+  3. issueRingCommand() - 중앙집중식 커맨드 게이트
+    - 호출자/이유 추적 로깅
+    - 자동 OFF 정책 차단 (사용자만 OFF 가능)
+    - 오프라인 비콘 보호
+  4. setDesiredRingPublic() - 공개 API (플래그만 설정)
+  5. reconcileDesiredState() - 희망 상태와 실제 상태 동기화
+  6. sendCommandWithConnect() - onFinally 훅 지원하는 새로운 명령 전송 파이프라인
+  7. 기존 메서드 래핑 - startRingAlarm() / stopRingAlarm() → @Deprecated 처리
+  8. UI 핸들러 업데이트 - DeviceScanActivity에서 커맨드 게이트 사용
 
-  - 토스트 피드백 복원
-    * Ring 상태 변화, 자동 알람, 태블릿 알람 이벤트에 토스트 표시
-    * 사용자 액션에 대한 즉각적인 시각적 피드백 제공
-
-  - 비콘 목록 안정 정렬 구현
-    * MAC 주소 기반 알파벳 순 정렬로 앱 재실행에도 동일한 순서 보장
+  - 모든 Ring 명령이 issueRingCommand()를 통해서만 실행
+  - 자동 OFF는 정책적으로 차단 (사용자만 OFF 가능)
+  - 호출자/이유가 완전히 로그에 추적됨
+  - 오프라인 비콘에 대한 phantom command 방지
+  - 버튼은 희망상태(플래그)만 바꾸고, 실제 전송은 게이트 한 곳에서만

@@ -32,6 +32,9 @@ public class BeaconState {
     // 사용자 설정
     private double distanceThresholdMeters;
     
+    // 알람 상태 관리 (Command Gate 패턴용)
+    public volatile boolean desiredRing; // 희망하는 부저 상태
+    
     // 메타데이터
     private long updatedAt;
     

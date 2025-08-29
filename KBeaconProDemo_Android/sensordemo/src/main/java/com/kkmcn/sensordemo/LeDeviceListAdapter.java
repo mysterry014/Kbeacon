@@ -21,7 +21,9 @@ import com.kkmcn.sensordemo.model.BeaconState;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 public class LeDeviceListAdapter extends BaseAdapter {
@@ -50,6 +52,10 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	
 	// Phase 3: 콜백 리스너
 	private OnRowActionListener mOnRowActionListener;
+	
+	// 클릭 디바운싱을 위한 마지막 클릭 시간 추적 (MAC + 버튼타입별)
+	private final Map<String, Long> mLastClickTimes = new HashMap<>();
+	private static final long CLICK_DEBOUNCE_MS = 500; // 500ms 디바운스
 
 	public LeDeviceListAdapter(ListDataSource c, Context ctx) {
 		super();
@@ -72,6 +78,29 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	 */
 	public void setOnRowActionListener(OnRowActionListener listener) {
 		this.mOnRowActionListener = listener;
+	}
+	
+	/**
+	 * 클릭 디바운싱 체크: MAC + 버튼타입별로 최소 간격을 보장
+	 * @param mac 비콘 MAC 주소
+	 * @param buttonType 버튼 타입 ("ring", "stop", "distance", "calibration", "name")
+	 * @return true if click is allowed, false if debounced
+	 */
+	private boolean isClickAllowed(String mac, String buttonType) {
+		if (mac == null || buttonType == null) return false;
+		
+		String clickKey = mac + "_" + buttonType;
+		long currentTime = System.currentTimeMillis();
+		Long lastClickTime = mLastClickTimes.get(clickKey);
+		
+		if (lastClickTime == null || (currentTime - lastClickTime) >= CLICK_DEBOUNCE_MS) {
+			mLastClickTimes.put(clickKey, currentTime);
+			return true;
+		}
+		
+		Log.d("LeDeviceListAdapter", String.format("Click debounced: %s (last: %dms ago)", 
+			clickKey, currentTime - lastClickTime));
+		return false;
 	}
 	
 	// [수정1] BeaconState에서 별칭 우선 반환 (KBeacon 참조 제거)
@@ -244,6 +273,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		
 			// [수정1] 이름 TextView 클릭 리스너 - MAC만 전달 (Activity에서 별칭 재조회)
 			viewHolder.tvBeaconName.setOnClickListener(v -> {
+				if (!isClickAllowed(captureMac, "name")) {
+					Log.d("LeDeviceListAdapter", "Name click debounced for MAC: " + captureMac);
+					return;
+				}
+				
 				if (mOnRowActionListener != null && captureMac != null) {
 					// MAC만 넘김; 이름은 Activity에서 재조회
 					mOnRowActionListener.onNameEdit(captureMac, null);
@@ -253,6 +287,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			// 부저 알람 시작 버튼
 			Log.d("LeDeviceListAdapter", String.format("Setting RingAlarm listener for position=%d, MAC=%s", i, captureMac));
 			viewHolder.btnRingAlarm.setOnClickListener(v -> {
+				if (!isClickAllowed(captureMac, "ring")) {
+					Log.d("LeDeviceListAdapter", "Ring alarm click debounced for MAC: " + captureMac);
+					return;
+				}
+				
 				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
 				v.setEnabled(false);
 				v.postDelayed(() -> v.setEnabled(true), 300);
@@ -271,6 +310,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			// 부저 알람 중지 버튼
 			Log.d("LeDeviceListAdapter", String.format("Setting RingStop listener for position=%d, MAC=%s", i, captureMac));
 			viewHolder.btnRingAlarmStop.setOnClickListener(v -> {
+				if (!isClickAllowed(captureMac, "stop")) {
+					Log.d("LeDeviceListAdapter", "Ring stop click debounced for MAC: " + captureMac);
+					return;
+				}
+				
 				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
 				v.setEnabled(false);
 				v.postDelayed(() -> v.setEnabled(true), 300);
@@ -288,6 +332,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			
 			// 거리 설정 버튼
 			viewHolder.btnDistanceSetting.setOnClickListener(v -> {
+				if (!isClickAllowed(captureMac, "distance")) {
+					Log.d("LeDeviceListAdapter", "Distance setting click debounced for MAC: " + captureMac);
+					return;
+				}
+				
 				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
 				v.setEnabled(false);
 				v.postDelayed(() -> v.setEnabled(true), 300);
@@ -299,6 +348,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			
 			// 캘리브레이션 버튼
 			viewHolder.btnCalibration.setOnClickListener(v -> {
+				if (!isClickAllowed(captureMac, "calibration")) {
+					Log.d("LeDeviceListAdapter", "Calibration click debounced for MAC: " + captureMac);
+					return;
+				}
+				
 				// [터치디바운스] 버튼 자체 300ms 비활성화로 연타 방지
 				v.setEnabled(false);
 				v.postDelayed(() -> v.setEnabled(true), 300);
