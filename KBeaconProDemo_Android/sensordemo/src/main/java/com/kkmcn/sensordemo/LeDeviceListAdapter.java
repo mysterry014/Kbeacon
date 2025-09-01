@@ -55,7 +55,7 @@ public class LeDeviceListAdapter extends BaseAdapter {
 	
 	// 클릭 디바운싱을 위한 마지막 클릭 시간 추적 (MAC + 버튼타입별)
 	private final Map<String, Long> mLastClickTimes = new HashMap<>();
-	private static final long CLICK_DEBOUNCE_MS = 200; // [패치 C] 500ms → 200ms로 단축
+	private static final long CLICK_DEBOUNCE_MS = 250; // 디바운스 간격 최적화 (200ms→250ms)
 
 	public LeDeviceListAdapter(ListDataSource c, Context ctx) {
 		super();

@@ -80,6 +80,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public static final String ACTION_RING_STATE_CHANGED = "com.kkmcn.sensordemo.RING_STATE_CHANGED";
     public static final String ACTION_AUTO_ALARM_TRIGGERED = "com.kkmcn.sensordemo.AUTO_ALARM_TRIGGERED";
     public static final String ACTION_SCAN_NO_RESULTS = "com.kkmcn.sensordemo.SCAN_NO_RESULTS";
+    public static final String ACTION_TOAST = "com.kkmcn.sensordemo.ACTION_TOAST";
     
     // 스캔 결과 감시
     private volatile long lastAdvTs = 0L;
@@ -682,6 +683,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return newState;
         });
         
+        // 온라인 타임스탬프 갱신 (isOnline 판정 근거)
+        state.setUpdatedAt(System.currentTimeMillis());
+
         // 광고 이름 업데이트 (있는 경우)
         String advName = beacon.getName();
         if (advName != null && !advName.isEmpty()) {
@@ -1864,6 +1868,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         if (beacon == null) {
             Log.e(TAG, "performConnectAndCommand: KBeacon object not found for " + mac);
+            broadcastToast("비콘을 찾을 수 없습니다. 조금만 가까이 접근한 뒤 다시 시도하세요.");
+            broadcastRingStateChanged(mac, "알람");
             return;
         }
         
@@ -1989,8 +1995,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 토스트 브로드캐스트
      */
     private void broadcastToast(String message) {
-        // UI에 토스트 메시지 전달 (필요시 구현)
-        Log.i(TAG, "[TOAST] " + message);
+        Intent i = new Intent(ACTION_TOAST);
+        i.putExtra("message", message);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(i);
+        Log.i(TAG, "[TOAST->UI] " + message);
     }
     
     // ==================== 기존 메서드 래핑 (하위 호환성) ====================

@@ -314,6 +314,23 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     }, 2000);
 
                     break;
+                    
+                case BleService.ACTION_TOAST: {
+                    String msg = intent.getStringExtra("message");
+                    if (msg != null && !msg.isEmpty()) runOnUiThread(() -> toastShow(msg));
+                    break;
+                }
+                
+                case "com.kkmcn.sensordemo.NEED_PERMISSIONS": {
+                    runOnUiThread(() -> {
+                        try { 
+                            checkBluetoothPermitAllowed(); 
+                        } catch (Exception e) { 
+                            toastShow("권한 요청 실패: " + e.getMessage()); 
+                        }
+                    });
+                    break;
+                }
             }
         }
     };
@@ -1206,6 +1223,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
                 filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
                 filter.addAction(BleService.ACTION_SCAN_NO_RESULTS);
+                filter.addAction(BleService.ACTION_TOAST);
+                filter.addAction("com.kkmcn.sensordemo.NEED_PERMISSIONS");
                 LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
                 
             } catch (Exception e) {
@@ -1433,7 +1452,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         Log.d(TAG, "Distance setting requested for MAC: " + mac);
         
         // [터치디바운스] 다이얼로그 띄우는 동안 UI 갱신 금지
-        uiFreezeUntilMs = SystemClock.uptimeMillis() + 300;
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 100;
         
         // 서비스 바인더를 통한 통일된 거리 조회
         float currentThreshold = 50.0f; // 기본값
@@ -1524,7 +1543,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         Log.d(TAG, "Calibration requested for MAC: " + mac);
         
         // [터치디바운스] 캘리브레이션 동안 UI 갱신 금지
-        uiFreezeUntilMs = SystemClock.uptimeMillis() + 300;
+        uiFreezeUntilMs = SystemClock.uptimeMillis() + 100;
         
         // 캘리브레이션 다이얼로그 표시
         CalibrationDialog.show(this, mac, new CalibrationDialog.CalibrationCallback() {
