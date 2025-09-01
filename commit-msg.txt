@@ -1,11 +1,5 @@
-  fix(critical): 사용자 분석 기반 완전 해결 - 크래시/반응성/배터리 문제
+● fix(distance): 캘리브레이션 저장/로딩 불일치 문제 해결
 
-  패치 A: Android 12+ 권한 가드 + 기본 패스워드로 connect() 크래시 완전 차단
-  패치 B: UI 갱신 경로 단일화로 이중화 오버헤드 제거 (50% 부하 감소)
-  패치 C: 디바운스 200ms 단축 + Stable IDs + 촉각피드백 (300% 반응성 향상)
-  패치 D: 스로틀링으로 연타 갱신 병합, 다중 비콘 환경 최적화
-  System 배터리: 상세 디버그 로그로 정확한 원인 분석 가능
-
-  - setHasStableIds() 직접 호출 → hasStableIds() 오버라이드로 변경
-  - KBeacon 직접 생성 → SDK 정책 준수 (스캔을 통해서만 발견)
-  - getScanRecord() 미지원 → System/Sensor/TLM 패킷 우선 활용
+  • 거리 계산 시 DevicePrefs 대신 Prefs 사용으로 캘리브레이션 결과 반영
+  • BeaconState에서 장치 이름 정보 추출하여 MAC+이름 기반 보정값 로드
+  • RSSI EMA → 거리 → 거리 EMA → UI 파이프라인 완전 연결

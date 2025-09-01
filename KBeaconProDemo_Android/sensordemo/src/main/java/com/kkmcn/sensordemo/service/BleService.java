@@ -48,6 +48,7 @@ import java.util.Set;
 import java.util.HashSet;
 
 import com.kkmcn.sensordemo.prefs.DevicePrefs;
+import com.kkmcn.sensordemo.data.Prefs;
 
 /**
  * KBeacon BLE 관리 Foreground Service
@@ -779,19 +780,25 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * DevicePrefs를 사용한 거리 계산
+     * Prefs를 사용한 거리 계산 (캘리브레이션 결과 반영)
      */
     private double calculateDistanceWithDevicePrefs(String mac, double rssiFiltered) {
-        float txPowerAt1m = DevicePrefs.getTxPower1m(getApplicationContext(), mac, (float)DEFAULT_TX_POWER_AT_1M);
-        float pathLossN = DevicePrefs.getPathLossN(getApplicationContext(), mac, (float)DEFAULT_PATH_LOSS_EXPONENT);
+        // BeaconState에서 이름 정보 가져오기
+        BeaconState state = beaconStates.get(mac);
+        String name = (state != null) ? state.getName() : null;
+        
+        // Prefs 인스턴스 생성하여 캘리브레이션 값 로드
+        Prefs prefs = new Prefs(getApplicationContext());
+        double txPowerAt1m = prefs.getTxPowerAt1m(mac, name, DEFAULT_TX_POWER_AT_1M);
+        double pathLossN = prefs.getN(mac, name, DEFAULT_PATH_LOSS_EXPONENT);
         
         // distance(m) = 10^((txPowerAt1m - rssiFiltered)/(10 * n))
         double distance = Math.pow(10, (txPowerAt1m - rssiFiltered) / (10.0 * pathLossN));
         
         // [Issue 3 Debug] 문제의 비콘에 대한 거리 계산 상세 로깅
         if (mac != null && mac.toLowerCase().contains("561976")) {
-            Log.e(TAG, String.format("[561976_DISTANCE] MAC=%s, rssi=%.1f, txPower=%.1f, n=%.2f, distance=%.3fm", 
-                mac, rssiFiltered, txPowerAt1m, pathLossN, distance));
+            Log.e(TAG, String.format("[561976_DISTANCE] MAC=%s, name=%s, rssi=%.1f, txPower=%.2f, n=%.2f, distance=%.3fm", 
+                mac, name, rssiFiltered, txPowerAt1m, pathLossN, distance));
         }
         
         return distance;
