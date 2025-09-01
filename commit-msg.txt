@@ -1,8 +1,7 @@
-fix(stability): 장시간 사용 안정성 및 즉시 알람중지 완전 구현
+● fix(build): API 호환성 및 중복 정의 문제 해결
 
-  • Watchdog 시스템으로 5분마다 스캔상태 감시, 10분 무광고시 자동 재시작
-  • 30분마다 예방적 스캔 재시작으로 드라이버 상태 리셋 및 Doze 대응
-  • requestRingStopImmediate() 구현으로 STOP 명령 최우선 처리, 즉시 알람중지
-  • Bluetooth ON/OFF 상태 변화 감지 및 KBeacon 매니저 자동 재초기화
-  • 모든 상황에서 사용자 토스트 피드백 제공으로 UX 개선
+  • KBeacon API 호환성 수정 - ConnectedState→KBConnState, SendMsgCallback→ActionCallback
+  • 중복된 btStateReceiver 정의 제거 및 기존 코드에 자동복구 기능 통합
+  • 모든 Watchdog, 즉시 STOP, Bluetooth 복구 기능 유지하며 빌드 성공
+
 

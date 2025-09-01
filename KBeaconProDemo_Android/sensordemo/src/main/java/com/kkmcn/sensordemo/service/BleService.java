@@ -153,8 +153,6 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private long lastScanRestartAt = System.currentTimeMillis();
     private Handler wdHandler = new Handler(Looper.getMainLooper());
     
-    // Bluetooth 상태 수신기
-    private BroadcastReceiver btStateReceiver;
     
     // 자동 알람 활성화 상태
     private volatile boolean autoAlarmEnabled = true;
@@ -181,9 +179,6 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // 저장된 paired MAC 목록 복원
         pairedSet = DevicePrefs.getPaired(getApplicationContext());
         Log.d(TAG, "Restored paired devices: " + pairedSet.size());
-        
-        // Bluetooth 상태 수신기 등록
-        registerBtStateReceiver();
         
         // 저장된 MAC 게이트 레지스트리 복원
         restoreSavedData();
@@ -1669,24 +1664,95 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * 크래시 스나이퍼 패치: Bluetooth 상태 변경 리시버
+     * Bluetooth 상태 변경 리시버 (업그레이드: 자동 복구 기능 포함)
      */
     private final BroadcastReceiver btStateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
                 int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
-                Log.d(TAG, "Bluetooth state changed: " + state);
+                Log.i(TAG, "Bluetooth state changed: " + getBluetoothStateName(state));
                 
-                if (state == BluetoothAdapter.STATE_ON) {
-                    Log.i(TAG, "Bluetooth turned ON, ensuring scanning");
-                    ensureScanning(); // BT가 나중에 켜져도 자동 재개
-                } else if (state == BluetoothAdapter.STATE_OFF) {
-                    Log.w(TAG, "Bluetooth turned OFF, stopping scanning");
-                    isScanning = false;
-                    broadcastScanStateChanged(false);
+                switch (state) {
+                    case BluetoothAdapter.STATE_OFF:
+                        Log.w(TAG, "Bluetooth turned OFF - stopping scan and disconnecting all");
+                        isScanning = false;
+                        broadcastScanStateChanged(false);
+                        safeDisconnectAll();
+                        break;
+                        
+                    case BluetoothAdapter.STATE_ON:
+                        Log.i(TAG, "Bluetooth turned ON - reinitializing and restarting scan");
+                        reinitKBeaconMgr();
+                        
+                        // 짧은 지연 후 스캔 재시작 (어댑터 완전 초기화 대기)
+                        mainHandler.postDelayed(() -> {
+                            ensureScanning();
+                            broadcastToast("Bluetooth 복구됨 - 스캔 재시작");
+                        }, 1000);
+                        break;
+                        
+                    case BluetoothAdapter.STATE_TURNING_OFF:
+                        Log.i(TAG, "Bluetooth turning OFF");
+                        break;
+                        
+                    case BluetoothAdapter.STATE_TURNING_ON:
+                        Log.i(TAG, "Bluetooth turning ON");
+                        break;
                 }
             }
+        }
+    };
+    
+    /**
+     * Bluetooth 상태 이름 반환 (로깅용)
+     */
+    private String getBluetoothStateName(int state) {
+        switch (state) {
+            case BluetoothAdapter.STATE_OFF: return "OFF";
+            case BluetoothAdapter.STATE_ON: return "ON";
+            case BluetoothAdapter.STATE_TURNING_OFF: return "TURNING_OFF";
+            case BluetoothAdapter.STATE_TURNING_ON: return "TURNING_ON";
+            default: return "UNKNOWN(" + state + ")";
+        }
+    }
+    
+    /**
+     * 모든 연결 안전하게 해제
+     */
+    private void safeDisconnectAll() {
+        for (BeaconState state : beaconStates.values()) {
+            try {
+                KBeacon beacon = findBeaconByMac(state.getMac());
+                if (beacon != null && beacon.getState() == KBConnState.Connected) {
+                    beacon.disconnect();
+                    Log.d(TAG, "Disconnected beacon due to BT OFF: " + state.getMac());
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+    
+    /**
+     * KBeacon 매니저 재초기화
+     */
+    private void reinitKBeaconMgr() {
+        try {
+            // KBeacon 매니저가 새로운 Bluetooth 상태를 인식하도록 재초기화
+            if (kBeaconsMgr != null) {
+                // 기존 리스너 정리
+                kBeaconsMgr.delegate = null;
+            }
+            
+            // 새로운 인스턴스로 재초기화
+            kBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
+            if (kBeaconsMgr != null) {
+                kBeaconsMgr.delegate = this;
+                Log.i(TAG, "KBeacon manager reinitialized successfully");
+            }
+            
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to reinitialize KBeacon manager", t);
+            broadcastToast("Bluetooth 복구 실패 - 앱을 재시작해주세요");
         }
     };
     
@@ -2202,12 +2268,12 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         beacon.connect(password, STOP_CONNECT_TIMEOUT, new KBeacon.ConnStateDelegate() {
             @Override
-            public void onConnStateChange(KBeacon beacon, KBeacon.ConnectedState state, int evt) {
-                if (state == KBeacon.ConnectedState.Connected) {
+            public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
+                if (state == KBConnState.Connected) {
                     Log.d(TAG, "Connected for STOP, sending command: " + mac);
                     writeRingCommandImmediate(beacon, cmd);
-                } else if (state == KBeacon.ConnectedState.Disconnected) {
-                    Log.w(TAG, "Failed to connect for STOP: " + mac);
+                } else if (state == KBConnState.Disconnected && nReason != 0) {
+                    Log.w(TAG, "Failed to connect for STOP: " + mac + ", reason: " + nReason);
                     broadcastToast("연결 실패: STOP 명령 전달 불가");
                     broadcastRingStateChanged(mac, "알람");
                 }
@@ -2221,10 +2287,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private void writeRingCommandImmediate(KBeacon beacon, org.json.JSONObject cmd) {
         String mac = beacon.getMac();
         
-        beacon.sendCommand(cmd, new KBeacon.SendMsgCallback() {
+        beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
             @Override
-            public void onSendMsgComplete(boolean result, KBeacon beacon, KBeacon.MsgType msgType) {
-                if (result) {
+            public void onActionComplete(boolean bConfigSuccess, KBException error) {
+                if (bConfigSuccess) {
                     Log.d(TAG, "STOP command sent successfully: " + mac);
                     broadcastRingStateChanged(mac, "알람");
                     
@@ -2236,25 +2302,26 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     }, 500);
                     
                 } else {
-                    Log.w(TAG, "STOP command failed, retrying: " + mac);
+                    Log.w(TAG, "STOP command failed, retrying: " + mac + ", error: " + 
+                        (error != null ? error.errorCode : "unknown"));
                     
                     // 1회 재시도
                     mainHandler.postDelayed(() -> {
-                        beacon.sendCommand(cmd, new KBeacon.SendMsgCallback() {
+                        beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
                             @Override
-                            public void onSendMsgComplete(boolean retryResult, KBeacon beacon2, KBeacon.MsgType msgType2) {
-                                String status = retryResult ? "알람" : "알람";
-                                broadcastRingStateChanged(mac, status);
+                            public void onActionComplete(boolean retryResult, KBException retryError) {
+                                broadcastRingStateChanged(mac, "알람");
                                 
                                 if (retryResult) {
                                     Log.d(TAG, "STOP command retry successful: " + mac);
                                 } else {
-                                    Log.e(TAG, "STOP command retry failed: " + mac);
+                                    Log.e(TAG, "STOP command retry failed: " + mac + ", error: " + 
+                                        (retryError != null ? retryError.errorCode : "unknown"));
                                     broadcastToast("부저 알람 중지 실패: " + mac);
                                 }
                                 
                                 // 연결 해제
-                                try { beacon2.disconnect(); } catch (Exception ignored) {}
+                                try { beacon.disconnect(); } catch (Exception ignored) {}
                             }
                         });
                     }, 1000);
@@ -2263,118 +2330,6 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         });
     }
     
-    // ==================== Bluetooth 상태 관리 ====================
-    
-    /**
-     * Bluetooth 어댑터 상태 변화 수신기 등록
-     */
-    private void registerBtStateReceiver() {
-        btStateReceiver = new BroadcastReceiver() {
-            @Override 
-            public void onReceive(Context context, Intent intent) {
-                if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
-                    int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
-                    Log.i(TAG, "Bluetooth state changed: " + getBluetoothStateName(state));
-                    
-                    switch (state) {
-                        case BluetoothAdapter.STATE_OFF:
-                            Log.w(TAG, "Bluetooth turned OFF - stopping scan and disconnecting all");
-                            stopScanInternalSafe();
-                            safeDisconnectAll();
-                            break;
-                            
-                        case BluetoothAdapter.STATE_ON:
-                            Log.i(TAG, "Bluetooth turned ON - reinitializing and restarting scan");
-                            reinitKBeaconMgr();
-                            
-                            // 짧은 지연 후 스캔 재시작 (어댑터 완전 초기화 대기)
-                            mainHandler.postDelayed(() -> {
-                                restartBleScan();
-                                broadcastToast("Bluetooth 복구됨 - 스캔 재시작");
-                            }, 1000);
-                            break;
-                            
-                        case BluetoothAdapter.STATE_TURNING_OFF:
-                            Log.i(TAG, "Bluetooth turning OFF");
-                            break;
-                            
-                        case BluetoothAdapter.STATE_TURNING_ON:
-                            Log.i(TAG, "Bluetooth turning ON");
-                            break;
-                    }
-                }
-            }
-        };
-        
-        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-        try {
-            registerReceiver(btStateReceiver, filter);
-            Log.d(TAG, "Bluetooth state receiver registered");
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to register Bluetooth state receiver", e);
-        }
-    }
-    
-    /**
-     * Bluetooth 상태 이름 반환 (로깅용)
-     */
-    private String getBluetoothStateName(int state) {
-        switch (state) {
-            case BluetoothAdapter.STATE_OFF: return "OFF";
-            case BluetoothAdapter.STATE_ON: return "ON";
-            case BluetoothAdapter.STATE_TURNING_OFF: return "TURNING_OFF";
-            case BluetoothAdapter.STATE_TURNING_ON: return "TURNING_ON";
-            default: return "UNKNOWN(" + state + ")";
-        }
-    }
-    
-    /**
-     * 안전한 스캔 중지
-     */
-    private void stopScanInternalSafe() {
-        try { 
-            stopScanning(); 
-        } catch (Throwable ignored) {}
-    }
-    
-    /**
-     * 모든 연결 안전하게 해제
-     */
-    private void safeDisconnectAll() {
-        for (BeaconState state : beaconStates.values()) {
-            try {
-                KBeacon beacon = findBeaconByMac(state.getMac());
-                if (beacon != null && beacon.getState() == KBConnState.Connected) {
-                    beacon.disconnect();
-                    Log.d(TAG, "Disconnected beacon due to BT OFF: " + state.getMac());
-                }
-            } catch (Throwable ignored) {}
-        }
-    }
-    
-    /**
-     * KBeacon 매니저 재초기화
-     */
-    private void reinitKBeaconMgr() {
-        try {
-            // KBeacon 매니저가 새로운 Bluetooth 상태를 인식하도록 재초기화
-            if (kBeaconsMgr != null) {
-                // 기존 리스너 정리
-                kBeaconsMgr.delegate = null;
-            }
-            
-            // 새로운 인스턴스로 재초기화
-            kBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
-            if (kBeaconsMgr != null) {
-                kBeaconsMgr.delegate = this;
-                Log.i(TAG, "KBeacon manager reinitialized successfully");
-            }
-            
-        } catch (Throwable t) {
-            Log.e(TAG, "Failed to reinitialize KBeacon manager", t);
-            broadcastToast("Bluetooth 복구 실패 - 앱을 재시작해주세요");
-        }
-    }
     
     // ==================== 기존 메서드 래핑 (하위 호환성) ====================
 }
