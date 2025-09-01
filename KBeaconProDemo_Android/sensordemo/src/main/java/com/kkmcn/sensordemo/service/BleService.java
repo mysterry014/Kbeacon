@@ -81,6 +81,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public static final String ACTION_AUTO_ALARM_TRIGGERED = "com.kkmcn.sensordemo.AUTO_ALARM_TRIGGERED";
     public static final String ACTION_SCAN_NO_RESULTS = "com.kkmcn.sensordemo.SCAN_NO_RESULTS";
     public static final String ACTION_TOAST = "com.kkmcn.sensordemo.ACTION_TOAST";
+    public static final String ACTION_CALIBRATION_SAMPLE = "com.kkmcn.sensordemo.CALIBRATION_SAMPLE";
     
     // 스캔 결과 감시
     private volatile long lastAdvTs = 0L;
@@ -692,6 +693,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return;
         }
         
+        // 워치독용 마지막 광고 시각 갱신
+        onAnyAdvertisementObserved();
+        
         // BeaconState 조회/생성 (모든 MAC에 대해)
         BeaconState state = beaconStates.computeIfAbsent(mac, k -> {
             BeaconState newState = new BeaconState(mac);
@@ -726,6 +730,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         int currentRssi = beacon.getRssi();
         state.setLastRssi(currentRssi);
         state.setLastUpdateTime(System.currentTimeMillis());
+        // 온라인 판정 근거 타임스탬프 갱신
+        state.setUpdatedAt(System.currentTimeMillis());
+        
+        // 캘리브레이션 샘플 브로드캐스트는 실제 캘리브레이션 진행 시에만 호출
+        // (현재는 부하를 줄이기 위해 비활성화, 필요 시 캘리브레이션 세션에서 직접 호출)
         
         // 디버깅 로그: 하이브리드 스캔 상태 (FORCE LOG)
         if (advName != null && NAME_REGEX.matcher(advName).matches()) {
@@ -1072,6 +1081,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
+     * 캘리브레이션 RSSI 샘플 브로드캐스트
+     */
+    private void broadcastCalibrationSample(String mac, String stage, int rssi, boolean done) {
+        Intent intent = new Intent(ACTION_CALIBRATION_SAMPLE);
+        intent.putExtra("mac", mac);
+        intent.putExtra("stage", stage);  
+        intent.putExtra("rssi", rssi);
+        intent.putExtra("done", done);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    /**
      * 자동 알람 거리 초과 감지
      */
     private void checkAutoAlarmTrigger(String mac, BeaconState state, double distanceFiltered) {
@@ -1173,7 +1194,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 broadcastRingStateChanged(mac, "연결됨");
                 
                 // 패스워드를 사용한 인증된 연결 (기본 패스워드)
-                beacon.connect("0000000000000000", 20000, new KBeacon.ConnStateDelegate() {
+                beacon.connect("0000000000000000", 7000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
                         Log.i(TAG, "Connection state changed: " + state + ", reason: " + nReason);
@@ -1228,7 +1249,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 Log.d(TAG, "Connecting to beacon for stop command: " + mac);
                 
                 // 패스워드를 사용한 인증된 연결 (기본 패스워드)
-                beacon.connect("0000000000000000", 20000, new KBeacon.ConnStateDelegate() {
+                beacon.connect("0000000000000000", 7000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
                         if (state == KBConnState.Connected) {
@@ -2026,7 +2047,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 
                 // 기본 패스워드로 연결 시도
                 final String defaultPassword = "0000000000000000";
-                beacon.connect(defaultPassword, 20000, new KBeacon.ConnStateDelegate() {
+                beacon.connect(defaultPassword, 7000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
                         if (state == KBConnState.Connected) {

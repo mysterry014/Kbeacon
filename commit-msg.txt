@@ -1,21 +1,7 @@
-  feat(stability): 사용자 분석 기반 3가지 핵심 안정성 개선
+  fix(critical): 사용자 보고 4가지 핵심 반응성 문제 완전 해결
 
-  1. BT 상태 리시버 등록 누락 보완 ✅
-
-  - onCreate()에서 btStateReceiver 등록 추가
-  - Bluetooth 꺼짐/켜짐 상태 변화 감지하여 자동 복구
-
-  2. Ring 명령 중복 방지 및 상태 브로드캐스트 개선 ✅
-
-  - commandInFlight 맵으로 동시 명령 실행 방지
-  - issueRingCommand()에서 이미 진행중인 명령 스킵
-  - 모든 실패 케이스에서 플래그 정리 보장
-  - sendCommandToConnectedBeacon()에서 링 상태 브로드캐스트 강화
-
-  3. 사용자 STOP 후 자동알람 쿨다운 추가 ✅
-
-  - lastManualStopAt 맵에 수동 중지 시점 기록
-  - checkAutoAlarmTrigger()에서 30초 쿨다운 체크
-  - 사용자 수동 중지 후 일정 시간 자동알람 차단
-
+  • 중복 리시버/STOP 이중경로 → 토스트 중복/연결실패 메시지 해결
+  • 연결 타임아웃 20초→7초 + commandInFlight 개선 → 3번 터치 문제 해결
+  • DataStore 동기화 + resolveDisplayName() → 캘리브레이션 Unknown 해결
+  • 주기적 스캔 재시작 + 광고 타임스탬프 갱신 → 장기 안정성 확보
 

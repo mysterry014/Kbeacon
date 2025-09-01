@@ -173,9 +173,31 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private volatile boolean userTouchingList = false;
     private volatile long uiFreezeUntilMs = 0L;
     
+    // 브로드캐스트 리시버 중복 등록 방지
+    private boolean receiverRegistered = false;
+
+    // 캘리브레이션 실시간 샘플 간단 로거(필요 시 UI 갱신에 활용)
+    private final java.util.concurrent.ConcurrentHashMap<String, String> calibStageRssi = new java.util.concurrent.ConcurrentHashMap<>();
+    
     // [캘리브레이션] 가드 플래그 및 세션 관리
     private volatile boolean isCalibrating = false;
     private CalibrationSession activeCalibrationSession = null;
+    
+    // 디스플레이용 이름(별칭→광고이름→MAC 순) 해석
+    private String resolveDisplayName(String mac) {
+        try {
+            if (mBeaconDataStore != null) {
+                BeaconState s = mBeaconDataStore.get(mac);
+                if (s != null) {
+                    if (s.getAlias() != null && !s.getAlias().isEmpty()) return s.getAlias();
+                    if (s.getName() != null && !s.getName().isEmpty())   return s.getName();
+                }
+            }
+            // BleService에서 beacon 상태는 별도 방법으로 조회 필요
+            // 현재는 mBeaconDataStore만 사용
+        } catch (Throwable ignored) {}
+        return mac != null ? mac : "Unknown";
+    }
     
     // BleService 연결 관리
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -228,38 +250,42 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     break;
                     
                 case BleService.ACTION_RING_STATE_CHANGED:
-                    String mac = intent.getStringExtra("mac");
-                    String state = intent.getStringExtra("state");
-                    Log.d(TAG, String.format("Ring state changed: MAC=%s, state=%s", mac, state));
+                    String ringMac = intent.getStringExtra("mac");
+                    String ringState = intent.getStringExtra("state");
+                    Log.d(TAG, String.format("Ring state changed: MAC=%s, state=%s", ringMac, ringState));
                     
-                    // 토스트 피드백 표시
-                    String beaconName = getBeaconDisplayName(mac);
-                    if ("알람중".equals(state)) {
-                        toastShow(beaconName + " 부저 알람 시작");
-                    } else if ("알람".equals(state)) {
-                        toastShow(beaconName + " 부저 알람 중지");
-                    } else if ("연결됨".equals(state)) {
-                        toastShow(beaconName + " 연결됨");
-                    } else if ("동작중".equals(state)) {
-                        toastShow(beaconName + " 알람 처리 중...");
+                    // 토스트 피드백 표시 - resolveDisplayName 사용
+                    if ("알람중".equals(ringState)) {
+                        toastShow(resolveDisplayName(ringMac) + " 부저 알람 시작");
+                    } else if ("알람".equals(ringState)) {
+                        toastShow(resolveDisplayName(ringMac) + " 부저 알람 중지");
+                    } else if ("연결됨".equals(ringState)) {
+                        toastShow(resolveDisplayName(ringMac) + " 연결됨");
+                    } else if ("동작중".equals(ringState)) {
+                        toastShow(resolveDisplayName(ringMac) + " 알람 처리 중...");
                     }
                     break;
                     
-                case BleService.ACTION_AUTO_ALARM_TRIGGERED:
+                case BleService.ACTION_AUTO_ALARM_TRIGGERED: {
                     String triggerMac = intent.getStringExtra("mac");
-                    double distance = intent.getDoubleExtra("distance", 0.0);
-                    double threshold = intent.getDoubleExtra("threshold", 0.0);
-                    Log.w(TAG, String.format("Auto alarm triggered: MAC=%s, distance=%.1fm > threshold=%.1fm", 
-                        triggerMac, distance, threshold));
-                    
-                    // 토스트 피드백 표시
-                    String triggerBeaconName = getBeaconDisplayName(triggerMac);
-                    toastShow(String.format("⚠️ 자동 알람: %s (%.1fm > %.1fm)", 
-                        triggerBeaconName, distance, threshold));
-                    
-                    // 태블릿 알람 시작
-                    runOnUiThread(() -> startPhoneAlarm());
+                    toastShow("자동 알람 시작: " + resolveDisplayName(triggerMac));
                     break;
+                }
+
+
+                case BleService.ACTION_CALIBRATION_SAMPLE: {
+                    // extras: mac, stage(1|2|3 또는 "1m"등), rssi(int), done(boolean)
+                    String calibMac = intent.getStringExtra("mac");
+                    int calibRssi = intent.getIntExtra("rssi", Integer.MIN_VALUE);
+                    String calibStage = intent.getStringExtra("stage");
+                    boolean calibDone = intent.getBooleanExtra("done", false);
+                    String calibKey = calibMac + "/" + (calibStage != null ? calibStage : "?");
+                    calibStageRssi.put(calibKey, (calibRssi == Integer.MIN_VALUE ? "N/A" : (calibRssi + " dBm")));
+                    Log.i(TAG, String.format("CALIB SAMPLE %s [%s] = %s, done=%s", resolveDisplayName(calibMac), calibStage, calibStageRssi.get(calibKey), calibDone));
+                    // 필요 시: 진행 중인 다이얼로그에 반영하는 훅을 추가하세요.
+                    // 예: if (mCalibDialog != null) mCalibDialog.onSample(calibMac, calibStage, calibRssi, calibDone, resolveDisplayName(calibMac));
+                    break;
+                }
                     
                 case BleService.ACTION_SCAN_NO_RESULTS:
                     boolean locEnabled = intent.getBooleanExtra("location_enabled", false);
@@ -971,6 +997,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
             
             List<BeaconState> filteredBeacons = mBleService.getFilteredBeaconStates();
+            // DataStore도 동기화하여 캘리브레이션/별칭 조회가 Unknown으로 떨어지지 않게 함
+            if (mBeaconDataStore != null && filteredBeacons != null) {
+                for (BeaconState s : filteredBeacons) {
+                    if (s != null && s.getMac() != null) {
+                        mBeaconDataStore.upsert(s);
+                    }
+                }
+            }
             
             // FORCE LOG: UI 업데이트 디버깅
             Log.e(TAG, "FORCE LOG: UI UPDATE - Found " + filteredBeacons.size() + " beacons");
@@ -1011,6 +1045,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         // 500ms UI 갱신 시작
         mUiUpdateHandler.post(mUiUpdateRunnable);
+        
+        // 브로드캐스트 리시버 등록
+        maybeRegisterServiceReceiver();
     }
 
     @Override
@@ -1019,6 +1056,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         // 500ms UI 갱신 중지
         mUiUpdateHandler.removeCallbacks(mUiUpdateRunnable);
+        
+        // 브로드캐스트 리시버 해제
+        maybeUnregisterServiceReceiver();
     }
 
     @Override
@@ -1031,16 +1071,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         invalidateOptionsMenu();
     }
 
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        
-        // 브로드캐스트 리시버 해제
-        try {
-            LocalBroadcastManager.getInstance(this).unregisterReceiver(mServiceBroadcastReceiver);
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to unregister broadcast receiver", e);
-        }
+        // onPause에서 이미 해제되므로 여기서는 이중 해제 방지
         
         // BleService 바인딩 해제
         if (mServiceBound) {
@@ -1063,6 +1098,35 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
 
         if (mBeaconsMgr != null) {
             mBeaconsMgr.clearBeacons();
+        }
+    }
+    
+    private void maybeRegisterServiceReceiver() {
+        if (receiverRegistered) return;
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BleService.ACTION_BEACON_UPDATE);
+        filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
+        filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
+        filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
+        filter.addAction(BleService.ACTION_SCAN_NO_RESULTS);
+        filter.addAction(BleService.ACTION_TOAST);
+        // 캘리브레이션 RSSI 샘플 브로드캐스트
+        filter.addAction(BleService.ACTION_CALIBRATION_SAMPLE);
+        filter.addAction("com.kkmcn.sensordemo.NEED_PERMISSIONS");
+        LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
+        receiverRegistered = true;
+        Log.d(TAG, "Service receiver registered");
+    }
+
+    private void maybeUnregisterServiceReceiver() {
+        if (!receiverRegistered) return;
+        try {
+            LocalBroadcastManager.getInstance(this).unregisterReceiver(mServiceBroadcastReceiver);
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to unregister broadcast receiver", e);
+        } finally {
+            receiverRegistered = false;
+            Log.d(TAG, "Service receiver unregistered");
         }
     }
 
@@ -1216,16 +1280,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 ContextCompat.startForegroundService(this, serviceIntent);
                 bindService(serviceIntent, mServiceConnection, Context.BIND_AUTO_CREATE);
                 
-                // 브로드캐스트 리시버 등록
-                IntentFilter filter = new IntentFilter();
-                filter.addAction(BleService.ACTION_BEACON_UPDATE);
-                filter.addAction(BleService.ACTION_SCAN_STATE_CHANGED);
-                filter.addAction(BleService.ACTION_RING_STATE_CHANGED);
-                filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
-                filter.addAction(BleService.ACTION_SCAN_NO_RESULTS);
-                filter.addAction(BleService.ACTION_TOAST);
-                filter.addAction("com.kkmcn.sensordemo.NEED_PERMISSIONS");
-                LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
+                // 리시버는 onResume 시 단 한 번만 등록
+                maybeRegisterServiceReceiver();
                 
             } catch (Exception e) {
                 Log.e(TAG, "Failed to start BleService safely", e);
