@@ -105,6 +105,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // TTL 관련 상수 (Issue 4)
     private static final long BEACON_TTL_MS = 30000; // 30초 후 오프라인 비콘 제거
     
+    // Watchdog 관련 상수
+    private static final long WATCHDOG_PERIOD_MS = 5 * 60 * 1000L;  // 5분마다 체크
+    private static final long NO_ADV_RESTART_MS = 10 * 60 * 1000L; // 10분 광고 0이면 재시작
+    private static final long PERIODIC_SCAN_RESTART_MS = 30 * 60 * 1000L; // 30분마다 예방적 재시작
+    
     // Service 바인더
     public class BleServiceBinder extends Binder {
         public BleService getService() {
@@ -143,6 +148,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // 영속 저장소
     private ServicePrefs servicePrefs;
     
+    // Watchdog 관리
+    private long lastAdvAt = System.currentTimeMillis();
+    private long lastScanRestartAt = System.currentTimeMillis();
+    private Handler wdHandler = new Handler(Looper.getMainLooper());
+    
+    // Bluetooth 상태 수신기
+    private BroadcastReceiver btStateReceiver;
+    
     // 자동 알람 활성화 상태
     private volatile boolean autoAlarmEnabled = true;
     
@@ -168,6 +181,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // 저장된 paired MAC 목록 복원
         pairedSet = DevicePrefs.getPaired(getApplicationContext());
         Log.d(TAG, "Restored paired devices: " + pairedSet.size());
+        
+        // Bluetooth 상태 수신기 등록
+        registerBtStateReceiver();
         
         // 저장된 MAC 게이트 레지스트리 복원
         restoreSavedData();
@@ -206,6 +222,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // 크래시 스나이퍼 패치: ③ 3중 게이트 적용
         ensureScanning();
+        startScanWatchdog(); // Watchdog 시작
         
         return START_STICKY; // 서비스 재시작 허용
     }
@@ -685,6 +702,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // 온라인 타임스탬프 갱신 (isOnline 판정 근거)
         state.setUpdatedAt(System.currentTimeMillis());
+        
+        // Watchdog용 광고 수신 타임스탬프 갱신
+        onAnyAdvertisementObserved();
 
         // 광고 이름 업데이트 (있는 경우)
         String advName = beacon.getName();
@@ -1999,6 +2019,361 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         i.putExtra("message", message);
         LocalBroadcastManager.getInstance(this).sendBroadcast(i);
         Log.i(TAG, "[TOAST->UI] " + message);
+    }
+    
+    // ==================== Watchdog 시스템 ====================
+    
+    /**
+     * Watchdog 시작 - 스캔 상태 감시 및 자동 복구
+     */
+    private void startScanWatchdog() {
+        wdHandler.removeCallbacks(wdTask);
+        wdHandler.postDelayed(wdTask, WATCHDOG_PERIOD_MS);
+        Log.i(TAG, "Watchdog started");
+    }
+    
+    private final Runnable wdTask = new Runnable() {
+        @Override 
+        public void run() {
+            try {
+                long now = System.currentTimeMillis();
+                
+                // 광고 수신이 오랫동안 없으면 스캔 재시작
+                if (now - lastAdvAt > NO_ADV_RESTART_MS) {
+                    Log.w(TAG, "Watchdog: no advertisement for " + (now - lastAdvAt) + "ms, restarting scan");
+                    restartBleScan();
+                    cleanupStuckConnections();
+                }
+                
+                // 주기적 예방 재시작 (30분마다)
+                if (now - lastScanRestartAt > PERIODIC_SCAN_RESTART_MS) {
+                    Log.i(TAG, "Watchdog: periodic scan restart");
+                    restartBleScan();
+                }
+                
+            } catch (Throwable t) { 
+                Log.e(TAG, "Watchdog error", t); 
+            }
+            
+            // 다음 체크 예약
+            wdHandler.postDelayed(this, WATCHDOG_PERIOD_MS);
+        }
+    };
+    
+    /**
+     * 광고 수신 시 호출 - Watchdog용 타임스탬프 갱신
+     */
+    private void onAnyAdvertisementObserved() {
+        lastAdvAt = System.currentTimeMillis();
+    }
+    
+    /**
+     * 스캔 재시작 (드라이버 상태 리셋)
+     */
+    private void restartBleScan() {
+        try { 
+            stopScanning(); 
+        } catch (Throwable ignored) {}
+        
+        try { 
+            startScanning(); 
+        } catch (Throwable t) {
+            Log.e(TAG, "restartBleScan failed", t);
+        }
+        
+        lastScanRestartAt = System.currentTimeMillis();
+        Log.i(TAG, "BLE scan restarted");
+    }
+    
+    /**
+     * 연결이 오래 지속되는 장치 정리
+     */
+    private void cleanupStuckConnections() {
+        for (BeaconState state : beaconStates.values()) {
+            String mac = state.getMac();
+            // 연결 시도가 30초 이상 지속되면 강제 정리
+            if (isConnectingTooLong(state)) {
+                forceCloseGatt(mac);
+            }
+        }
+    }
+    
+    /**
+     * 연결이 너무 오래 지속되는지 확인
+     */
+    private boolean isConnectingTooLong(BeaconState state) {
+        // 연결 상태 확인 로직 (간단히 30초 기준)
+        long now = System.currentTimeMillis();
+        return (now - state.getUpdatedAt()) > 30000;
+    }
+    
+    /**
+     * GATT 연결 강제 정리
+     */
+    private void forceCloseGatt(String mac) {
+        KBeacon beacon = findBeaconByMac(mac);
+        if (beacon != null) {
+            try { 
+                beacon.disconnect(); 
+                Log.i(TAG, "Force disconnected stuck beacon: " + mac);
+            } catch (Throwable ignored) {}
+        }
+    }
+    
+    // ==================== STOP 최우선 처리 시스템 ====================
+    
+    /**
+     * 즉시 STOP 명령 처리 - 모든 대기 중인 명령보다 우선
+     */
+    public void requestRingStopImmediate(String mac) {
+        Log.i(TAG, "Immediate STOP requested for: " + mac);
+        
+        // 1) 해당 MAC의 모든 pending ring 작업 취소
+        cancelAllRingSchedules(mac);
+        
+        // 2) STOP 명령 생성
+        org.json.JSONObject stopCmd = new org.json.JSONObject();
+        try {
+            stopCmd.put("msg", "ring");
+            stopCmd.put("ringTime", 0);
+            stopCmd.put("ringType", 0x0);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to create STOP command", e);
+            return;
+        }
+        
+        // 3) 최우선 전송
+        sendStopWithPriority(mac, stopCmd);
+    }
+    
+    /**
+     * 해당 MAC의 모든 링 스케줄 취소
+     */
+    private void cancelAllRingSchedules(String mac) {
+        // 기존 스케줄된 링 작업 취소
+        ScheduledFuture<?> existingTask = activeRingTasks.get(mac);
+        if (existingTask != null && !existingTask.isDone()) {
+            existingTask.cancel(true);
+            activeRingTasks.remove(mac);
+            Log.d(TAG, "Cancelled existing ring task for: " + mac);
+        }
+        
+        // 진행 중인 링 상태 정리
+        ringInProgress.put(mac, false);
+        
+        // 내부 desired 플래그도 false로
+        setDesiredRingFlag(mac, false);
+    }
+    
+    /**
+     * 최우선으로 STOP 명령 전송
+     */
+    private void sendStopWithPriority(String mac, org.json.JSONObject cmd) {
+        KBeacon beacon = findBeaconByMac(mac);
+        
+        // 이미 연결되어 있으면 즉시 전송
+        if (beacon != null && beacon.getState() == KBConnState.Connected) {
+            Log.d(TAG, "Beacon already connected, sending STOP immediately: " + mac);
+            writeRingCommandImmediate(beacon, cmd);
+            return;
+        }
+        
+        // 연결이 필요하면 짧은 타임아웃으로 빠른 연결 시도
+        if (beacon != null) {
+            Log.d(TAG, "Connecting for immediate STOP: " + mac);
+            connectThenStop(mac, cmd);
+        } else {
+            Log.w(TAG, "Beacon not found for STOP: " + mac);
+            broadcastToast("비콘을 찾을 수 없습니다: " + mac);
+            broadcastRingStateChanged(mac, "알람");
+        }
+    }
+    
+    /**
+     * 빠른 연결 후 STOP 전송
+     */
+    private void connectThenStop(String mac, org.json.JSONObject cmd) {
+        final int STOP_CONNECT_TIMEOUT = 5000; // 5초 타임아웃
+        
+        KBeacon beacon = findBeaconByMac(mac);
+        if (beacon == null) return;
+        
+        String password = "0000000000000000"; // 기본 패스워드
+        
+        beacon.connect(password, STOP_CONNECT_TIMEOUT, new KBeacon.ConnStateDelegate() {
+            @Override
+            public void onConnStateChange(KBeacon beacon, KBeacon.ConnectedState state, int evt) {
+                if (state == KBeacon.ConnectedState.Connected) {
+                    Log.d(TAG, "Connected for STOP, sending command: " + mac);
+                    writeRingCommandImmediate(beacon, cmd);
+                } else if (state == KBeacon.ConnectedState.Disconnected) {
+                    Log.w(TAG, "Failed to connect for STOP: " + mac);
+                    broadcastToast("연결 실패: STOP 명령 전달 불가");
+                    broadcastRingStateChanged(mac, "알람");
+                }
+            }
+        });
+    }
+    
+    /**
+     * 즉시 링 명령 전송 (재시도 포함)
+     */
+    private void writeRingCommandImmediate(KBeacon beacon, org.json.JSONObject cmd) {
+        String mac = beacon.getMac();
+        
+        beacon.sendCommand(cmd, new KBeacon.SendMsgCallback() {
+            @Override
+            public void onSendMsgComplete(boolean result, KBeacon beacon, KBeacon.MsgType msgType) {
+                if (result) {
+                    Log.d(TAG, "STOP command sent successfully: " + mac);
+                    broadcastRingStateChanged(mac, "알람");
+                    
+                    // 짧은 지연 후 연결 해제
+                    mainHandler.postDelayed(() -> {
+                        try {
+                            beacon.disconnect();
+                        } catch (Exception ignored) {}
+                    }, 500);
+                    
+                } else {
+                    Log.w(TAG, "STOP command failed, retrying: " + mac);
+                    
+                    // 1회 재시도
+                    mainHandler.postDelayed(() -> {
+                        beacon.sendCommand(cmd, new KBeacon.SendMsgCallback() {
+                            @Override
+                            public void onSendMsgComplete(boolean retryResult, KBeacon beacon2, KBeacon.MsgType msgType2) {
+                                String status = retryResult ? "알람" : "알람";
+                                broadcastRingStateChanged(mac, status);
+                                
+                                if (retryResult) {
+                                    Log.d(TAG, "STOP command retry successful: " + mac);
+                                } else {
+                                    Log.e(TAG, "STOP command retry failed: " + mac);
+                                    broadcastToast("부저 알람 중지 실패: " + mac);
+                                }
+                                
+                                // 연결 해제
+                                try { beacon2.disconnect(); } catch (Exception ignored) {}
+                            }
+                        });
+                    }, 1000);
+                }
+            }
+        });
+    }
+    
+    // ==================== Bluetooth 상태 관리 ====================
+    
+    /**
+     * Bluetooth 어댑터 상태 변화 수신기 등록
+     */
+    private void registerBtStateReceiver() {
+        btStateReceiver = new BroadcastReceiver() {
+            @Override 
+            public void onReceive(Context context, Intent intent) {
+                if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(intent.getAction())) {
+                    int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+                    Log.i(TAG, "Bluetooth state changed: " + getBluetoothStateName(state));
+                    
+                    switch (state) {
+                        case BluetoothAdapter.STATE_OFF:
+                            Log.w(TAG, "Bluetooth turned OFF - stopping scan and disconnecting all");
+                            stopScanInternalSafe();
+                            safeDisconnectAll();
+                            break;
+                            
+                        case BluetoothAdapter.STATE_ON:
+                            Log.i(TAG, "Bluetooth turned ON - reinitializing and restarting scan");
+                            reinitKBeaconMgr();
+                            
+                            // 짧은 지연 후 스캔 재시작 (어댑터 완전 초기화 대기)
+                            mainHandler.postDelayed(() -> {
+                                restartBleScan();
+                                broadcastToast("Bluetooth 복구됨 - 스캔 재시작");
+                            }, 1000);
+                            break;
+                            
+                        case BluetoothAdapter.STATE_TURNING_OFF:
+                            Log.i(TAG, "Bluetooth turning OFF");
+                            break;
+                            
+                        case BluetoothAdapter.STATE_TURNING_ON:
+                            Log.i(TAG, "Bluetooth turning ON");
+                            break;
+                    }
+                }
+            }
+        };
+        
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        try {
+            registerReceiver(btStateReceiver, filter);
+            Log.d(TAG, "Bluetooth state receiver registered");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to register Bluetooth state receiver", e);
+        }
+    }
+    
+    /**
+     * Bluetooth 상태 이름 반환 (로깅용)
+     */
+    private String getBluetoothStateName(int state) {
+        switch (state) {
+            case BluetoothAdapter.STATE_OFF: return "OFF";
+            case BluetoothAdapter.STATE_ON: return "ON";
+            case BluetoothAdapter.STATE_TURNING_OFF: return "TURNING_OFF";
+            case BluetoothAdapter.STATE_TURNING_ON: return "TURNING_ON";
+            default: return "UNKNOWN(" + state + ")";
+        }
+    }
+    
+    /**
+     * 안전한 스캔 중지
+     */
+    private void stopScanInternalSafe() {
+        try { 
+            stopScanning(); 
+        } catch (Throwable ignored) {}
+    }
+    
+    /**
+     * 모든 연결 안전하게 해제
+     */
+    private void safeDisconnectAll() {
+        for (BeaconState state : beaconStates.values()) {
+            try {
+                KBeacon beacon = findBeaconByMac(state.getMac());
+                if (beacon != null && beacon.getState() == KBConnState.Connected) {
+                    beacon.disconnect();
+                    Log.d(TAG, "Disconnected beacon due to BT OFF: " + state.getMac());
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+    
+    /**
+     * KBeacon 매니저 재초기화
+     */
+    private void reinitKBeaconMgr() {
+        try {
+            // KBeacon 매니저가 새로운 Bluetooth 상태를 인식하도록 재초기화
+            if (kBeaconsMgr != null) {
+                // 기존 리스너 정리
+                kBeaconsMgr.delegate = null;
+            }
+            
+            // 새로운 인스턴스로 재초기화
+            kBeaconsMgr = KBeaconsMgr.sharedBeaconManager(this);
+            if (kBeaconsMgr != null) {
+                kBeaconsMgr.delegate = this;
+                Log.i(TAG, "KBeacon manager reinitialized successfully");
+            }
+            
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to reinitialize KBeacon manager", t);
+            broadcastToast("Bluetooth 복구 실패 - 앱을 재시작해주세요");
+        }
     }
     
     // ==================== 기존 메서드 래핑 (하위 호환성) ====================

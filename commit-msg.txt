@@ -1,7 +1,8 @@
-fix(ui): 부저알람 무응답 및 버튼 반응성 문제 완전 해결
+fix(stability): 장시간 사용 안정성 및 즉시 알람중지 완전 구현
 
-  • broadcastToast 실제 구현으로 오프라인/권한/조회실패 시 사용자 피드백 제공
-  • processBeaconAdvertisement에서 updatedAt 확실히 갱신하여 온라인 판정 신뢰도 향상
-  • ACTION_TOAST/NEED_PERMISSIONS 브로드캐스트 수신으로 서비스→UI 연결 완성
-  • 디바운스 간격 최적화(200ms→250ms) 및 UI 프리즈 단축(300ms→100ms)으로 다이얼로그 반응성 개선
+  • Watchdog 시스템으로 5분마다 스캔상태 감시, 10분 무광고시 자동 재시작
+  • 30분마다 예방적 스캔 재시작으로 드라이버 상태 리셋 및 Doze 대응
+  • requestRingStopImmediate() 구현으로 STOP 명령 최우선 처리, 즉시 알람중지
+  • Bluetooth ON/OFF 상태 변화 감지 및 KBeacon 매니저 자동 재초기화
+  • 모든 상황에서 사용자 토스트 피드백 제공으로 UX 개선
 
