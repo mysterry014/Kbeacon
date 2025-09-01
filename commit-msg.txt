@@ -1,7 +1,21 @@
-● fix(build): API 호환성 및 중복 정의 문제 해결
+  feat(stability): 사용자 분석 기반 3가지 핵심 안정성 개선
 
-  • KBeacon API 호환성 수정 - ConnectedState→KBConnState, SendMsgCallback→ActionCallback
-  • 중복된 btStateReceiver 정의 제거 및 기존 코드에 자동복구 기능 통합
-  • 모든 Watchdog, 즉시 STOP, Bluetooth 복구 기능 유지하며 빌드 성공
+  1. BT 상태 리시버 등록 누락 보완 ✅
+
+  - onCreate()에서 btStateReceiver 등록 추가
+  - Bluetooth 꺼짐/켜짐 상태 변화 감지하여 자동 복구
+
+  2. Ring 명령 중복 방지 및 상태 브로드캐스트 개선 ✅
+
+  - commandInFlight 맵으로 동시 명령 실행 방지
+  - issueRingCommand()에서 이미 진행중인 명령 스킵
+  - 모든 실패 케이스에서 플래그 정리 보장
+  - sendCommandToConnectedBeacon()에서 링 상태 브로드캐스트 강화
+
+  3. 사용자 STOP 후 자동알람 쿨다운 추가 ✅
+
+  - lastManualStopAt 맵에 수동 중지 시점 기록
+  - checkAutoAlarmTrigger()에서 30초 쿨다운 체크
+  - 사용자 수동 중지 후 일정 시간 자동알람 차단
 
 

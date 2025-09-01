@@ -110,6 +110,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private static final long NO_ADV_RESTART_MS = 10 * 60 * 1000L; // 10분 광고 0이면 재시작
     private static final long PERIODIC_SCAN_RESTART_MS = 30 * 60 * 1000L; // 30분마다 예방적 재시작
     
+    // 수동 STOP 후 자동알람 쿨다운
+    private static final long MANUAL_STOP_COOLDOWN_MS = 30 * 1000L; // 30초
+    
     // Service 바인더
     public class BleServiceBinder extends Binder {
         public BleService getService() {
@@ -136,6 +139,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // Ring 관리
     private final ConcurrentHashMap<String, ScheduledFuture<?>> activeRingTasks = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Boolean> ringInProgress = new ConcurrentHashMap<>();
+    // 동일 MAC에 대한 동시 명령 경합 방지
+    private final ConcurrentHashMap<String, Boolean> commandInFlight = new ConcurrentHashMap<>();
+    // 사용자 STOP 직후 AUTO_ON 재트리거 억제용 쿨다운 (ms)
+    private final ConcurrentHashMap<String, Long> lastManualStopAt = new ConcurrentHashMap<>();
+    private static final long AUTO_ON_COOLDOWN_AFTER_MANUAL_STOP_MS = 7000L; // 7초
     
     // 스케줄러
     private ScheduledExecutorService scheduler;
@@ -201,6 +209,13 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // 주기적 업데이트 시작
         startPeriodicUpdates();
+        
+        // [FIX] Bluetooth 상태 리시버 등록 누락 보완
+        try {
+            registerBtStateReceiver();
+        } catch (Throwable t) {
+            Log.w(TAG, "registerBtStateReceiver failed", t);
+        }
     }
     
     @Override
@@ -1064,6 +1079,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return;
         }
         
+        // 쿨다운 체크: 사용자가 수동으로 STOP 버튼을 누른 후 일정시간 자동알람 비활성
+        Long lastStopTime = lastManualStopAt.get(mac);
+        if (lastStopTime != null) {
+            long timeSinceStop = System.currentTimeMillis() - lastStopTime;
+            if (timeSinceStop < MANUAL_STOP_COOLDOWN_MS) {
+                // 쿨다운 중이므로 자동알람 차단
+                return;
+            }
+        }
+        
         // 이미 Ring이 활성화된 경우 중복 알람 방지
         if (ringInProgress.containsKey(mac)) {
             return;
@@ -1820,6 +1845,12 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         Log.i(TAG, String.format("[RING_CMD] mac=%s on=%s reason=%s at %s:%d",
                 mac, on, reason, caller.getClassName(), caller.getLineNumber()));
 
+        // 명령 중복 방지: 이미 진행중인 명령이 있으면 스킵
+        if (commandInFlight.getOrDefault(mac, false)) {
+            Log.w(TAG, String.format("[RING_CMD] Command already in flight for %s, skipping", mac));
+            return;
+        }
+
         // 정책: 자동 OFF 금지 (사용자만 OFF 가능)
         if (!on && reason != RingReason.USER_TAP_OFF) {
             Log.w(TAG, "[RING_CMD] auto OFF blocked by policy, reason: " + reason);
@@ -1846,12 +1877,19 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return;
         }
 
+        // 명령 실행 플래그 설정
+        commandInFlight.put(mac, true);
+        
         // 기존 파이프라인 사용 (타임아웃/재시도)
         sendCommandWithConnect(
             mac, cmd, 3,
             on ? "알람 시작됨" : "알람 중지됨",
             on ? "알람 시작 실패" : "알람 중지 실패",
-            beacon -> scheduleIdleDisconnect(beacon)
+            beacon -> {
+                // 명령 완료 후 플래그 해제
+                commandInFlight.put(mac, false);
+                scheduleIdleDisconnect(beacon);
+            }
         );
     }
     
@@ -1942,18 +1980,23 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     ) {
         if (currentRetry >= maxRetry) {
             Log.e(TAG, String.format("performConnectAndCommand: max retry exceeded for %s", mac));
+            commandInFlight.put(mac, false); // 명령 플래그 해제
             return;
         }
         
         // 연결 시도
         BeaconState state = beaconStates.get(mac);
-        if (state == null) return;
+        if (state == null) {
+            commandInFlight.put(mac, false); // 명령 플래그 해제
+            return;
+        }
         
         // 실제 beacon 객체 찾기 (findBeaconByMac 사용 - 없으면 생성)
         KBeacon beacon = findBeaconByMac(mac);
         
         if (beacon == null) {
             Log.e(TAG, "performConnectAndCommand: KBeacon object not found for " + mac);
+            commandInFlight.put(mac, false); // 명령 플래그 해제
             broadcastToast("비콘을 찾을 수 없습니다. 조금만 가까이 접근한 뒤 다시 시도하세요.");
             broadcastRingStateChanged(mac, "알람");
             return;
@@ -1975,6 +2018,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT)
                         != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                     Log.w(TAG, "BLUETOOTH_CONNECT permission not granted for " + mac);
+                    commandInFlight.put(mac, false); // 명령 플래그 해제
                     android.content.Intent intent = new android.content.Intent("com.kkmcn.sensordemo.NEED_PERMISSIONS");
                     androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
                     return;
@@ -2024,20 +2068,47 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         String successMsg, String failMsg,
         java.util.function.Consumer<KBeacon> onFinally
     ) {
+        // cmd 내용에 따라 시작/정지 판별
+        final int _ringTime = cmd.optInt("ringTime", -1);
+        final int _ringType = cmd.optInt("ringType", -1);
+        final String macForAck = beacon.getMac();
+
         beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
             @Override
             public void onActionComplete(boolean success, KBException error) {
                 if (success) {
                     Log.i(TAG, successMsg + " for MAC: " + beacon.getMac());
+                    // [ACK] 성공 브로드캐스트 + 상태 반영
+                    if (_ringType == 0x0 || _ringTime == 0) {
+                        // STOP 성공
+                        broadcastRingStateChanged(macForAck, "알람");
+                        ringInProgress.remove(macForAck);
+                    } else {
+                        // START 성공
+                        broadcastRingStateChanged(macForAck, "알람중");
+                        ringInProgress.put(macForAck, true);
+                        // ringTime 후 자동 해제(장치가 알아서 꺼지더라도, inProgress 플래그는 안전하게 내려준다)
+                        int safeMs = (_ringTime > 0 ? _ringTime : 3000) + 600;
+                        mainHandler.postDelayed(() -> ringInProgress.remove(macForAck), safeMs);
+                    }
                 } else {
                     Log.e(TAG, failMsg + " for MAC: " + beacon.getMac() + 
                         ", error: " + (error != null ? error.errorCode : "unknown"));
+                    // 실패시 시작/정지에 맞는 UI 상태로 안내(일관성)
+                    if (_ringType == 0x0 || _ringTime == 0) {
+                        broadcastRingStateChanged(macForAck, "알람");
+                    } else {
+                        broadcastRingStateChanged(macForAck, "알람"); // 시작 실패면 '알람 아님' 상태
+                        ringInProgress.remove(macForAck);
+                    }
                 }
                 
                 // onFinally 훅 실행 (null 가드)
                 if (onFinally != null && beacon != null) {
                     onFinally.accept(beacon);
                 }
+                // 명령 경합 가드 해제
+                commandInFlight.remove(macForAck);
             }
         });
     }
