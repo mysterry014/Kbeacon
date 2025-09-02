@@ -1664,6 +1664,18 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 if (mServiceBound && mBleService != null) {
                     mBleService.setCalibrationMode(true, mac);
                 }
+                
+                // ★ UI 즉시 업데이트: 캘리브레이션 시작 상태 표시
+                runOnUiThread(() -> {
+                    BeaconState beaconState = mBeaconDataStore.get(mac);
+                    if (beaconState != null) {
+                        beaconState.setCalibrationInProgress(true);
+                        beaconState.setCalibrationStage(0); // 준비 단계
+                        if (mDevListAdapter != null) {
+                            mDevListAdapter.notifyDataSetChanged();
+                        }
+                    }
+                });
             }
             
             @Override
@@ -1676,6 +1688,17 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     mBleService.setCalibrationMode(false, null);
                     mBleService.clearCalibrationTarget();
                 }
+                
+                // ★ UI 즉시 업데이트: 캘리브레이션 완료 상태 표시
+                runOnUiThread(() -> {
+                    BeaconState beaconState = mBeaconDataStore.get(mac);
+                    if (beaconState != null) {
+                        beaconState.setCalibrationInProgress(false);
+                        if (mDevListAdapter != null) {
+                            mDevListAdapter.notifyDataSetChanged();
+                        }
+                    }
+                });
                 
                 Log.i(TAG, "Calibration finished - alarm guard deactivated, saved=" + saved);
             }
@@ -1710,6 +1733,21 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 if (mServiceBound && mBleService != null) {
                     mBleService.broadcastCalibrationStageCompleted(mac, stageIndex, medianRssi, keptSamples);
                 }
+                
+                // ★ UI 즉시 업데이트: 단계 완료 상태 표시
+                runOnUiThread(() -> {
+                    BeaconState beaconState = mBeaconDataStore.get(mac);
+                    if (beaconState != null) {
+                        beaconState.setCalibrationStage(stageIndex + 1); // 1-based index
+                        // 마지막 단계(3단계) 완료 시에만 캘리브레이션 진행 플래그를 비활성화
+                        if (stageIndex >= 2) { // 0-based index, so 2 = stage 3
+                            beaconState.setCalibrationInProgress(false);
+                        }
+                        if (mDevListAdapter != null) {
+                            mDevListAdapter.notifyDataSetChanged();
+                        }
+                    }
+                });
             }
             
             @Override
@@ -1721,6 +1759,18 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 if (mServiceBound && mBleService != null) {
                     mBleService.broadcastCalibrationStageStartedPublic(mac, stageIndex, distanceMeters);
                 }
+                
+                // ★ UI 즉시 업데이트: 캘리브레이션 진행 상태 표시
+                runOnUiThread(() -> {
+                    BeaconState beaconState = mBeaconDataStore.get(mac);
+                    if (beaconState != null) {
+                        beaconState.setCalibrationInProgress(true);
+                        beaconState.setCalibrationStage(stageIndex + 1); // 1-based index
+                        if (mDevListAdapter != null) {
+                            mDevListAdapter.notifyDataSetChanged();
+                        }
+                    }
+                });
             }
             
             @Override

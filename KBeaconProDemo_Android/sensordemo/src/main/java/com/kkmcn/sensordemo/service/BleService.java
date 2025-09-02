@@ -37,7 +37,7 @@ import com.kkmcn.kbeaconlib2.KBConnState;
 import com.kkmcn.sensordemo.R;
 import com.kkmcn.sensordemo.model.BeaconState;
 import com.kkmcn.sensordemo.utils.RssiWindow;
-import com.kkmcn.sensordemo.data.ServicePrefs;
+import com.kkmcn.sensordemo.data.Prefs;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -187,7 +187,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private Handler mainHandler;
     
     // 영속 저장소
-    private ServicePrefs servicePrefs;
+    private Prefs mPrefs;
     
     // Watchdog 관리
     private long lastAdvAt = System.currentTimeMillis();
@@ -238,7 +238,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         scheduler = Executors.newScheduledThreadPool(4);
         
         // 영속 저장소 초기화
-        servicePrefs = new ServicePrefs(this);
+        mPrefs = new Prefs(this);
         
         // 저장된 paired MAC 목록 복원
         pairedSet = DevicePrefs.getPaired(getApplicationContext());
@@ -697,13 +697,17 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             cancelAutoRingSchedulersFor(targetMac);
             Log.i(TAG, "[CALIB-GATE1] Auto ring schedulers cancelled for: " + targetMac);
             
-            // 게이트 2: 정규 RSSI 피드를 evaluator로 공급 일시 중지
-            pauseNormalRssiFeedToEvaluator();
-            Log.i(TAG, "[CALIB-GATE2] Normal RSSI feed to evaluator paused");
+            // 게이트 2: 해당 MAC의 필터링 상태 완전 리셋
+            resetBeaconFiltering(targetMac);
+            Log.i(TAG, "[CALIB-GATE2] Filtering state reset for: " + targetMac);
             
-            // 게이트 3: 캘리브레이션 전용 스캔 시작
+            // 게이트 3: 정규 RSSI 피드를 evaluator로 공급 일시 중지
+            pauseNormalRssiFeedToEvaluator();
+            Log.i(TAG, "[CALIB-GATE3] Normal RSSI feed to evaluator paused");
+            
+            // 게이트 4: 캘리브레이션 전용 스캔 시작
             startCalibrationScan(targetMac);
-            Log.i(TAG, "[CALIB-GATE3] Calibration scan started for: " + targetMac);
+            Log.i(TAG, "[CALIB-GATE4] Calibration scan started for: " + targetMac);
         } else {
             // 캘리브레이션 종료 시 모든 게이트 해제
             stopCalibrationScan();
@@ -877,17 +881,19 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return; // 무효 샘플은 모든 처리 중단
         }
         
+        // 캘리브레이션 중 일반 RSSI 피드 차단 (게이트 2: 이중 스캔 방지)
+        if (isCalibrating && mac.equalsIgnoreCase(calibTargetMac)) {
+            Log.v(TAG, String.format("[CALIB-GATE2] Normal RSSI feed blocked during calibration: mac=%s, rssi=%d", mac, currentRssi));
+            return; // 캘리브레이션 타깃은 전용 스캐너에서만 처리
+        }
+        
         state.setLastRssi(currentRssi);
         state.setLastUpdateTime(System.currentTimeMillis());
         // 온라인 판정 근거 타임스탬프 갱신
         state.setUpdatedAt(System.currentTimeMillis());
         
-        // 캘리브레이션 타겟 MAC이면 실시간 RSSI 샘플 브로드캐스트
-        if (calibTargetMac != null && calibTargetMac.equalsIgnoreCase(mac)) {
-            
-            broadcastCalibrationSample(mac, "sampling", currentRssi, false);
-            Log.v(TAG, String.format("[CALIB-SAMPLE] %s: %d dBm (valid)", mac, currentRssi));
-        }
+        // 캘리브레이션 중에는 일반 스캔에서 샘플 브로드캐스트 하지 않음
+        // (전용 스캐너에서만 처리하여 이중 소스 방지)
         
         // 디버깅 로그: 하이브리드 스캔 상태 (FORCE LOG)
         if (advName != null && NAME_REGEX.matcher(advName).matches()) {
@@ -1335,10 +1341,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 return;
             }
             
-            // ScanFilter: 타겟 MAC만 필터링
+            // MAC 주소 정규화 (대문자, 콜론 포함 형태)
+            String normalizedTargetMac = targetMac.toUpperCase().replaceAll("[^0-9A-F]", "");
+            String macWithColons = normalizedTargetMac.replaceAll("(.{2})", "$1:").replaceAll(":$", "");
+            
+            // ScanFilter: 정확한 MAC 매칭만 허용
             ScanFilter scanFilter = new ScanFilter.Builder()
-                .setDeviceAddress(targetMac)
+                .setDeviceAddress(macWithColons)
                 .build();
+                
+            Log.i(TAG, String.format("[CALIB-SCAN] MAC filter: %s -> %s", targetMac, macWithColons));
             
             // ScanSettings: LOW_LATENCY + reportDelay=0 (즉시 콜백)
             ScanSettings scanSettings = new ScanSettings.Builder()
@@ -1353,7 +1365,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     if (result == null || result.getDevice() == null) return;
                     
                     String mac = result.getDevice().getAddress();
-                    int rssi = result.getRssi();
+                    
+                    // RSSI 소스 검증 - 반드시 ScanResult.getRssi() 사용
+                    int rssi = result.getRssi(); // ★ 유일한 RSSI 소스
                     long timestamp = System.currentTimeMillis();
                     
                     // 무효 RSSI 샘플 조기 차단 (Service단)
@@ -1362,9 +1376,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                         return;
                     }
                     
-                    // 타겟 MAC 확인 (추가 보안)
+                    // 타겟 MAC 이중 확인 (필터 + 콜백 검증)
                     if (!targetMac.equalsIgnoreCase(mac)) {
-                        Log.v(TAG, String.format("[CALIB-SCAN] Non-target MAC filtered: expected=%s, got=%s", targetMac, mac));
+                        Log.w(TAG, String.format("[CALIB-SCAN] MAC mismatch: expected=%s, got=%s", targetMac, mac));
+                        return;
+                    }
+                    
+                    // 캘리브레이션 상태 확인
+                    if (!isCalibrating) {
+                        Log.w(TAG, String.format("[CALIB-SCAN] Received sample but not calibrating: mac=%s", mac));
                         return;
                     }
                     
@@ -1807,7 +1827,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         try {
             // 레거시 MAC 게이트 레지스트리에서 paired로 마이그레이션
-            Map<String, String> savedMacs = servicePrefs.getRegisteredMacs();
+            // [deprecated] servicePrefs 사용 중단 - 통합 저장소로 교체 필요
+            Map<String, String> savedMacs = new HashMap<>(); // TODO: Prefs 통합 저장소에서 MAC 목록 조회
             for (String mac : savedMacs.keySet()) {
                 if (!pairedSet.contains(mac)) {
                     pairedSet.add(mac);
@@ -1824,26 +1845,22 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     return newState;
                 });
                 
-                // 거리 설정값 복원
-                double threshold = servicePrefs.getDistanceThreshold(mac);
+                // 거리 설정값 복원 (Prefs 사용)
+                double threshold = mPrefs.getDistanceThreshold(mac, "default", 50.0);
                 state.setDistanceThreshold(threshold);
                 
-                // 배터리 정보 복원
-                ServicePrefs.BatteryInfo batteryInfo = servicePrefs.getBatteryInfo(mac);
-                if (batteryInfo != null) {
-                    state.setBatteryPercent(batteryInfo.percent);
-                    state.setBatteryVoltage(batteryInfo.voltage);
-                    state.setLastBatteryUpdateTime(batteryInfo.updateTime);
+                // 배터리 정보 복원 (Prefs 사용)
+                // [deprecated] getBatteryPercent 메서드 없음 - 0으로 기본값 설정
+                int batteryPercent = 0; // TODO: 배터리 정보를 Prefs에서 불러오는 적절한 메서드 구현
+                if (batteryPercent >= 0) {
+                    state.setBatteryPercent(batteryPercent);
+                    // 배터리 업데이트 시간은 별도 관리하지 않음 (단순화)
                 }
                 
-                // 별칭 복원
-                String alias = servicePrefs.getDeviceAlias(mac);
-                if (alias != null) {
-                    state.setAlias(alias);
-                }
+                // 별칭은 DeviceScanActivity에서 관리 (단순화)
                 
-                Log.v(TAG, String.format("Restored state for %s: threshold=%.1f, battery=%d%%, alias=%s", 
-                    mac, threshold, batteryInfo != null ? batteryInfo.percent : 0, alias));
+                Log.v(TAG, String.format("Restored state for %s: threshold=%.1f, battery=%d%%", 
+                    mac, threshold, batteryPercent));
             }
             
         } catch (Exception e) {
@@ -1859,14 +1876,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         double txPowerAt1m = DEFAULT_TX_POWER_AT_1M;
         double pathLossExponent = DEFAULT_PATH_LOSS_EXPONENT;
         
-        // ServicePrefs에서 캘리브레이션 결과 로드
-        if (servicePrefs != null) {
-            ServicePrefs.CalibrationResult calibration = servicePrefs.getCalibrationResult(mac);
+        // Prefs에서 캘리브레이션 결과 로드 (DeviceScanActivity와 동일한 저장소 사용)
+        if (mPrefs != null) {
+            Prefs.CalibrationParams calibration = mPrefs.loadCalibration(mac);
             if (calibration != null) {
                 txPowerAt1m = calibration.txPowerAt1m;
                 pathLossExponent = calibration.pathLossExponent;
-                Log.v(TAG, String.format("Using saved calibration for %s: txPower=%.1f, n=%.2f", 
+                Log.i(TAG, String.format("[MODEL-ATTACH] Loaded calibration for %s: txPower=%.1f, n=%.2f", 
                     mac, txPowerAt1m, pathLossExponent));
+            } else {
+                Log.d(TAG, String.format("[MODEL-ATTACH] No calibration found for %s, using defaults", mac));
             }
         }
         
@@ -1882,8 +1901,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      */
     public void saveCalibrationResult(String mac, double txPowerAt1m, double pathLossExponent, 
                                     double rSquared, double rmse) {
-        if (servicePrefs != null) {
-            servicePrefs.saveCalibrationResult(mac, txPowerAt1m, pathLossExponent, rSquared, rmse);
+        // [deprecated] servicePrefs 사용 중단 - Prefs 통합 저장소 사용
+        if (mPrefs != null) {
+            mPrefs.saveCalibration(mac, txPowerAt1m, pathLossExponent, 0.0, 0.0, 0.0, System.currentTimeMillis());
             Log.i(TAG, String.format("Calibration result saved for %s", mac));
         }
     }
@@ -1892,14 +1912,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 거리 설정값 저장
      */
     public void saveDistanceThreshold(String mac, double threshold) {
-        if (servicePrefs != null) {
-            servicePrefs.saveDistanceThreshold(mac, threshold);
+        if (mPrefs != null) {
+            // Prefs.save 메서드 사용 (mac, name, threshold)
+            BeaconState state = beaconStates.get(mac);
+            String name = (state != null) ? state.getName() : null;
+            mPrefs.setDistanceThreshold(mac, name, threshold);
             
             // BeaconState도 동시 업데이트
-            BeaconState state = beaconStates.get(mac);
             if (state != null) {
                 state.setDistanceThreshold(threshold);
             }
+            
+            Log.d(TAG, String.format("Saved distance threshold %.1f for MAC %s", threshold, mac));
         }
     }
     
@@ -1907,14 +1931,17 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 장치 별칭 저장
      */
     public void saveDeviceAlias(String mac, String alias) {
-        if (servicePrefs != null) {
-            servicePrefs.saveDeviceAlias(mac, alias);
+        if (mPrefs != null) {
+            // Prefs.setAlias 메서드 사용
+            mPrefs.setAlias(mac, alias);
             
             // BeaconState도 동시 업데이트
             BeaconState state = beaconStates.get(mac);
             if (state != null) {
                 state.setAlias(alias);
             }
+            
+            Log.d(TAG, String.format("Saved device alias %s for MAC %s", alias, mac));
         }
     }
     

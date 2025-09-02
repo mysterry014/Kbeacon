@@ -35,6 +35,10 @@ public class BeaconState {
     // 알람 상태 관리 (Command Gate 패턴용)
     public volatile boolean desiredRing; // 희망하는 부저 상태
     
+    // 캘리브레이션 진행 상태 (UI 업데이트용)
+    private boolean calibrationInProgress = false;
+    private int calibrationStage = 0; // 1, 2, 3 (1-based index)
+    
     // 메타데이터
     private long updatedAt;
     
@@ -376,6 +380,60 @@ public class BeaconState {
      */
     public double getDistanceThreshold() {
         return distanceThresholdMeters;
+    }
+    
+    // ========== 캘리브레이션 진행 상태 관리 ==========
+    
+    /**
+     * 캘리브레이션 진행 상태 설정
+     * @param inProgress 진행 여부
+     */
+    public void setCalibrationInProgress(boolean inProgress) {
+        this.calibrationInProgress = inProgress;
+        if (!inProgress) {
+            this.calibrationStage = 0; // 완료 시 단계 리셋
+        }
+        this.updatedAt = System.currentTimeMillis();
+    }
+    
+    /**
+     * 캘리브레이션 진행 상태 조회
+     * @return 진행 여부
+     */
+    public boolean isCalibrationInProgress() {
+        return calibrationInProgress;
+    }
+    
+    /**
+     * 캘리브레이션 단계 설정
+     * @param stage 현재 단계 (1, 2, 3)
+     */
+    public void setCalibrationStage(int stage) {
+        this.calibrationStage = stage;
+        this.updatedAt = System.currentTimeMillis();
+    }
+    
+    /**
+     * 캘리브레이션 단계 조회
+     * @return 현재 단계 (0=비활성, 1-3=단계)
+     */
+    public int getCalibrationStage() {
+        return calibrationStage;
+    }
+    
+    /**
+     * 캘리브레이션 상태 메시지 생성 (UI용)
+     * @return 상태 메시지
+     */
+    public String getCalibrationStatusMessage() {
+        if (!calibrationInProgress) {
+            return "";
+        }
+        if (calibrationStage > 0) {
+            return String.format("보정 진행 (%d/3 단계)", calibrationStage);
+        } else {
+            return "보정 준비 중";
+        }
     }
     
     // TODO: 추후 확장 포인트

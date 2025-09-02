@@ -312,6 +312,17 @@ public class CalibrationDialog {
                     tvInstructions.setText(String.format("%.0fm 지점에서 측정 중...\n비콘을 움직이지 마세요.", distancesFromStage(stageIndex)));
                 });
             }
+            
+            @Override
+            public void resetBeaconFiltering(String mac) {
+                Log.d(TAG, String.format("[FILTER-RESET] CalibrationSession requesting filtering reset for: %s", mac));
+                if (callback != null) {
+                    callback.resetBeaconFiltering(mac);
+                    Log.d(TAG, String.format("[FILTER-RESET] Filtering reset delegated to callback for: %s", mac));
+                } else {
+                    Log.w(TAG, String.format("[FILTER-RESET] Callback is null, cannot reset filtering for: %s", mac));
+                }
+            }
         });
         
         // UI 업데이트 시작

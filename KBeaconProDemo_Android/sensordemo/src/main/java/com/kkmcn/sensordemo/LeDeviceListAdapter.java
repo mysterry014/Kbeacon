@@ -258,11 +258,17 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		double distanceFiltered = beaconState.getDistanceFiltered();
 		boolean hasValidCalibration = beaconState.getTxPowerAt1m() != 0.0 || beaconState.getPathLossExponent() != 0.0;
 		
+		// ★ 캘리브레이션 상태 반영 거리 표시
 		String distanceText;
-		if (hasValidCalibration && distanceFiltered > 0.0) {
+		if (beaconState.isCalibrationInProgress()) {
+			// 캘리브레이션 진행 중인 경우
+			distanceText = beaconState.getCalibrationStatusMessage();
+		} else if (hasValidCalibration && distanceFiltered > 0.0) {
+			// 정상 거리 표시
 			distanceText = String.format("%.1f m", distanceFiltered);
 		} else {
-			distanceText = "–"; // 보정 미적용/취소 시 거리만 "-" 표시
+			// 보정 미적용 시
+			distanceText = "–";
 		}
 		viewHolder.tvDistance.setText(distanceText);
 		
