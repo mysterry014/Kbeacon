@@ -1,14 +1,15 @@
-  fix(calibration): 적응형 타겟 불일치로 인한 1m→2m 단계 전환 실패 해결
+  fix(calibration): 1m→2m 단계 전환 실패 완전 해결
 
-  핵심 문제: UI는 적응형 타겟(40개) 표시, 완료 판정은 상수(20개) 참조로 인한 불일치
+  핵심 문제: 1m 완료 후 CalibrationDialog가 2m 카운트다운을 시작하지 않아
+  Session과 UI 탈동기화로 2m 진입 불가
 
-  • 상수 직접 비교 제거: isCurrentStageComplete()에서 MIN_SAMPLES_PER_STAGE 대신 적응형 타겟 사용
-  • 완료 조건 완전 단일화: 모든 완료 체크에서 adaptiveTargetSamples 우선 사용  
-  • 강화된 로깅으로 20/40 경계 추적:
-    - [COMPLETION-GATE]: 완료 조건 체크 전 상태
-    - [GATE-FIRED]: stageComplete=true 설정 시점
-    - [GATE-BLOCKED]: 중복 완료 시도 감지  
-    - [CALLBACK]: onStageCompleted 호출 추적
-    - [ADAPTIVE-SET]: 타겟 변경 로깅
-  • 타겟 정보 명시: 샘플 로그에 adaptive vs default 구분 표시
+  수정사항:
+  • CalibrationDialog.onStageCompleted: 다음 단계 카운트다운 즉시 시작
+  • CalibrationSession.beginStageWaiting: 상태 완전 초기화 보장
+    - stageComplete=false, adaptiveTargetSamples=-1, 타임아웃 취소
+  • 이벤트 역할 분리: ACTION_CALIB_STAGE_STARTED 추가
+  • 강화된 로깅: [STAGE-INIT], [STAGE-TRANSITION] 등 상태 추적
+
+  흐름: 1m(40/40) → onStageCompleted → startStageCountdown(1) 
+  → beginStageWaiting(1) → onStageStarted(1) → 2m 카운트다운 → 정상 진행
 

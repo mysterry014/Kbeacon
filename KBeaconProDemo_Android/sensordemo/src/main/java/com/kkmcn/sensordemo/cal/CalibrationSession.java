@@ -254,28 +254,41 @@ public class CalibrationSession {
     
     
     /**
-     * 단계 대기 시작 (게이트 닫힘 + 버퍼 리셋)
+     * 단계 대기 시작 (게이트 닫힘 + 상태 완전 초기화)
      * 카운트다운이 끝나면 enableIntakeForCurrentStage()를 호출해야 함
      * 
      * @param stageIndex 단계 인덱스 (0:1m, 1:2m, 2:3m)
      * @param stage 단계 enum
      */
     public synchronized void beginStageWaiting(int stageIndex, CalibrationStage stage) {
-        Log.d(TAG, String.format("[GATE] beginStageWaiting stage %d (%s) - intake=false, buffers reset", 
+        Log.w(TAG, String.format("[STAGE-INIT] beginStageWaiting stage %d (%s) - FULL RESET", 
                 stageIndex + 1, stage));
         
+        // ★ 상태 완전 초기화 (탈동기화 방지)
         currentStage = stage;
         stageWaitStartMs = System.currentTimeMillis(); // 카운트다운 시작 시각
+        intakeStartMs = 0; // 수집 시작 시각 리셋 (아직 시작 안 됨)
         intakeEnabled = false; // 게이트 닫기
         extendedOnce = false;  // 연장 플래그 리셋
-        stageComplete = false; // 단계 완료 플래그 리셋
+        stageComplete = false; // 단계 완료 플래그 리셋 (중요!)
+        adaptiveTargetSamples = -1; // 적응형 타겟 리셋 (중요!)
+        
+        // 이전 단계 타임아웃 취소
+        cancelCurrentTimeout();
         
         // 해당 단계 버퍼 리셋
         resetStageBuffers(stageIndex);
         
-        // 단계 시작 콜백 (카운트다운 시작 신호)
+        Log.w(TAG, String.format("[STAGE-INIT] Stage %d initialized: stageComplete=%s, adaptiveTarget=%d, intakeEnabled=%s", 
+               stageIndex + 1, stageComplete, adaptiveTargetSamples, intakeEnabled));
+        
+        // ★ 단계 시작 콜백 (카운트다운 시작 신호)
         if (listener != null) {
+            Log.w(TAG, String.format("[STAGE-CALLBACK] Calling onStageStarted(stageIndex=%d, distance=%.1fm)", 
+                   stageIndex, distancesMeters[stageIndex]));
             listener.onStageStarted(stageIndex, distancesMeters[stageIndex]);
+        } else {
+            Log.e(TAG, String.format("[STAGE-CALLBACK] listener is null! Cannot call onStageStarted for stage %d", stageIndex + 1));
         }
     }
     

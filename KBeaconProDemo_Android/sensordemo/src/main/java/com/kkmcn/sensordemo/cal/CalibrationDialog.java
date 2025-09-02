@@ -38,6 +38,7 @@ public class CalibrationDialog {
         void onNativeCalibrationScanStart(String mac);
         void onNativeCalibrationScanStop();
         void onStageCompleted(String mac, int stageIndex, double medianRssi, int keptSamples);
+        void onStageStarted(String mac, int stageIndex, double distanceMeters);
         String getBeaconDisplayName(String mac);
         void saveCalibrationResult(String mac, CalibrationSession.CalibrationResult result);
         CalibrationSession.CalibrationResult loadCalibrationResult(String mac);
@@ -184,6 +185,12 @@ public class CalibrationDialog {
             @Override
             public void onStageStarted(int stageIndex, double distanceMeters) {
                 Log.d(TAG, String.format("Stage %d started: %.1fm", stageIndex + 1, distanceMeters));
+                
+                // 상위로 단계 시작 신호 전달 (브로드캐스트)
+                if (callback != null) {
+                    callback.onStageStarted(mac, stageIndex, distanceMeters);
+                }
+                
                 runOnUiThread(() -> {
                     tvInstructions.setText(String.format("%.0fm 지점에서 측정 중...\n비콘을 움직이지 마세요.", distanceMeters));
                 });
@@ -217,6 +224,19 @@ public class CalibrationDialog {
                                 distancesFromStage(stageIndex), medianRssi));
                     }
                 });
+                
+                // ★ 핵심 수정: 다음 단계 카운트다운 시작
+                if (stageIndex < stageStatusTexts.length - 1) { // 마지막 단계가 아니면
+                    int nextStageIndex = stageIndex + 1;
+                    Log.i(TAG, String.format("[STAGE-TRANSITION] Stage %d → %d: Starting countdown for next stage", 
+                           stageIndex + 1, nextStageIndex + 1));
+                    
+                    runOnUiThread(() -> {
+                        startStageCountdown(nextStageIndex); // 다음 단계 카운트다운 시작
+                    });
+                } else {
+                    Log.i(TAG, String.format("[STAGE-TRANSITION] Stage %d was final stage - waiting for computation", stageIndex + 1));
+                }
             }
             
             @Override

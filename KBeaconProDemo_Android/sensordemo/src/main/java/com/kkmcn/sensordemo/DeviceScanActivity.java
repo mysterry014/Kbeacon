@@ -330,6 +330,19 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     // (실제 단계 전환은 CalibrationSession 내부에서 이미 처리됨)
                     break;
                 }
+                
+                case BleService.ACTION_CALIB_STAGE_STARTED: {
+                    // extras: mac, stageIndex, distanceMeters
+                    String calibMac = intent.getStringExtra("mac");
+                    int stageIndex = intent.getIntExtra("stageIndex", -1);
+                    double distanceMeters = intent.getDoubleExtra("distanceMeters", 0.0);
+                    
+                    Log.d(TAG, String.format("[CALIB-STAGE-STARTED] Stage %d for %s: distance=%.1fm", 
+                          stageIndex + 1, resolveDisplayName(calibMac), distanceMeters));
+                    
+                    // 단계 시작 브로드캐스트 (CalibrationDialog가 카운트다운을 시작함)
+                    break;
+                }
                     
                 case BleService.ACTION_SCAN_NO_RESULTS:
                     boolean locEnabled = intent.getBooleanExtra("location_enabled", false);
@@ -1155,6 +1168,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         // 캘리브레이션 관련 브로드캐스트
         filter.addAction(BleService.ACTION_CALIBRATION_SAMPLE);
         filter.addAction(BleService.ACTION_CALIB_STAGE_COMPLETE);
+        filter.addAction(BleService.ACTION_CALIB_STAGE_STARTED);
         filter.addAction("com.kkmcn.sensordemo.NEED_PERMISSIONS");
         LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
         receiverRegistered = true;
@@ -1688,6 +1702,17 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 // BleService로 단계 완료 브로드캐스트 신호 전달
                 if (mServiceBound && mBleService != null) {
                     mBleService.broadcastCalibrationStageCompleted(mac, stageIndex, medianRssi, keptSamples);
+                }
+            }
+            
+            @Override
+            public void onStageStarted(String mac, int stageIndex, double distanceMeters) {
+                Log.d(TAG, String.format("Stage %d started: MAC=%s, distance=%.1fm", 
+                       stageIndex + 1, mac, distanceMeters));
+                
+                // BleService로 단계 시작 브로드캐스트 신호 전달
+                if (mServiceBound && mBleService != null) {
+                    mBleService.broadcastCalibrationStageStartedPublic(mac, stageIndex, distanceMeters);
                 }
             }
             
