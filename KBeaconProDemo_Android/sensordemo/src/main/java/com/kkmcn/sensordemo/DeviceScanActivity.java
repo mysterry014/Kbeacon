@@ -179,6 +179,14 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     // 캘리브레이션 실시간 샘플 간단 로거(필요 시 UI 갱신에 활용)
     private final java.util.concurrent.ConcurrentHashMap<String, String> calibStageRssi = new java.util.concurrent.ConcurrentHashMap<>();
     
+    // 토스트 디바운스 (중복 방지)
+    private String lastToastText = "";
+    private long lastToastTime = 0;
+    private static final long TOAST_DEBOUNCE_MS = 1000; // 1초 내 동일 문구 무시
+    
+    // 버튼 상태 추적 (CLAUDE.md 스타일 상태 표시)
+    private final java.util.concurrent.ConcurrentHashMap<String, String> buttonStates = new java.util.concurrent.ConcurrentHashMap<>();
+    
     // [캘리브레이션] 가드 플래그 및 세션 관리
     private volatile boolean isCalibrating = false;
     private CalibrationSession activeCalibrationSession = null;
@@ -254,16 +262,16 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     String ringState = intent.getStringExtra("state");
                     Log.d(TAG, String.format("Ring state changed: MAC=%s, state=%s", ringMac, ringState));
                     
-                    // 토스트 피드백 표시 - resolveDisplayName 사용
+                    // 버튼 상태 업데이트 (CLAUDE.md 스타일)
+                    updateButtonState(ringMac, ringState);
+                    
+                    // 토스트는 최종 상태("알람중", "알람")일 때만 표시하고, 중간 과정은 버튼 텍스트로만 표시
                     if ("알람중".equals(ringState)) {
                         toastShow(resolveDisplayName(ringMac) + " 부저 알람 시작");
                     } else if ("알람".equals(ringState)) {
                         toastShow(resolveDisplayName(ringMac) + " 부저 알람 중지");
-                    } else if ("연결됨".equals(ringState)) {
-                        toastShow(resolveDisplayName(ringMac) + " 연결됨");
-                    } else if ("동작중".equals(ringState)) {
-                        toastShow(resolveDisplayName(ringMac) + " 알람 처리 중...");
                     }
+                    // "연결됨", "동작중" 등은 토스트 대신 버튼 텍스트로만 표시
                     break;
                     
                 case BleService.ACTION_AUTO_ALARM_TRIGGERED: {
@@ -1468,6 +1476,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         Log.d("RING", String.format("UI onRingStart: MAC=%s", mac));
         
+        // 즉시 버튼 상태 업데이트 (사용자 피드백)
+        updateButtonState(mac, "동작중");
+        
         // [터치디바운스] 클릭 직후 100ms 프리즈로 리스너 재설정 레이스 추가 차단 (250ms → 100ms 단축)
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 100;
         
@@ -1497,6 +1508,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             Log.d(TAG, "Ring stop blocked - calibration in progress");
             return;
         }
+        
+        // 즉시 버튼 상태 업데이트 (사용자 피드백)
+        updateButtonState(mac, "동작중");
         
         Log.d("RING", String.format("UI onRingStop: MAC=%s", mac));
         
@@ -1794,10 +1808,48 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     }
     
     /**
+     * 버튼 상태 업데이트 (CLAUDE.md 스타일)
+     */
+    private void updateButtonState(String mac, String state) {
+        if (mac == null || state == null) return;
+        
+        buttonStates.put(mac, state);
+        
+        // 어댑터에 데이터 변경 알림 (UI 갱신)
+        runOnUiThread(() -> {
+            if (mLeDeviceListAdapter != null) {
+                mLeDeviceListAdapter.notifyDataSetChanged();
+            }
+        });
+        
+        Log.d(TAG, String.format("[BUTTON-STATE] %s -> %s", mac, state));
+    }
+
+    /**
+     * 버튼 상태 조회 (어댑터에서 호출)
+     */
+    public String getButtonState(String mac) {
+        return buttonStates.getOrDefault(mac, "알람"); // 기본값은 "알람"
+    }
+
+    /**
      * 토스트 메시지 표시 헬퍼 메서드
      */
     public void toastShow(String message) {
+        // 토스트 디바운스: 동일 문구가 1초 내에 이미 표시되었으면 무시
+        long now = System.currentTimeMillis();
+        if (message != null && message.equals(lastToastText) && 
+            (now - lastToastTime) < TOAST_DEBOUNCE_MS) {
+            Log.v(TAG, String.format("[TOAST-DEBOUNCE] Skipped duplicate toast: '%s' (within %dms)", 
+                message, (now - lastToastTime)));
+            return;
+        }
+        
+        lastToastText = message != null ? message : "";
+        lastToastTime = now;
+        
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+        Log.d(TAG, String.format("[TOAST-SHOW] %s", message));
     }
     
     /**

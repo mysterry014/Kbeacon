@@ -169,6 +169,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // 캘리브레이션 타겟 MAC (실시간 RSSI 샘플 브로드캐스트용)
     private volatile String calibTargetMac = null;
     
+    // 상태 브로드캐스트 디바운스 (중복 방지) - "state:timestamp" 형태로 저장
+    private final ConcurrentHashMap<String, String> lastStateByMac = new ConcurrentHashMap<>();
+    private static final long STATE_DEBOUNCE_MS = 500; // 500ms 내 동일 상태 중복 차단
+    
     @Override
     public void onCreate() {
         super.onCreate();
@@ -1441,10 +1445,34 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * Ring 상태 변경 브로드캐스트
      */
     private void broadcastRingStateChanged(String mac, String state) {
+        // 디바운스 체크: 동일 MAC에 동일 상태가 500ms 내 이미 전송되었으면 스킵
+        long now = System.currentTimeMillis();
+        String key = mac;
+        String lastEntry = lastStateByMac.get(key);
+        
+        if (lastEntry != null) {
+            String[] parts = lastEntry.split(":", 2);
+            if (parts.length == 2) {
+                String lastState = parts[0];
+                long lastTime = Long.parseLong(parts[1]);
+                
+                if (state.equals(lastState) && (now - lastTime) < STATE_DEBOUNCE_MS) {
+                    Log.v(TAG, String.format("[STATE-DEBOUNCE] Skipped duplicate state: %s -> %s (within %dms)", 
+                        mac, state, (now - lastTime)));
+                    return;
+                }
+            }
+        }
+        
+        // 새로운 상태 저장
+        lastStateByMac.put(key, state + ":" + now);
+        
         Intent intent = new Intent(ACTION_RING_STATE_CHANGED);
         intent.putExtra("mac", mac);
         intent.putExtra("state", state);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        
+        Log.d(TAG, String.format("[STATE-BROADCAST] %s -> %s", mac, state));
     }
     
     // ========== 영속 저장소 관련 메서드들 ==========
@@ -2366,7 +2394,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         } else {
             Log.w(TAG, "Beacon not found for STOP: " + mac);
             broadcastToast("비콘을 찾을 수 없습니다: " + mac);
-            broadcastRingStateChanged(mac, "알람");
+            // 비콘 없을 때도 상태 브로드캐스트 제거 - 성공 콜백에서만 발생하도록 통일
         }
     }
     
@@ -2390,7 +2418,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 } else if (state == KBConnState.Disconnected && nReason != 0) {
                     Log.w(TAG, "Failed to connect for STOP: " + mac + ", reason: " + nReason);
                     broadcastToast("연결 실패: STOP 명령 전달 불가");
-                    broadcastRingStateChanged(mac, "알람");
+                    // 연결 실패 시 상태 브로드캐스트 제거 - 성공 콜백에서만 발생하도록 통일
                 }
             }
         });
@@ -2425,14 +2453,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                         beacon.sendCommand(cmd, new KBeacon.ActionCallback() {
                             @Override
                             public void onActionComplete(boolean retryResult, KBException retryError) {
-                                broadcastRingStateChanged(mac, "알람");
-                                
                                 if (retryResult) {
                                     Log.d(TAG, "STOP command retry successful: " + mac);
+                                    broadcastRingStateChanged(mac, "알람");
                                 } else {
                                     Log.e(TAG, "STOP command retry failed: " + mac + ", error: " + 
                                         (retryError != null ? retryError.errorCode : "unknown"));
                                     broadcastToast("부저 알람 중지 실패: " + mac);
+                                    // 재시도 실패 시 상태 브로드캐스트 제거 - 성공시만 발생
                                 }
                                 
                                 // 연결 해제
