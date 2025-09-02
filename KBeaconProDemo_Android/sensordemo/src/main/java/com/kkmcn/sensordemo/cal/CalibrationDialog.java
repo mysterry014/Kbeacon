@@ -35,6 +35,9 @@ public class CalibrationDialog {
         void onCalibrationStarted();
         void onCalibrationFinished(boolean saved);
         void onSampleNeeded(CalibrationSession session);
+        void onNativeCalibrationScanStart(String mac);
+        void onNativeCalibrationScanStop();
+        void onStageCompleted(String mac, int stageIndex, double medianRssi, int keptSamples);
         String getBeaconDisplayName(String mac);
         void saveCalibrationResult(String mac, CalibrationSession.CalibrationResult result);
         CalibrationSession.CalibrationResult loadCalibrationResult(String mac);
@@ -172,6 +175,10 @@ public class CalibrationDialog {
         double[] distances = {1.0, 2.0, 3.0};
         session = new CalibrationSession(mac, distances);
         
+        // 네이티브 캘리브레이션 스캔 시작
+        Log.i(TAG, "Starting native calibration scan for: " + mac);
+        callback.onNativeCalibrationScanStart(mac);
+        
         // [수정] 세션에 리스너 설정
         session.setListener(new CalibrationSession.CalibrationListener() {
             @Override
@@ -195,6 +202,15 @@ public class CalibrationDialog {
             @Override
             public void onStageCompleted(int stageIndex, double medianRssi) {
                 Log.d(TAG, String.format("Stage %d completed: median RSSI = %.1f dBm", stageIndex + 1, medianRssi));
+                
+                // 샘플 개수 정보 가져오기 (session에서)
+                int keptSamples = session != null ? session.getCurrentStageSampleCount() : 0;
+                
+                // 상위로 단계 완료 신호 전달
+                if (callback != null) {
+                    callback.onStageCompleted(mac, stageIndex, medianRssi, keptSamples);
+                }
+                
                 runOnUiThread(() -> {
                     if (stageIndex >= 0 && stageIndex < stageStatusTexts.length) {
                         stageStatusTexts[stageIndex].setText(String.format("%.0fm: 완료 (RSSI: %.1f dBm)", 
@@ -207,6 +223,11 @@ public class CalibrationDialog {
             public void onCalibrationFinished(CalibrationSession.CalibrationResult result) {
                 Log.i(TAG, String.format("Calibration finished: rating=%s, tx1m=%.2f, n=%.2f", 
                        result.rating, result.txPowerAt1m, result.pathLossExponent));
+                
+                // 네이티브 캘리브레이션 스캔 중지
+                Log.i(TAG, "Stopping native calibration scan");
+                callback.onNativeCalibrationScanStop();
+                
                 runOnUiThread(() -> {
                     showCalibrationResult(result);
                     stopUiUpdates(); // UI 업데이트 중지
@@ -216,6 +237,11 @@ public class CalibrationDialog {
             @Override
             public void onCalibrationError(String errorMessage) {
                 Log.e(TAG, "Calibration error: " + errorMessage);
+                
+                // 네이티브 캘리브레이션 스캔 중지
+                Log.i(TAG, "Stopping native calibration scan due to error");
+                callback.onNativeCalibrationScanStop();
+                
                 runOnUiThread(() -> {
                     tvInstructions.setText("측정 실패: " + errorMessage + "\n재측정을 시도해주세요.");
                     btnAction.setText("재측정");
@@ -331,29 +357,8 @@ public class CalibrationDialog {
             Log.v(TAG, "[UI-UPDATE] Not requesting samples - session not collecting: " + session.getStage());
         }
         
-        // 단계 완룼 확인 및 다음 단계 진행
-        if (session.isCurrentStageComplete()) {
-            Log.d(TAG, "[UI-UPDATE] Current stage complete, proceeding to next stage or computation");
-            
-            if (session.nextStageOrCompute()) {
-                CalibrationStage newStage = session.getStage();
-                Log.d(TAG, "[UI-UPDATE] Stage transition successful. New stage: " + newStage);
-                
-                int newStageIndex = getCurrentStageIndex(newStage);
-                
-                if (newStageIndex >= 0 && session.isCollecting()) {
-                    // 다음 단계 카운트다운 시작 (이미 beginStageWaiting이 호출되어 게이트가 닫힘)
-                    Log.d(TAG, "[UI-UPDATE] Starting countdown for next stage: " + (newStageIndex + 1));
-                    startStageCountdown(newStageIndex);
-                } else if (newStage == CalibrationStage.COMPUTING) {
-                    runOnUiThread(() -> {
-                        tvInstructions.setText("데이터 분석 중...");
-                    });
-                }
-            } else {
-                Log.e(TAG, "[UI-UPDATE] Failed to proceed to next stage or computation");
-            }
-        }
+        // 단계 전환은 이제 CalibrationSession 내부에서 자동으로 처리됨
+        // onStageCompleted 콜백을 통해 UI 업데이트가 발생
     }
     
     private int getCurrentStageIndex(CalibrationStage stage) {
@@ -438,6 +443,10 @@ public class CalibrationDialog {
         if (session != null) {
             session.cancel();
         }
+        
+        // 네이티브 캘리브레이션 스캔 중지
+        Log.i(TAG, "Stopping native calibration scan due to cancellation");
+        callback.onNativeCalibrationScanStop();
         
         stopUiUpdates();
         

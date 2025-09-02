@@ -297,9 +297,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     // 캘리브레이션 진행 중이고 세션이 활성화되어 있을 때만 처리
                     if (isCalibrating && activeCalibrationSession != null && calibMac != null) {
                         String sessionMac = activeCalibrationSession.getMac();
-                        // 타겟 MAC이 일치하고 RSSI가 유효할 때 세션에 전달
+                        // 타겟 MAC이 일치하고 RSSI가 유효할 때 세션에 전달 (무효 샘플은 Service에서 이미 필터링됨)
                         if (calibMac.equalsIgnoreCase(sessionMac) && 
-                            calibRssi != Integer.MIN_VALUE && calibRssi != 0) {
+                            calibRssi != Integer.MIN_VALUE) {
                             
                             activeCalibrationSession.onRssiSample(calibRssi);
                             Log.v(TAG, String.format("[CALIB-FEED] %s: %d dBm → session", 
@@ -313,6 +313,21 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     Log.d(TAG, String.format("CALIB SAMPLE %s [%s] = %s, active=%s", 
                         resolveDisplayName(calibMac), calibStage, calibStageRssi.get(calibKey), 
                         (activeCalibrationSession != null)));
+                    break;
+                }
+                
+                case BleService.ACTION_CALIB_STAGE_COMPLETE: {
+                    // extras: mac, stageIndex, medianRssi, keptSamples
+                    String calibMac = intent.getStringExtra("mac");
+                    int stageIndex = intent.getIntExtra("stageIndex", -1);
+                    double medianRssi = intent.getDoubleExtra("medianRssi", 0.0);
+                    int keptSamples = intent.getIntExtra("keptSamples", 0);
+                    
+                    Log.d(TAG, String.format("[CALIB-STAGE-COMPLETE] Stage %d for %s: median=%.1fdBm, samples=%d", 
+                          stageIndex + 1, resolveDisplayName(calibMac), medianRssi, keptSamples));
+                    
+                    // 캘리브레이션 다이얼로그나 세션이 이 신호를 처리하여 자동으로 다음 단계로 진행
+                    // (실제 단계 전환은 CalibrationSession 내부에서 이미 처리됨)
                     break;
                 }
                     
@@ -1137,8 +1152,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         filter.addAction(BleService.ACTION_AUTO_ALARM_TRIGGERED);
         filter.addAction(BleService.ACTION_SCAN_NO_RESULTS);
         filter.addAction(BleService.ACTION_TOAST);
-        // 캘리브레이션 RSSI 샘플 브로드캐스트
+        // 캘리브레이션 관련 브로드캐스트
         filter.addAction(BleService.ACTION_CALIBRATION_SAMPLE);
+        filter.addAction(BleService.ACTION_CALIB_STAGE_COMPLETE);
         filter.addAction("com.kkmcn.sensordemo.NEED_PERMISSIONS");
         LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
         receiverRegistered = true;
@@ -1652,6 +1668,35 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     String targetMac = session.getMac();
                     mBleService.setCalibrationTarget(targetMac);
                     Log.d(TAG, "Calibration target set: " + targetMac);
+                }
+            }
+            
+            @Override
+            public void onNativeCalibrationScanStart(String mac) {
+                // 네이티브 캘리브레이션 스캔 시작
+                if (mServiceBound && mBleService != null) {
+                    mBleService.startCalibrationScan(mac);
+                    Log.i(TAG, "Started native calibration scan for: " + mac);
+                }
+            }
+            
+            @Override
+            public void onStageCompleted(String mac, int stageIndex, double medianRssi, int keptSamples) {
+                Log.d(TAG, String.format("Stage %d completed: MAC=%s, medianRssi=%.1f, samples=%d", 
+                       stageIndex + 1, mac, medianRssi, keptSamples));
+                
+                // BleService로 단계 완료 브로드캐스트 신호 전달
+                if (mServiceBound && mBleService != null) {
+                    mBleService.broadcastCalibrationStageCompleted(mac, stageIndex, medianRssi, keptSamples);
+                }
+            }
+            
+            @Override
+            public void onNativeCalibrationScanStop() {
+                // 네이티브 캘리브레이션 스캔 중지
+                if (mServiceBound && mBleService != null) {
+                    mBleService.stopCalibrationScan();
+                    Log.i(TAG, "Stopped native calibration scan");
                 }
             }
             

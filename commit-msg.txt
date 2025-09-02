@@ -1,7 +1,11 @@
-  refactor(ring): 부저 제어 단일화(BleService), RingManager 제거 및 토스트 중복 근본 해소
+ fix(calibration): 캘리브레이션 20/20 샘플 수집 후 진행 멈춤 현상 완전 해결
 
-  • BleService로 스케줄러 일원화, START/STOP 성공 시에만 상태 브로드캐스트
-  • 실패/재시도/연결중 단계 브로드캐스트 제거
-  • UI 토스트는 수동 시작/중지에서만 노출, 자동/재트리거는 미노출
-  • STOP 시 재트리거 선취소 → 연결 실패 토스트 레이스 제거
+  • 종료 조건 안전화: >= 비교 및 stageComplete 플래그로 중복 방지
+  • 브로드캐스트 분리: 샘플 수집과 단계 완료 이벤트 분리
+    - ACTION_CALIB_STAGE_COMPLETE 추가
+    - CalibrationSession → Dialog → Activity → BleService 연결 체인 구축
+  • 타임아웃 로직: Handler 기반 20초 상한으로 무한 대기 방지
+  • UI 이벤트 수신: DeviceScanActivity에서 새 액션 처리
+  • 자동 단계 전환: checkStageCompletion에서 직접 beginStageWaiting 호출
+  • 코드 정리: 불필요한 nextStageOrCompute() 메서드 제거
 

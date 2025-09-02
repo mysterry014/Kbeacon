@@ -6,6 +6,12 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -85,6 +91,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public static final String ACTION_SCAN_NO_RESULTS = "com.kkmcn.sensordemo.SCAN_NO_RESULTS";
     public static final String ACTION_TOAST = "com.kkmcn.sensordemo.ACTION_TOAST";
     public static final String ACTION_CALIBRATION_SAMPLE = "com.kkmcn.sensordemo.CALIBRATION_SAMPLE";
+    public static final String ACTION_CALIB_STAGE_COMPLETE = "com.kkmcn.sensordemo.CALIB_STAGE_COMPLETE";
     
     // 스캔 결과 감시
     private volatile long lastAdvTs = 0L;
@@ -191,6 +198,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     
     // 캘리브레이션 타겟 MAC (실시간 RSSI 샘플 브로드캐스트용)
     private volatile String calibTargetMac = null;
+    
+    // 캘리브레이션 전용 네이티브 스캐너 (reportDelay=0으로 즉시 콜백)
+    private BluetoothLeScanner calibrationScanner = null;
+    private ScanCallback calibrationScanCallback = null;
+    private volatile boolean calibrationScanActive = false;
     
     // 상태 브로드캐스트 디바운스 (중복 방지) - "state:timestamp" 형태로 저장
     private final ConcurrentHashMap<String, String> lastStateByMac = new ConcurrentHashMap<>();
@@ -371,8 +383,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         }
         
         try {
-            // 스캔 모드 설정 (이제 권한이 있으므로 안전)
+            // 스캔 모드 설정 (이제 권한이 있으므로 안전) - 최대 고속 설정
             kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+            
+            // 스캔 주기는 SDK에서 자동 관리됨 (setScanPeriod 메소드 미지원)
             
             // LOW_LATENCY 모드로 스캔 시작
             Log.e(TAG, "FORCE LOG: About to start BLE scanning...");
@@ -763,10 +777,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // 온라인 판정 근거 타임스탬프 갱신
         state.setUpdatedAt(System.currentTimeMillis());
         
-        // 캘리브레이션 타겟 MAC이면 실시간 RSSI 샘플 브로드캐스트
+        // 캘리브레이션 타겟 MAC이면 실시간 RSSI 샘플 브로드캐스트 (무효 샘플 필터링 적용)
         if (calibTargetMac != null && calibTargetMac.equalsIgnoreCase(mac)) {
+            // 무효 RSSI 범위 확인 (Service에서 필터링하여 Activity 부하 감소)
+            if (currentRssi == 0 || currentRssi > -10 || currentRssi < -127) {
+                Log.v(TAG, String.format("[CALIB-SAMPLE-FILTER] Invalid RSSI rejected: mac=%s, rssi=%d", mac, currentRssi));
+                return; // 무효 샘플은 브로드캐스트 금지
+            }
+            
             broadcastCalibrationSample(mac, "sampling", currentRssi, false);
-            Log.v(TAG, String.format("[CALIB-SAMPLE] %s: %d dBm", mac, currentRssi));
+            Log.v(TAG, String.format("[CALIB-SAMPLE] %s: %d dBm (valid)", mac, currentRssi));
         }
         
         // 디버깅 로그: 하이브리드 스캔 상태 (FORCE LOG)
@@ -1124,6 +1144,28 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         intent.putExtra("done", done);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     }
+    
+    /**
+     * 캘리브레이션 단계 완료 브로드캐스트
+     */
+    private void broadcastCalibrationStageComplete(String mac, int stageIndex, double medianRssi, int keptSamples) {
+        Intent intent = new Intent(ACTION_CALIB_STAGE_COMPLETE);
+        intent.putExtra("mac", mac);
+        intent.putExtra("stageIndex", stageIndex);
+        intent.putExtra("medianRssi", medianRssi);
+        intent.putExtra("keptSamples", keptSamples);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        
+        Log.d(TAG, String.format("[BROADCAST] Stage %d complete: median=%.1fdBm, samples=%d", 
+              stageIndex + 1, medianRssi, keptSamples));
+    }
+    
+    /**
+     * 캘리브레이션 단계 완료 브로드캐스트 (public 접근)
+     */
+    public void broadcastCalibrationStageCompleted(String mac, int stageIndex, double medianRssi, int keptSamples) {
+        broadcastCalibrationStageComplete(mac, stageIndex, medianRssi, keptSamples);
+    }
 
     /**
      * 캘리브레이션 타겟 MAC 설정 (RSSI 샘플 브로드캐스트용)
@@ -1140,6 +1182,123 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         String prev = calibTargetMac;
         calibTargetMac = null;
         Log.d(TAG, "Calibration target cleared: " + prev);
+    }
+    
+    /**
+     * 캘리브레이션 전용 네이티브 스캔 시작 (reportDelay=0으로 즉시 콜백)
+     * @param targetMac 타겟 MAC 주소
+     */
+    public void startCalibrationScan(String targetMac) {
+        if (calibrationScanActive) {
+            Log.w(TAG, "[CALIB-SCAN] Already active, stopping previous scan first");
+            stopCalibrationScan();
+        }
+        
+        if (targetMac == null || targetMac.isEmpty()) {
+            Log.e(TAG, "[CALIB-SCAN] Invalid target MAC: " + targetMac);
+            return;
+        }
+        
+        try {
+            BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+            BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+            
+            if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
+                Log.e(TAG, "[CALIB-SCAN] Bluetooth not available or disabled");
+                return;
+            }
+            
+            calibrationScanner = bluetoothAdapter.getBluetoothLeScanner();
+            if (calibrationScanner == null) {
+                Log.e(TAG, "[CALIB-SCAN] BluetoothLeScanner not available");
+                return;
+            }
+            
+            // ScanFilter: 타겟 MAC만 필터링
+            ScanFilter scanFilter = new ScanFilter.Builder()
+                .setDeviceAddress(targetMac)
+                .build();
+            
+            // ScanSettings: LOW_LATENCY + reportDelay=0 (즉시 콜백)
+            ScanSettings scanSettings = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                .setReportDelay(0) // 즉시 콜백 (배치 제거)
+                .build();
+            
+            // ScanCallback 생성
+            calibrationScanCallback = new ScanCallback() {
+                @Override
+                public void onScanResult(int callbackType, ScanResult result) {
+                    if (result == null || result.getDevice() == null) return;
+                    
+                    String mac = result.getDevice().getAddress();
+                    int rssi = result.getRssi();
+                    long timestamp = System.currentTimeMillis();
+                    
+                    // 유효 RSSI 범위 확인 (무효 샘플 필터링을 Service에서 수행)
+                    if (rssi == 0 || rssi > -10 || rssi < -127) {
+                        Log.v(TAG, String.format("[CALIB-SCAN] Invalid RSSI rejected: mac=%s, rssi=%d", mac, rssi));
+                        return;
+                    }
+                    
+                    // 타겟 MAC 확인 (추가 보안)
+                    if (!targetMac.equalsIgnoreCase(mac)) {
+                        Log.v(TAG, String.format("[CALIB-SCAN] Non-target MAC filtered: expected=%s, got=%s", targetMac, mac));
+                        return;
+                    }
+                    
+                    // 유효한 샘플 - 즉시 브로드캐스트
+                    broadcastCalibrationSample(mac, "sampling", rssi, false);
+                    Log.v(TAG, String.format("[CALIB-SCAN] Sample broadcast: mac=%s, rssi=%d dBm, ts=%d", mac, rssi, timestamp));
+                }
+                
+                @Override
+                public void onScanFailed(int errorCode) {
+                    Log.e(TAG, String.format("[CALIB-SCAN] Scan failed: errorCode=%d", errorCode));
+                    calibrationScanActive = false;
+                }
+            };
+            
+            // 스캔 시작
+            calibrationScanner.startScan(
+                java.util.Collections.singletonList(scanFilter), 
+                scanSettings, 
+                calibrationScanCallback
+            );
+            
+            calibrationScanActive = true;
+            Log.i(TAG, String.format("[CALIB-SCAN] Native scan started: targetMac=%s, reportDelay=0", targetMac));
+            
+        } catch (SecurityException e) {
+            Log.e(TAG, "[CALIB-SCAN] Permission denied: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "[CALIB-SCAN] Failed to start scan: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 캘리브레이션 전용 네이티브 스캔 중지
+     */
+    public void stopCalibrationScan() {
+        if (!calibrationScanActive) {
+            Log.d(TAG, "[CALIB-SCAN] Not active, nothing to stop");
+            return;
+        }
+        
+        try {
+            if (calibrationScanner != null && calibrationScanCallback != null) {
+                calibrationScanner.stopScan(calibrationScanCallback);
+                Log.i(TAG, "[CALIB-SCAN] Native scan stopped successfully");
+            }
+        } catch (SecurityException e) {
+            Log.e(TAG, "[CALIB-SCAN] Permission denied during stop: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "[CALIB-SCAN] Error stopping scan: " + e.getMessage(), e);
+        } finally {
+            calibrationScanner = null;
+            calibrationScanCallback = null;
+            calibrationScanActive = false;
+        }
     }
 
     /**
@@ -1747,14 +1906,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         }
         
         try {
-            // 스캔 모드 설정 (이제 권한이 있으므로 안전)
+            // 스캔 모드 설정 (이제 권한이 있으므로 안전) - 최대 고속 설정
             if (kBeaconsMgr != null) {
                 kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+                // 스캔 주기는 SDK에서 자동 관리됨
             } else {
                 kBeaconsMgr = KBeaconsMgr.sharedBeaconManager(getApplicationContext());
                 if (kBeaconsMgr != null) {
                     kBeaconsMgr.delegate = this;
                     kBeaconsMgr.setScanMode(KBeaconsMgr.SCAN_MODE_LOW_LATENCY);
+                    // 스캔 주기는 SDK에서 자동 관리됨
                 }
             }
             
@@ -1904,6 +2065,13 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             stopScanning(); 
         } catch (Throwable ignored) {
             Log.w(TAG, "Exception during stop scanning", ignored);
+        }
+        
+        // 캘리브레이션 스캔 중지
+        try {
+            stopCalibrationScan();
+        } catch (Throwable ignored) {
+            Log.w(TAG, "Exception during stop calibration scan", ignored);
         }
         
         // Ring 알람 중지
