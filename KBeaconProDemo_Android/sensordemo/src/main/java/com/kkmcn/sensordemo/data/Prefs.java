@@ -401,14 +401,16 @@ public class Prefs {
         public final double pathLossExponent;
         public final double rSquared;
         public final double rmse;
+        public final double maxResidual;
         public final long timestampMs;
         
         public CalibrationParams(double txPowerAt1m, double pathLossExponent, 
-                               double rSquared, double rmse, long timestampMs) {
+                               double rSquared, double rmse, double maxResidual, long timestampMs) {
             this.txPowerAt1m = txPowerAt1m;
             this.pathLossExponent = pathLossExponent;
             this.rSquared = rSquared;
             this.rmse = rmse;
+            this.maxResidual = maxResidual;
             this.timestampMs = timestampMs;
         }
     }
@@ -418,21 +420,23 @@ public class Prefs {
     private static final String KEY_SUFFIX_CAL_N = ".cal_n";
     private static final String KEY_SUFFIX_CAL_R2 = ".cal_r2";
     private static final String KEY_SUFFIX_CAL_RMSE = ".cal_rmse";
+    private static final String KEY_SUFFIX_CAL_MAX_RESIDUAL = ".cal_maxres";
     private static final String KEY_SUFFIX_CAL_TS = ".cal_ts";
     
     /**
      * 캘리브레이션 결과 저장 (MAC 기준)
-     * 키 설계: cal_tx1m_{mac}, cal_n_{mac}, cal_r2_{mac}, cal_rmse_{mac}, cal_ts_{mac}
+     * 키 설계: cal_tx1m_{mac}, cal_n_{mac}, cal_r2_{mac}, cal_rmse_{mac}, cal_maxres_{mac}, cal_ts_{mac}
      * 
      * @param mac MAC 주소
      * @param txPowerAt1m 1m 기준 RSSI
      * @param pathLossExponent 경로 손실 지수
      * @param rSquared R² 값
      * @param rmse RMSE 값
+     * @param maxResidual 최대 잔차 값
      * @param timestampMs 측정 시간
      */
     public void saveCalibration(String mac, double txPowerAt1m, double pathLossExponent, 
-                               double rSquared, double rmse, long timestampMs) {
+                               double rSquared, double rmse, double maxResidual, long timestampMs) {
         if (mac == null || mac.isEmpty()) {
             Log.w(TAG, "Cannot save calibration: MAC is null or empty");
             return;
@@ -446,6 +450,7 @@ public class Prefs {
         editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_N, String.valueOf(pathLossExponent));
         editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_R2, String.valueOf(rSquared));
         editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_RMSE, String.valueOf(rmse));
+        editor.putString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_MAX_RESIDUAL, String.valueOf(maxResidual));
         editor.putLong(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TS, timestampMs);
         
         // 실제 사용되는 tx1m, n 값도 동시에 업데이트
@@ -454,8 +459,8 @@ public class Prefs {
         
         editor.apply();
         
-        Log.i(TAG, String.format("Saved calibration for MAC %s: tx1m=%.2f, n=%.2f, R²=%.2f, RMSE=%.2f", 
-               normalizedMac, txPowerAt1m, pathLossExponent, rSquared, rmse));
+        Log.i(TAG, String.format("Saved calibration for MAC %s: tx1m=%.2f, n=%.2f, R²=%.2f, RMSE=%.2f, maxRes=%.2f", 
+               normalizedMac, txPowerAt1m, pathLossExponent, rSquared, rmse, maxResidual));
     }
     
     /**
@@ -475,6 +480,7 @@ public class Prefs {
             String nStr = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_N, null);
             String r2Str = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_R2, null);
             String rmseStr = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_RMSE, null);
+            String maxResStr = mPrefs.getString(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_MAX_RESIDUAL, null);
             long timestamp = mPrefs.getLong(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TS, 0);
             
             if (tx1mStr == null || nStr == null || r2Str == null || rmseStr == null || timestamp == 0) {
@@ -485,11 +491,12 @@ public class Prefs {
             double pathLossExponent = Double.parseDouble(nStr);
             double rSquared = Double.parseDouble(r2Str);
             double rmse = Double.parseDouble(rmseStr);
+            double maxResidual = (maxResStr != null) ? Double.parseDouble(maxResStr) : 0.0; // 기존 데이터 호환성
             
-            Log.d(TAG, String.format("Loaded calibration for MAC %s: tx1m=%.2f, n=%.2f, R²=%.2f, RMSE=%.2f", 
-                   normalizedMac, txPowerAt1m, pathLossExponent, rSquared, rmse));
+            Log.d(TAG, String.format("Loaded calibration for MAC %s: tx1m=%.2f, n=%.2f, R²=%.2f, RMSE=%.2f, maxRes=%.2f", 
+                   normalizedMac, txPowerAt1m, pathLossExponent, rSquared, rmse, maxResidual));
             
-            return new CalibrationParams(txPowerAt1m, pathLossExponent, rSquared, rmse, timestamp);
+            return new CalibrationParams(txPowerAt1m, pathLossExponent, rSquared, rmse, maxResidual, timestamp);
             
         } catch (NumberFormatException e) {
             Log.w(TAG, "Failed to load calibration for MAC " + normalizedMac + ": " + e.getMessage());
@@ -513,6 +520,7 @@ public class Prefs {
         editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_N);
         editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_R2);
         editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_RMSE);
+        editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_MAX_RESIDUAL);
         editor.remove(KEY_PREFIX_BEACON + normalizedMac + KEY_SUFFIX_CAL_TS);
         
         editor.apply();

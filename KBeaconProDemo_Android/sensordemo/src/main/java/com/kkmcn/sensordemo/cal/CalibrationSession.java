@@ -490,9 +490,9 @@ public class CalibrationSession {
         // 선형회귀 계산: y = mx + b
         LinearRegressionResult regression = performLinearRegression(x, y);
         
-        // 파라미터 변환
-        double pathLossExponent = -regression.slope / 10.0; // n = -m/10
-        double txPowerAt1m = regression.intercept; // tx1m = b
+        // 파라미터 변환 (부호 수정)
+        double pathLossExponent = -regression.slope / 10.0; // n = -slope/10 (부호 처리 주의)
+        double txPowerAt1m = regression.intercept; // tx1m = intercept
         
         // [NaN/Inf 방어] 회귀 결과 유효성 검사
         if (Double.isNaN(regression.slope) || Double.isInfinite(regression.slope) ||
@@ -500,6 +500,13 @@ public class CalibrationSession {
             Log.e(TAG, String.format("Degenerate regression: slope=%.3f, intercept=%.3f", 
                    regression.slope, regression.intercept));
             result = createBadResult("Degenerate regression - slope or intercept invalid");
+            return;
+        }
+        
+        // 물리적 유효성 검사 (경로손실지수 범위)
+        if (!(pathLossExponent > 0.8 && pathLossExponent < 6.0)) {
+            Log.e(TAG, String.format("Invalid path loss exponent: n=%.3f (should be 0.8 < n < 6.0)", pathLossExponent));
+            result = createBadResult("Invalid path loss exponent - outside physical range");
             return;
         }
         

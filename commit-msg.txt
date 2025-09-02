@@ -1,15 +1,8 @@
-  fix(calibration): 1m→2m 단계 전환 실패 완전 해결
+  fix(calibration): 3가지 핵심 캘리브레이션 이슈 완전 해결 - 사용자 분석 기반
 
-  핵심 문제: 1m 완료 후 CalibrationDialog가 2m 카운트다운을 시작하지 않아
-  Session과 UI 탈동기화로 2m 진입 불가
-
-  수정사항:
-  • CalibrationDialog.onStageCompleted: 다음 단계 카운트다운 즉시 시작
-  • CalibrationSession.beginStageWaiting: 상태 완전 초기화 보장
-    - stageComplete=false, adaptiveTargetSamples=-1, 타임아웃 취소
-  • 이벤트 역할 분리: ACTION_CALIB_STAGE_STARTED 추가
-  • 강화된 로깅: [STAGE-INIT], [STAGE-TRANSITION] 등 상태 추적
-
-  흐름: 1m(40/40) → onStageCompleted → startStageCountdown(1) 
-  → beginStageWaiting(1) → onStageStarted(1) → 2m 카운트다운 → 정상 진행
+  • 선형회귀 부호 수정: n = -slope/10.0 (음수 경로손실지수 → 양수 변환)
+  • 물리적 유효성 검증: 0.8 < n < 6.0 범위 체크로 불가능한 거리값(964.9m) 방지
+  • 데이터 지속성 개선: maxResidual 필드 추가로 품질지표 누락 해결
+  • UI 재설정 로직: 재측정 시 단계상태/결과레이아웃 완전 초기화
+  • 앱 백업 비활성화: android:allowBackup="false"로 재설치 데이터 일관성 보장
 

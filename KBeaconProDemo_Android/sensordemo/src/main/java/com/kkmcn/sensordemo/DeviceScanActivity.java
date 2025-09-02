@@ -1735,7 +1735,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             public void saveCalibrationResult(String mac, CalibrationSession.CalibrationResult result) {
                 // 1. Prefs에 캘리브레이션 결과 저장
                 mPrefs.saveCalibration(mac, result.txPowerAt1m, result.pathLossExponent, 
-                                     result.rSquared, result.rmse, result.timestampMs);
+                                     result.rSquared, result.rmse, result.maxResidual, result.timestampMs);
                 
                 // 2. BeaconState 업데이트
                 BeaconState beaconState = mBeaconDataStore.get(mac);

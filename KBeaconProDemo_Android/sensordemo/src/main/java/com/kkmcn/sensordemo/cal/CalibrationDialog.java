@@ -166,8 +166,38 @@ public class CalibrationDialog {
         btnAction.setOnClickListener(v -> startCalibration());
     }
     
+    /**
+     * UI 완전 리셋 (재측정 시 필수)
+     * - 단계별 상태 텍스트 리셋
+     * - 결과 레이아웃 숨기기
+     * - 진행률 관련 UI 초기화
+     */
+    private void resetCalibrationUI() {
+        Log.d(TAG, "Resetting calibration UI for fresh start");
+        
+        // 단계별 상태 텍스트 초기화
+        for (int i = 0; i < stageStatusTexts.length; i++) {
+            stageStatusTexts[i].setText(String.format("%dm: 대기", i + 1));
+        }
+        
+        // 결과 레이아웃 숨기기
+        layoutResult.setVisibility(View.GONE);
+        
+        // 초기 안내 메시지로 리셋
+        tvInstructions.setText("거리보정을 시작합니다.\n1m 지점으로 이동하여 준비해주세요.");
+        
+        // 버튼 상태 리셋
+        btnAction.setText("측정 시작");
+        btnAction.setEnabled(true);
+        
+        Log.d(TAG, "UI reset completed - ready for new calibration");
+    }
+    
     private void startCalibration() {
         Log.d(TAG, "Starting calibration for MAC: " + mac);
+        
+        // UI 완전 리셋 (재측정 시 필수)
+        resetCalibrationUI();
         
         // 가드 활성화
         callback.onCalibrationStarted();
