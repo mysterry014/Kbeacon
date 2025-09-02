@@ -1817,8 +1817,8 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         // 어댑터에 데이터 변경 알림 (UI 갱신)
         runOnUiThread(() -> {
-            if (mLeDeviceListAdapter != null) {
-                mLeDeviceListAdapter.notifyDataSetChanged();
+            if (mDevListAdapter != null) {
+                mDevListAdapter.notifyDataSetChanged();
             }
         });
         

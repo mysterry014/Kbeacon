@@ -1,8 +1,11 @@
-  fix(calibration): RSSI 샘플 전달 누락으로 인한 진행률 표시 불가 문제 완전 해결
+● fix(critical): 사용자 분석 기반 완전 해결 - 크래시/반응성/배터리 문제
 
-  구조 개선을 통한 실시간 샘플 브로드캐스트 시스템 구축:
-  • BleService에 calibTargetMac 설정/해제 API 추가
-  • processBeaconAdvertisement에서 타겟 MAC 체크하여 실시간 브로드캐스트
-  • DeviceScanActivity에서 ACTION_CALIBRATION_SAMPLE을 세션으로 전달
-  • 캘리브레이션 시작/종료 시점에서 타겟 설정/해제 자동 연동
+  • 브로드캐스트 리시버 중복 등록 방지 (버튼 3번 클릭 문제 해결)
+  • 토스트 중복 출력 차단 (1초 디바운스 구현)
+  • 캘리브레이션 RSSI 샘플 전달 파이프라인 완성 (0.0 문제 해결)
+  • 연결 타임아웃 단축 (20s→7s) - 즉시 응답성 확보
+  • 버튼 즉시 상태 피드백 시스템 ("동작중"→"연결중"→"완료")
+  • 서비스단 상태 브로드캐스트 디바운스 (500ms)
+  • STOP 경로 중복 브로드캐스트 제거
+  • 어댑터 변수명 오타 수정 (mLeDeviceListAdapter→mDevListAdapter)
 
