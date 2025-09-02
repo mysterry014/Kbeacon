@@ -1167,6 +1167,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         filter.addAction(BleService.ACTION_TOAST);
         // 캘리브레이션 관련 브로드캐스트
         filter.addAction(BleService.ACTION_CALIBRATION_SAMPLE);
+        filter.addAction(BleService.ACTION_CALIB_RSSI_SAMPLE);
         filter.addAction(BleService.ACTION_CALIB_STAGE_COMPLETE);
         filter.addAction(BleService.ACTION_CALIB_STAGE_STARTED);
         filter.addAction("com.kkmcn.sensordemo.NEED_PERMISSIONS");
@@ -1658,6 +1659,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             public void onCalibrationStarted() {
                 isCalibrating = true;
                 Log.i(TAG, "Calibration started - alarm guard activated");
+                
+                // BleService에 캘리브레이션 모드 설정 (3중 게이트 활성화)
+                if (mServiceBound && mBleService != null) {
+                    mBleService.setCalibrationMode(true, mac);
+                }
             }
             
             @Override
@@ -1665,8 +1671,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                 isCalibrating = false;
                 activeCalibrationSession = null;
                 
-                // 캘리브레이션 종료 시 타겟 MAC 해제
+                // BleService의 캘리브레이션 모드 해제 (3중 게이트 비활성화)
                 if (mServiceBound && mBleService != null) {
+                    mBleService.setCalibrationMode(false, null);
                     mBleService.clearCalibrationTarget();
                 }
                 
@@ -1770,13 +1777,42 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             public CalibrationSession.CalibrationResult loadCalibrationResult(String mac) {
                 Prefs.CalibrationParams params = mPrefs.loadCalibration(mac);
                 if (params != null) {
+                    // 저장된 품질 지표로 실제 품질 재계산 (표시 시 재계산 아님 - 저장된 값 기준)
+                    CalibrationSession.QualityRating rating = determineQualityRating(
+                        params.rSquared, params.rmse, params.maxResidual);
+                    
                     return new CalibrationSession.CalibrationResult(
                         params.txPowerAt1m, params.pathLossExponent,
-                        params.rSquared, params.rmse, 0.0, // maxResidual은 저장하지 않으므로 0으로 설정
-                        CalibrationSession.QualityRating.GOOD // 저장된 결과는 GOOD으로 가정
+                        params.rSquared, params.rmse, params.maxResidual, 
+                        rating // 저장된 지표 기반 올바른 품질 판정
                     );
                 }
                 return null;
+            }
+            
+            /**
+             * 저장된 품질 지표로 품질 등급 결정 (CalibrationSession과 동일한 로직)
+             */
+            private CalibrationSession.QualityRating determineQualityRating(double rSquared, double rmse, double maxResidual) {
+                // GOOD: R² ≥ 0.85 && RMSE ≤ 3.0 && maxResidual ≤ 4.0
+                if (rSquared >= 0.85 && rmse <= 3.0 && maxResidual <= 4.0) {
+                    return CalibrationSession.QualityRating.GOOD;
+                }
+                // BORDERLINE: R² ≥ 0.70 && RMSE ≤ 5.0
+                else if (rSquared >= 0.70 && rmse <= 5.0) {
+                    return CalibrationSession.QualityRating.BORDERLINE;
+                }
+                // BAD: 그 외
+                else {
+                    return CalibrationSession.QualityRating.BAD;
+                }
+            }
+            
+            @Override
+            public void resetBeaconFiltering(String mac) {
+                if (mServiceBound && mBleService != null) {
+                    mBleService.resetBeaconFiltering(mac);
+                }
             }
         });
     }

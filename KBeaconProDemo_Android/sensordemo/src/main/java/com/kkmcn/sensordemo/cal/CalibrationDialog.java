@@ -42,6 +42,7 @@ public class CalibrationDialog {
         String getBeaconDisplayName(String mac);
         void saveCalibrationResult(String mac, CalibrationSession.CalibrationResult result);
         CalibrationSession.CalibrationResult loadCalibrationResult(String mac);
+        void resetBeaconFiltering(String mac);
     }
     
     /**
@@ -174,6 +175,9 @@ public class CalibrationDialog {
      */
     private void resetCalibrationUI() {
         Log.d(TAG, "Resetting calibration UI for fresh start");
+        
+        // BleService의 비콘 필터링 상태 완전 리셋
+        callback.resetBeaconFiltering(mac);
         
         // 단계별 상태 텍스트 초기화
         for (int i = 0; i < stageStatusTexts.length; i++) {

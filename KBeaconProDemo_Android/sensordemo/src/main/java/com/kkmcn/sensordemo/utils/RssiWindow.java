@@ -60,19 +60,42 @@ public class RssiWindow {
     }
     
     /**
-     * 이상치가 아닌 샘플들의 리스트 반환
-     * @return 중앙값 ±outlierThresholdDb 범위 내 샘플들
+     * 이상치가 아닌 샘플들의 리스트 반환 (MAD 기반)
+     * @return MAD 기반 이상치 제거 후 샘플들
      */
     public synchronized List<Integer> getFilteredSamples() {
         if (samples.size() < 3) {
             return new ArrayList<>(samples); // 샘플 부족시 모든 샘플 반환
         }
         
+        // MAD(Median Absolute Deviation) 기반 이상치 제거
         double median = getMedian();
-        List<Integer> filtered = new ArrayList<>();
         
+        // 절대편차 계산
+        List<Double> deviations = new ArrayList<>();
         for (Integer sample : samples) {
-            if (Math.abs(sample - median) <= outlierThresholdDb) {
+            deviations.add(Math.abs(sample - median));
+        }
+        
+        // MAD 계산 (편차들의 중앙값)
+        Collections.sort(deviations);
+        double mad;
+        int size = deviations.size();
+        if (size % 2 == 0) {
+            mad = (deviations.get(size/2 - 1) + deviations.get(size/2)) / 2.0;
+        } else {
+            mad = deviations.get(size/2);
+        }
+        
+        // MAD 기반 임계값 계산 (1.4826 * MAD * 2.5~3.0)
+        double madThreshold = 1.4826 * mad * 2.5;
+        
+        // 기본 임계값과 비교하여 더 엄격한 기준 사용
+        double effectiveThreshold = Math.min(madThreshold, outlierThresholdDb);
+        
+        List<Integer> filtered = new ArrayList<>();
+        for (Integer sample : samples) {
+            if (Math.abs(sample - median) <= effectiveThreshold) {
                 filtered.add(sample);
             }
         }

@@ -91,6 +91,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public static final String ACTION_SCAN_NO_RESULTS = "com.kkmcn.sensordemo.SCAN_NO_RESULTS";
     public static final String ACTION_TOAST = "com.kkmcn.sensordemo.ACTION_TOAST";
     public static final String ACTION_CALIBRATION_SAMPLE = "com.kkmcn.sensordemo.CALIBRATION_SAMPLE";
+    public static final String ACTION_CALIB_RSSI_SAMPLE = "com.kkmcn.sensordemo.CALIB_RSSI_SAMPLE";
     public static final String ACTION_CALIB_STAGE_COMPLETE = "com.kkmcn.sensordemo.CALIB_STAGE_COMPLETE";
     public static final String ACTION_CALIB_STAGE_STARTED = "com.kkmcn.sensordemo.CALIB_STAGE_STARTED";
     
@@ -197,8 +198,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // 자동 알람 활성화 상태
     private volatile boolean autoAlarmEnabled = true;
     
-    // 캘리브레이션 타겟 MAC (실시간 RSSI 샘플 브로드캐스트용)
-    private volatile String calibTargetMac = null;
+    // 캘리브레이션 모드 (3중 게이트)
+    private volatile boolean isCalibrating = false;
+    private volatile String calibTargetMac = null; // 캘리브레이션 타겟 MAC
     
     // 캘리브레이션 전용 네이티브 스캐너 (reportDelay=0으로 즉시 콜백)
     private BluetoothLeScanner calibrationScanner = null;
@@ -667,6 +669,61 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      */
     public boolean isAutoAlarmEnabled() {
         return autoAlarmEnabled;
+    }
+    
+    /**
+     * 캘리브레이션 모드 설정 (3중 게이트)
+     * @param calibrating 캘리브레이션 모드 여부
+     * @param targetMac 캘리브레이션 대상 MAC (null이면 해제)
+     */
+    public void setCalibrationMode(boolean calibrating, String targetMac) {
+        this.isCalibrating = calibrating;
+        this.calibTargetMac = targetMac;
+        
+        Log.i(TAG, String.format("Calibration mode: %s, target: %s", calibrating, targetMac));
+        
+        if (calibrating && targetMac != null) {
+            // 캘리브레이션 시작: 기존 자동 알람 스케줄러 정지
+            cancelAutoRingSchedulersFor(targetMac);
+            startCalibrationScan(targetMac);
+        } else {
+            // 캘리브레이션 종료: 스캔 정지 및 스케줄러 재개
+            stopCalibrationScan();
+            resumeAutoRingSchedulers();
+        }
+    }
+    
+    /**
+     * 캘리브레이션 모드 상태 확인
+     */
+    public boolean isCalibrating() {
+        return isCalibrating;
+    }
+    
+    /**
+     * 특정 MAC에 대한 비콘 필터링 상태 완전 리셋
+     * @param mac 리셋할 MAC 주소
+     */
+    public void resetBeaconFiltering(String mac) {
+        if (mac == null || mac.isEmpty()) return;
+        
+        String normalizedMac = mac.toUpperCase();
+        
+        // RSSI 윈도우 제거
+        rssiWindows.remove(normalizedMac);
+        
+        // EMA 캐시 제거
+        rssiEmaCache.remove(normalizedMac);
+        distanceEmaCache.remove(normalizedMac);
+        
+        // BeaconState의 필터링 관련 상태 리셋
+        BeaconState state = beaconStates.get(normalizedMac);
+        if (state != null) {
+            state.setRssiFiltered(0.0);
+            state.setDistanceFiltered(0.0);
+        }
+        
+        Log.d(TAG, String.format("Reset filtering state for MAC: %s", normalizedMac));
     }
     
     // ========== KBeaconsMgr.KBeaconMgrDelegate ==========
@@ -1324,9 +1381,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
 
     /**
-     * 자동 알람 거리 초과 감지
+     * 자동 알람 거리 초과 감지 (3중 게이트: 평가 루프 차단)
      */
     private void checkAutoAlarmTrigger(String mac, BeaconState state, double distanceFiltered) {
+        // 게이트 1: 캘리브레이션 모드 중에는 자동 알람 완전 차단
+        if (isCalibrating) {
+            return;
+        }
+        
         if (!autoAlarmEnabled) {
             return;
         }
@@ -2809,6 +2871,34 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 }
             }
         });
+    }
+    
+    
+    // ==================== 캘리브레이션 헬퍼 메서드 ====================
+    
+    /**
+     * 특정 MAC에 대한 자동 알람 스케줄러 취소 (게이트 2: 스케줄러 차단)
+     */
+    private void cancelAutoRingSchedulersFor(String mac) {
+        if (mac == null) return;
+        
+        RingSession session = ringSessions.get(mac);
+        if (session != null) {
+            session.active = false;
+            if (session.pendingRetrigger != null) {
+                mainHandler.removeCallbacks(session.pendingRetrigger);
+                session.pendingRetrigger = null;
+                Log.d(TAG, String.format("[CALIB-GATE2] Cancelled ring scheduler for: %s", mac));
+            }
+        }
+    }
+    
+    /**
+     * 자동 알람 스케줄러 재개
+     */
+    private void resumeAutoRingSchedulers() {
+        // 현재는 특별한 재개 로직이 필요하지 않음 (거리 초과 시 자동으로 다시 시작됨)
+        Log.d(TAG, "[CALIB-GATE2] Auto ring schedulers resumed");
     }
     
     
