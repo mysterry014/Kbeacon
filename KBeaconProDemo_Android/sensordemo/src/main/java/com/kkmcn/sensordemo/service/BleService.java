@@ -207,6 +207,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private ScanCallback calibrationScanCallback = null;
     private volatile boolean calibrationScanActive = false;
     
+    /**
+     * 무효 RSSI 샘플 판정 - Service단에서 조기 차단
+     * Activity까지 올리지 말고 여기서 필터링
+     * @param rssi RSSI 값
+     * @return true if 무효 샘플
+     */
+    private boolean isInvalidRssi(int rssi) {
+        return (rssi == 0 || rssi > -10 || rssi < -127);
+    }
+    
     // 상태 브로드캐스트 디바운스 (중복 방지) - "state:timestamp" 형태로 저장
     private final ConcurrentHashMap<String, String> lastStateByMac = new ConcurrentHashMap<>();
     private static final long STATE_DEBOUNCE_MS = 500; // 500ms 내 동일 상태 중복 차단
@@ -683,16 +693,46 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         Log.i(TAG, String.format("Calibration mode: %s, target: %s", calibrating, targetMac));
         
         if (calibrating && targetMac != null) {
-            // 캘리브레이션 시작: 기존 자동 알람 스케줄러 정지
+            // 게이트 1: 모든 자동 알람 스케줄러 취소
             cancelAutoRingSchedulersFor(targetMac);
+            Log.i(TAG, "[CALIB-GATE1] Auto ring schedulers cancelled for: " + targetMac);
+            
+            // 게이트 2: 정규 RSSI 피드를 evaluator로 공급 일시 중지
+            pauseNormalRssiFeedToEvaluator();
+            Log.i(TAG, "[CALIB-GATE2] Normal RSSI feed to evaluator paused");
+            
+            // 게이트 3: 캘리브레이션 전용 스캔 시작
             startCalibrationScan(targetMac);
+            Log.i(TAG, "[CALIB-GATE3] Calibration scan started for: " + targetMac);
         } else {
-            // 캘리브레이션 종료: 스캔 정지 및 스케줄러 재개
+            // 캘리브레이션 종료 시 모든 게이트 해제
             stopCalibrationScan();
+            Log.i(TAG, "[CALIB-GATE3] Calibration scan stopped");
+            
+            resumeNormalRssiFeedToEvaluator();
+            Log.i(TAG, "[CALIB-GATE2] Normal RSSI feed resumed");
+            
             resumeAutoRingSchedulers();
+            Log.i(TAG, "[CALIB-GATE1] Auto ring schedulers resumed");
         }
     }
     
+    /**
+     * 게이트 2: 정규 RSSI 피드를 evaluator로 공급 일시 중지
+     */
+    private void pauseNormalRssiFeedToEvaluator() {
+        // 현재는 특별한 정지 로직이 필요하지 않음 (checkAutoAlarmTrigger에서 차단됨)
+        Log.d(TAG, "[CALIB-GATE2] Normal RSSI feed to evaluator paused");
+    }
+    
+    /**
+     * 게이트 2: 정규 RSSI 피드 복원
+     */
+    private void resumeNormalRssiFeedToEvaluator() {
+        // 현재는 특별한 재개 로직이 필요하지 않음 (거리 초과 시 자동으로 다시 시작됨)
+        Log.d(TAG, "[CALIB-GATE2] Normal RSSI feed to evaluator resumed");
+    }
+
     /**
      * 캘리브레이션 모드 상태 확인
      */
@@ -830,18 +870,20 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // 기본 RSSI 업데이트 (모든 비콘에 대해)
         int currentRssi = beacon.getRssi();
+        
+        // 무효 RSSI 샘플 조기 차단 (Service단 - 모든 RSSI 처리 진입부)
+        if (isInvalidRssi(currentRssi)) {
+            Log.v(TAG, String.format("[RSSI-FILTER] Invalid RSSI rejected: mac=%s, rssi=%d", mac, currentRssi));
+            return; // 무효 샘플은 모든 처리 중단
+        }
+        
         state.setLastRssi(currentRssi);
         state.setLastUpdateTime(System.currentTimeMillis());
         // 온라인 판정 근거 타임스탬프 갱신
         state.setUpdatedAt(System.currentTimeMillis());
         
-        // 캘리브레이션 타겟 MAC이면 실시간 RSSI 샘플 브로드캐스트 (무효 샘플 필터링 적용)
+        // 캘리브레이션 타겟 MAC이면 실시간 RSSI 샘플 브로드캐스트
         if (calibTargetMac != null && calibTargetMac.equalsIgnoreCase(mac)) {
-            // 무효 RSSI 범위 확인 (Service에서 필터링하여 Activity 부하 감소)
-            if (currentRssi == 0 || currentRssi > -10 || currentRssi < -127) {
-                Log.v(TAG, String.format("[CALIB-SAMPLE-FILTER] Invalid RSSI rejected: mac=%s, rssi=%d", mac, currentRssi));
-                return; // 무효 샘플은 브로드캐스트 금지
-            }
             
             broadcastCalibrationSample(mac, "sampling", currentRssi, false);
             Log.v(TAG, String.format("[CALIB-SAMPLE] %s: %d dBm (valid)", mac, currentRssi));
@@ -1314,8 +1356,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     int rssi = result.getRssi();
                     long timestamp = System.currentTimeMillis();
                     
-                    // 유효 RSSI 범위 확인 (무효 샘플 필터링을 Service에서 수행)
-                    if (rssi == 0 || rssi > -10 || rssi < -127) {
+                    // 무효 RSSI 샘플 조기 차단 (Service단)
+                    if (isInvalidRssi(rssi)) {
                         Log.v(TAG, String.format("[CALIB-SCAN] Invalid RSSI rejected: mac=%s, rssi=%d", mac, rssi));
                         return;
                     }
@@ -1386,6 +1428,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private void checkAutoAlarmTrigger(String mac, BeaconState state, double distanceFiltered) {
         // 게이트 1: 캘리브레이션 모드 중에는 자동 알람 완전 차단
         if (isCalibrating) {
+            Log.d(TAG, String.format("[AUTO-ALARM-GATE] Blocked during calibration: mac=%s, distance=%.1fm", 
+                    mac, distanceFiltered));
             return;
         }
         

@@ -234,10 +234,18 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		viewHolder.tvBeaconName.setEllipsize(android.text.TextUtils.TruncateAt.END);
 		viewHolder.tvBeaconName.setMaxLines(1);
 		
-		// 2. RSSI 표시 (필터링된 값)
+		// 2. RSSI 표시 - 보정 상태와 관계없이 항상 최신값 표시
 		double rssiFiltered = beaconState.getRssiFiltered();
-		String rssiText = rssiFiltered != 0.0 ? 
-			String.format("%.0f dBm", rssiFiltered) : "–";
+		int lastRssi = beaconState.getLastRssi();
+		
+		String rssiText;
+		if (rssiFiltered != 0.0) {
+			rssiText = String.format("%.0f dBm", rssiFiltered);
+		} else if (lastRssi != 0) {
+			rssiText = String.format("%d dBm", lastRssi);
+		} else {
+			rssiText = "–";
+		}
 		viewHolder.tvRssi.setText(rssiText);
 		
 		// 3. 배터리 표시
@@ -246,10 +254,16 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			String.format("%d%%", batteryPercent) : "--%";
 		viewHolder.tvBattery.setText(batteryText);
 		
-		// 4. 거리 표시 (필터링된 값, 소수 1자리)
+		// 4. 거리 표시 - 보정 상태에 따라 분리 처리
 		double distanceFiltered = beaconState.getDistanceFiltered();
-		String distanceText = distanceFiltered > 0.0 ? 
-			String.format("%.1f m", distanceFiltered) : "–";
+		boolean hasValidCalibration = beaconState.getTxPowerAt1m() != 0.0 || beaconState.getPathLossExponent() != 0.0;
+		
+		String distanceText;
+		if (hasValidCalibration && distanceFiltered > 0.0) {
+			distanceText = String.format("%.1f m", distanceFiltered);
+		} else {
+			distanceText = "–"; // 보정 미적용/취소 시 거리만 "-" 표시
+		}
 		viewHolder.tvDistance.setText(distanceText);
 		
 		// [B] 클릭 대상 혼동 제거: 매 바인딩마다 리스너 완전 재설정
@@ -377,7 +391,11 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			viewHolder.deviceMacAddr.setText(strMacAddress);
 		}
 		if (viewHolder.rssiState != null) {
-			String strRssiValue = mContext.getString(R.string.BEACON_RSSI_VALUE) + beaconState.getLastRssi();
+			// RSSI는 보정 상태와 관계없이 항상 최신값 표시
+			int lastRssiForDisplay = beaconState.getLastRssi();
+			String strRssiValue = lastRssiForDisplay != 0 ? 
+				mContext.getString(R.string.BEACON_RSSI_VALUE) + lastRssiForDisplay + " dBm" :
+				mContext.getString(R.string.BEACON_RSSI_VALUE) + "--";
 			viewHolder.rssiState.setText(strRssiValue);
 		}
 		if (viewHolder.deviceBatteryPercent != null) {

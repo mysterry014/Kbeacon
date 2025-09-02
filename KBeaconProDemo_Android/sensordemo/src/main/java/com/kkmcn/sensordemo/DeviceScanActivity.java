@@ -1794,8 +1794,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
              * 저장된 품질 지표로 품질 등급 결정 (CalibrationSession과 동일한 로직)
              */
             private CalibrationSession.QualityRating determineQualityRating(double rSquared, double rmse, double maxResidual) {
-                // GOOD: R² ≥ 0.85 && RMSE ≤ 3.0 && maxResidual ≤ 4.0
-                if (rSquared >= 0.85 && rmse <= 3.0 && maxResidual <= 4.0) {
+                // CalibrationSession과 동일한 판정 기준 사용 (maxResidual은 저장용이지만 판정에는 미사용)
+                // GOOD: R² ≥ 0.85 && RMSE ≤ 3.0
+                if (rSquared >= 0.85 && rmse <= 3.0) {
                     return CalibrationSession.QualityRating.GOOD;
                 }
                 // BORDERLINE: R² ≥ 0.70 && RMSE ≤ 5.0

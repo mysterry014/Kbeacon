@@ -25,13 +25,14 @@ import java.util.List;
 public class CalibrationSession {
     private static final String TAG = "CalibrationSession";
     
-    // 수집 파라미터 (적응형 정책)
-    private static final int MIN_SAMPLES_PER_STAGE = 20; // 기본 최소 샘플 수
-    private static final int MAX_DURATION_MS_PER_STAGE = 15000; // 15초 상한
+    // 수집 파라미터 (적응형 정책) - 안정화 강화
+    private static final int DEFAULT_MIN_SAMPLES_PER_STAGE = 40; // 20 -> 40 (안정성 향상)
+    private static final int DEFAULT_MAX_SAMPLES_PER_STAGE = 60; // 상한 허용
+    private static final int MAX_DURATION_MS_PER_STAGE = 20000; // 15초 -> 20초 (충분한 수집 시간)
     private static final int SOFT_EXTEND_MS = 5000; // 1차 연장 5초
     private static final int SAMPLE_RATE_MEASURE_MS = 3000; // 첫 3초간 샘플링 속도 측정
-    private static final int ADAPTIVE_MIN_TARGET = 20; // 적응형 목표 하한
-    private static final int ADAPTIVE_MAX_TARGET = 40; // 적응형 목표 상한
+    private static final int ADAPTIVE_MIN_TARGET = 40; // 적응형 목표 하한 (40으로 상향)
+    private static final int ADAPTIVE_MAX_TARGET = 60; // 적응형 목표 상한 (60으로 확장)
     private static final int WINDOW_SIZE = 10;
     private static final double OUTLIER_THRESHOLD_DB = 7.0;
     
@@ -169,8 +170,8 @@ public class CalibrationSession {
         int sampleCount = stageRssiSamples.get(stageIndex).size();
         
         // ★ 강화된 로깅: 타겟 정보와 함께
-        int targetSamples = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : MIN_SAMPLES_PER_STAGE;
-        String targetInfo = (adaptiveTargetSamples > 0) ? String.format("adaptive:%d", adaptiveTargetSamples) : String.format("default:%d", MIN_SAMPLES_PER_STAGE);
+        int targetSamples = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : DEFAULT_MIN_SAMPLES_PER_STAGE;
+        String targetInfo = (adaptiveTargetSamples > 0) ? String.format("adaptive:%d", adaptiveTargetSamples) : String.format("default:%d", DEFAULT_MIN_SAMPLES_PER_STAGE);
         
         Log.d(TAG, String.format("[SAMPLE] Stage %d sample accepted: %d dBm (total: %d/%d, target: %s)", 
                stageIndex + 1, rssi, sampleCount, targetSamples, targetInfo));
@@ -185,7 +186,7 @@ public class CalibrationSession {
             long remaining = Math.max(0, MAX_DURATION_MS_PER_STAGE - elapsedSinceIntake);
             
             // ★ 최신 타겟 반영
-            int displayTarget = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : MIN_SAMPLES_PER_STAGE;
+            int displayTarget = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : DEFAULT_MIN_SAMPLES_PER_STAGE;
             
             Log.v(TAG, String.format("[PROGRESS] Stage %d: sample accepted, count=%d/%d, elapsed=%dms, remaining=%dms", 
                     stageIndex + 1, sampleCount, displayTarget, elapsedSinceIntake, remaining));
@@ -218,7 +219,7 @@ public class CalibrationSession {
         List<Integer> samples = stageRssiSamples.get(stageIndex);
         
         // ★ 적응형 타겟 사용 (상수 비교 제거)
-        int targetSamples = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : MIN_SAMPLES_PER_STAGE;
+        int targetSamples = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : DEFAULT_MIN_SAMPLES_PER_STAGE;
         
         // ★ 수집 시작 시각 기준으로 타임아웃 체크 (카운트다운 제외)
         long elapsedSinceIntake = intakeStartMs > 0 ? 
@@ -587,7 +588,7 @@ public class CalibrationSession {
         boolean timeComplete = elapsedMs >= MAX_DURATION_MS_PER_STAGE;
         
         // ★ 적응형 타겟이 설정된 경우 사용, 아니면 고정값 사용
-        int targetSamples = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : MIN_SAMPLES_PER_STAGE;
+        int targetSamples = (adaptiveTargetSamples > 0) ? adaptiveTargetSamples : DEFAULT_MIN_SAMPLES_PER_STAGE;
         boolean sampleComplete = sampleCount >= targetSamples;  // >= 사용으로 안전화
         
         // ★ 강화된 로깅: 완료 조건 체크 전 상태
@@ -657,7 +658,7 @@ public class CalibrationSession {
         // 기존 타임아웃 취소
         cancelCurrentTimeout();
         
-        // 새 타임아웃 태스크 생성
+        // 새 타임아웃 태스크 생성 - 강제 완료 보장
         currentTimeoutTask = () -> {
             Log.w(TAG, String.format("[TIMEOUT] Stage %d forced completion due to max duration timeout", stageIndex + 1));
             
@@ -673,7 +674,19 @@ public class CalibrationSession {
                     Log.w(TAG, String.format("Stage %d timeout complete: %d samples → median RSSI: %.1f dBm", 
                            stageIndex + 1, samples.size(), medianRssi));
                     
-                    // 단계 완료 콜백 (반드시 호출)
+                    // 다음 단계로 진행 (타임아웃으로 인한 강제 완료)
+                    if (stageIndex == 0) {
+                        Log.i(TAG, "[TIMEOUT-TRANSITION] Stage 1→2: Moving to COUNTDOWN_2M");
+                        beginStageWaiting(1, CalibrationStage.STAGE_2M);
+                    } else if (stageIndex == 1) {
+                        Log.i(TAG, "[TIMEOUT-TRANSITION] Stage 2→3: Moving to COUNTDOWN_3M");
+                        beginStageWaiting(2, CalibrationStage.STAGE_3M);
+                    } else if (stageIndex == 2) {
+                        Log.i(TAG, "[TIMEOUT-TRANSITION] Stage 3→COMPUTING: Starting final computation");
+                        finishCalibration();
+                    }
+                    
+                    // 추가 완료 콜백 (UI용)
                     if (listener != null) {
                         listener.onStageCompleted(stageIndex, medianRssi);
                     }
