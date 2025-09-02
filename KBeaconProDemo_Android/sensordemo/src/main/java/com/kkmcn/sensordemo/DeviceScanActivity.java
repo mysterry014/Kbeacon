@@ -75,7 +75,7 @@ import com.kkmcn.sensordemo.data.Prefs;
 import com.kkmcn.sensordemo.model.BeaconState;
 import com.kkmcn.sensordemo.utils.RssiFilter;
 import com.kkmcn.sensordemo.utils.DistanceEstimator;
-import com.kkmcn.sensordemo.ring.RingManager;
+// RingManager 제거: BleService로 단일화
 import com.kkmcn.sensordemo.battery.BatteryScheduler;
 import com.kkmcn.sensordemo.cal.CalibrationSession;
 import com.kkmcn.sensordemo.cal.CalibrationDialog;
@@ -153,7 +153,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     private ConcurrentHashMap<String, DistanceEstimator> mDistanceEstimators;
     
     // Phase 3 기능 컴포넌트들
-    private RingManager mRingManager;
+    // RingManager 제거: BleService로 단일화
     private BatteryScheduler mBatteryScheduler;
     private MediaPlayer mPhoneAlarmPlayer;
     
@@ -265,13 +265,19 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     // 버튼 상태 업데이트 (CLAUDE.md 스타일)
                     updateButtonState(ringMac, ringState);
                     
-                    // 토스트는 최종 상태("알람중", "알람")일 때만 표시하고, 중간 과정은 버튼 텍스트로만 표시
-                    if ("알람중".equals(ringState)) {
+                    // origin 정보 기반 토스트 정책 (수동 시작/중지만 토스트 표시)
+                    String origin = intent.getStringExtra("origin");
+                    
+                    if ("알람중".equals(ringState) && "MANUAL_START".equals(origin)) {
                         toastShow(resolveDisplayName(ringMac) + " 부저 알람 시작");
-                    } else if ("알람".equals(ringState)) {
+                        Log.i(TAG, String.format("[TOAST-POLICY] Manual start toast: mac=%s, origin=%s", ringMac, origin));
+                    } else if ("알람".equals(ringState) && "MANUAL_STOP".equals(origin)) {
                         toastShow(resolveDisplayName(ringMac) + " 부저 알람 중지");
+                        Log.i(TAG, String.format("[TOAST-POLICY] Manual stop toast: mac=%s, origin=%s", ringMac, origin));
+                    } else {
+                        Log.v(TAG, String.format("[TOAST-POLICY] Skipped toast: mac=%s, state=%s, origin=%s", ringMac, ringState, origin));
                     }
-                    // "연결됨", "동작중" 등은 토스트 대신 버튼 텍스트로만 표시
+                    // AUTO_START, SCHED_RETRIGGER는 토스트 표시 금지 (버튼 상태만 갱신)
                     break;
                     
                 case BleService.ACTION_AUTO_ALARM_TRIGGERED: {
@@ -543,7 +549,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         mBtnRmvNameFilter = (Button)findViewById(R.id.btmRemoveFilterName);
 
         // Phase 3: 기능 컴포넌트 초기화 (Context 추가)
-        mRingManager = new RingManager(this, mBeaconsMgr, mBeaconDataStore);
+        // RingManager 제거: BleService로 단일화
         mBatteryScheduler = new BatteryScheduler(mBeaconsMgr, mBeaconDataStore, this);
         
         // 하단 폰 알람 버튼 초기화 및 연결
@@ -1111,9 +1117,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         }
 
         // Phase 3: 기능 컴포넌트 정리
-        if (mRingManager != null) {
-            mRingManager.shutdown();
-        }
+        // RingManager 제거: BleService로 단일화
         if (mBatteryScheduler != null) {
             mBatteryScheduler.shutdown();
         }
@@ -1484,20 +1488,12 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         // Command Gate 패턴: 플래그만 설정, 실제 명령은 게이트에서 처리
         if (mServiceBound && mBleService != null) {
-            mBleService.setDesiredRingPublic(mac, true, BleService.RingReason.USER_TAP_ON);
+            mBleService.setDesiredRingPublic(mac, true, BleService.RingReason.MANUAL_START);
             Log.i("RING", "BleService.setDesiredRingPublic(true) called for MAC: " + mac);
         } else {
-            // 폴백: 기존 RingManager 사용
-            if (mRingManager != null) {
-                Log.d("RING", String.format("Fallback: RingManager.start for MAC=%s", mac));
-                boolean started = mRingManager.start(mac, 2000);
-                Log.i("RING", String.format("RingManager.start result: %s for MAC=%s", started, mac));
-                if (!started) {
-                    Log.w("RING", "RingManager.start failed - already running or busy?");
-                }
-            } else {
-                Log.e("RING", "Both BleService and RingManager are unavailable!");
-            }
+            // 서비스 준비 중 - UI 피드백만 제공, 명령 호출 금지
+            Log.w("RING", "Service not bound - waiting for service initialization");
+            updateButtonState(mac, "서비스 준비 중");
         }
     }
     
@@ -1519,16 +1515,12 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         // 즉시 STOP 처리: 모든 대기 명령보다 우선
         if (mServiceBound && mBleService != null) {
-            mBleService.requestRingStopImmediate(mac);
-            Log.i("RING", "BleService.requestRingStopImmediate() called for MAC: " + mac);
+            mBleService.setDesiredRingPublic(mac, false, BleService.RingReason.MANUAL_STOP);
+            Log.i("RING", "BleService.setDesiredRingPublic(false) called for MAC: " + mac);
         } else {
-            // 폴백: 기존 RingManager 사용
-            if (mRingManager != null) {
-                boolean stopped = mRingManager.stop(mac);
-                Log.i("RING_STOP", "RingManager.stop result: " + stopped + " for MAC: " + mac);
-            } else {
-                Log.e("RING", "Both BleService and RingManager are unavailable!");
-            }
+            // 서비스 준비 중 - UI 피드백만 제공, 명령 호출 금지
+            Log.w("RING", "Service not bound - waiting for service initialization");
+            updateButtonState(mac, "서비스 준비 중");
         }
     }
     

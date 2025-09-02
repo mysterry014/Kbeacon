@@ -71,7 +71,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     
     // Command Gate 패턴용 Ring 호출 이유 추적
     public enum RingReason {
-        USER_TAP_ON, USER_TAP_OFF, AUTO_ON, AUTO_OFF, WATCHDOG, PURGE_OFFLINE, OTHER
+        MANUAL_START,    // 수동 시작 (토스트 표시)
+        MANUAL_STOP,     // 수동 중지 (토스트 표시)  
+        AUTO_START,      // 자동 시작 (토스트 없음)
+        SCHED_RETRIGGER  // 스케줄러 재트리거 (토스트 없음)
     }
     
     // Broadcast Action 상수
@@ -114,6 +117,26 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // 수동 STOP 후 자동알람 쿨다운
     private static final long MANUAL_STOP_COOLDOWN_MS = 30 * 1000L; // 30초
     
+    // Ring 스케줄러 관련 상수
+    private static final int RING_TIME_MS = 3000; // 3초 부저
+    private static final int GUARD_INTERVAL_MS = 1000; // 1초 대기 후 재트리거
+    
+    // Ring 세션 관리 클래스
+    private static class RingSession {
+        final String mac;
+        final int ringTimeMs;
+        RingReason origin;
+        Runnable pendingRetrigger;
+        volatile boolean active;
+        
+        RingSession(String mac, int ringTimeMs, RingReason origin) {
+            this.mac = mac;
+            this.ringTimeMs = ringTimeMs;
+            this.origin = origin;
+            this.active = true;
+        }
+    }
+    
     // Service 바인더
     public class BleServiceBinder extends Binder {
         public BleService getService() {
@@ -137,8 +160,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private Set<String> pairedSet = new HashSet<>();
     private static final Pattern NAME_REGEX = Pattern.compile("^\\d{6}_.+");
     
-    // Ring 관리
-    private final ConcurrentHashMap<String, ScheduledFuture<?>> activeRingTasks = new ConcurrentHashMap<>();
+    // Ring 관리 (단일화된 스케줄러)
+    private final ConcurrentHashMap<String, RingSession> ringSessions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Boolean> ringInProgress = new ConcurrentHashMap<>();
     // 동일 MAC에 대한 동시 명령 경합 방지
     private final ConcurrentHashMap<String, Boolean> commandInFlight = new ConcurrentHashMap<>();
@@ -593,7 +616,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     @Deprecated
     public void startRingAlarm(String mac) {
         Log.d(TAG, "startRingAlarm (deprecated): " + mac);
-        setDesiredRingPublic(mac, true, RingReason.OTHER);
+        setDesiredRingPublic(mac, true, RingReason.AUTO_START);
     }
     
     /**
@@ -602,7 +625,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     @Deprecated
     public void stopRingAlarm(String mac) {
         Log.d(TAG, "stopRingAlarm (deprecated): " + mac);
-        setDesiredRingPublic(mac, false, RingReason.USER_TAP_OFF);
+        setDesiredRingPublic(mac, false, RingReason.MANUAL_STOP);
     }
     
     /**
@@ -611,7 +634,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public void stopAllRingAlarms() {
         Log.d(TAG, "stopAllRingAlarms");
         
-        for (String mac : new ArrayList<>(activeRingTasks.keySet())) {
+        for (String mac : new ArrayList<>(ringSessions.keySet())) {
             stopRingAlarm(mac);
         }
     }
@@ -1174,7 +1197,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 mac, beaconName, distanceFiltered, thresholdDistance));
             
             // 비콘 부저 알람 시작 (Command Gate 패턴 사용)
-            setDesiredRingPublic(mac, true, RingReason.AUTO_ON);
+            setDesiredRingPublic(mac, true, RingReason.AUTO_START);
             
             // 태블릿 알람 브로드캐스트
             Intent intent = new Intent(ACTION_AUTO_ALARM_TRIGGERED);
@@ -1442,37 +1465,49 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * Ring 상태 변경 브로드캐스트
+     * Ring 상태 변경 브로드캐스트 (origin 정보 포함, 단일화)
      */
-    private void broadcastRingStateChanged(String mac, String state) {
-        // 디바운스 체크: 동일 MAC에 동일 상태가 500ms 내 이미 전송되었으면 스킵
+    private void broadcastRingStateChanged(String mac, String state, RingReason origin) {
+        // 성공 시에만 브로드캐스트 (실패/재시도/연결중은 브로드캐스트 금지)
+        if (!"알람중".equals(state) && !"알람".equals(state)) {
+            Log.v(TAG, String.format("[RING-STATE] Skipping intermediate state broadcast: mac=%s, state=%s", mac, state));
+            return;
+        }
+        
+        // 디바운스 체크: 동일 MAC+상태+origin이 500ms 내 이미 전송되었으면 스킵
         long now = System.currentTimeMillis();
-        String key = mac;
+        String key = mac + "_" + state + "_" + origin;
         String lastEntry = lastStateByMac.get(key);
         
         if (lastEntry != null) {
-            String[] parts = lastEntry.split(":", 2);
-            if (parts.length == 2) {
-                String lastState = parts[0];
-                long lastTime = Long.parseLong(parts[1]);
-                
-                if (state.equals(lastState) && (now - lastTime) < STATE_DEBOUNCE_MS) {
-                    Log.v(TAG, String.format("[STATE-DEBOUNCE] Skipped duplicate state: %s -> %s (within %dms)", 
-                        mac, state, (now - lastTime)));
-                    return;
-                }
+            long lastTime = Long.parseLong(lastEntry);
+            if ((now - lastTime) < STATE_DEBOUNCE_MS) {
+                Log.v(TAG, String.format("[STATE-DEBOUNCE] Skipped duplicate broadcast: mac=%s, state=%s, origin=%s", mac, state, origin));
+                return;
             }
         }
         
-        // 새로운 상태 저장
-        lastStateByMac.put(key, state + ":" + now);
+        // 디바운스 캐시 업데이트
+        lastStateByMac.put(key, String.valueOf(now));
+        
+        Log.i(TAG, String.format("[RING-STATE-UNIFIED] Broadcasting: mac=%s, state=%s, origin=%s, caller=%s", 
+            mac, state, origin, Thread.currentThread().getStackTrace()[3].getMethodName()));
         
         Intent intent = new Intent(ACTION_RING_STATE_CHANGED);
         intent.putExtra("mac", mac);
         intent.putExtra("state", state);
+        intent.putExtra("origin", origin.name());
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
-        
-        Log.d(TAG, String.format("[STATE-BROADCAST] %s -> %s", mac, state));
+    }
+    
+    /**
+     * 레거시 브로드캐스트 메서드 (origin 없음) - 사용 금지
+     */
+    @Deprecated
+    private void broadcastRingStateChanged(String mac, String state) {
+        Log.w(TAG, String.format("[DEPRECATED] broadcastRingStateChanged without origin called: mac=%s, state=%s", mac, state));
+        // 레거시 호출에는 기본 origin 할당 (추후 모든 호출을 origin 포함으로 변경)
+        broadcastRingStateChanged(mac, state, RingReason.AUTO_START);
     }
     
     // ========== 영속 저장소 관련 메서드들 ==========
@@ -1924,7 +1959,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         }
 
         // 정책: 자동 OFF 금지 (사용자만 OFF 가능)
-        if (!on && reason != RingReason.USER_TAP_OFF) {
+        if (!on && reason != RingReason.MANUAL_STOP) {
             Log.w(TAG, "[RING_CMD] auto OFF blocked by policy, reason: " + reason);
             return;
         }
@@ -1991,21 +2026,128 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 공개 API: 플래그만 바꾸고, reconcile에서 커맨드 게이트 호출
      */
     public void setDesiredRingPublic(String mac, boolean on, RingReason reason) {
-        BeaconState state = beaconStates.get(mac);
-        if (state == null) {
-            Log.w(TAG, "setDesiredRingPublic: beacon not found: " + mac);
+        Log.d(TAG, String.format("[RING-UNIFIED] setDesiredRingPublic: mac=%s, on=%s, reason=%s", mac, on, reason));
+        
+        if (on) {
+            startRingWithScheduler(mac, reason);
+        } else {
+            stopRingWithScheduler(mac, reason);
+        }
+    }
+    
+    /**
+     * Ring 시작 with 단일 스케줄러
+     */
+    private void startRingWithScheduler(String mac, RingReason reason) {
+        // 1. 기존 세션 정리 (재시작 시)
+        stopRingSession(mac);
+        
+        // 2. 새 세션 생성
+        RingSession session = new RingSession(mac, RING_TIME_MS, reason);
+        ringSessions.put(mac, session);
+        
+        // 3. 즉시 첫 번째 Ring 실행
+        executeRingOnce(session);
+        
+        Log.i(TAG, String.format("[RING-START] Session created: mac=%s, reason=%s", mac, reason));
+    }
+    
+    /**
+     * Ring 중지 with 스케줄러 정리
+     */
+    private void stopRingWithScheduler(String mac, RingReason reason) {
+        Log.i(TAG, String.format("[RING-STOP] Stopping session: mac=%s, reason=%s", mac, reason));
+        
+        // 1. 재트리거 취소 (최우선)
+        RingSession session = ringSessions.get(mac);
+        if (session != null) {
+            session.active = false;
+            if (session.pendingRetrigger != null) {
+                mainHandler.removeCallbacks(session.pendingRetrigger);
+                session.pendingRetrigger = null;
+                Log.d(TAG, "[RING-STOP] Pending retrigger cancelled for: " + mac);
+            }
+        }
+        
+        // 2. 세션 제거
+        ringSessions.remove(mac);
+        
+        // 3. STOP 명령 전송
+        sendStopCommandToBeacon(mac, reason);
+        
+        // 4. 수동 중지인 경우 쿨다운 설정
+        if (reason == RingReason.MANUAL_STOP) {
+            lastManualStopAt.put(mac, System.currentTimeMillis());
+        }
+    }
+    
+    /**
+     * 실제 Ring 명령 한 번 실행 (스케줄러 코어)
+     */
+    private void executeRingOnce(RingSession session) {
+        if (!session.active) {
+            Log.d(TAG, "[RING-EXEC] Session inactive, skipping: " + session.mac);
             return;
         }
         
-        if (state.desiredRing == on) {
-            Log.v(TAG, String.format("setDesiredRingPublic: no change %s=%s", mac, on));
-            return; // 변화 없으면 무시
+        // Command Gate 방식으로 기존 reconcileDesiredState 재사용
+        BeaconState state = beaconStates.get(session.mac);
+        if (state != null) {
+            state.desiredRing = true;
+            reconcileDesiredStateUnified(session.mac, session.origin);
         }
         
-        state.desiredRing = on;
-        Log.d(TAG, String.format("setDesiredRingPublic: %s -> %s (reason=%s)", mac, on, reason));
-        
-        reconcileDesiredState(mac, reason);
+        // 재트리거 스케줄링 (ringTime + guard interval 후)
+        if (session.active) {
+            session.pendingRetrigger = () -> {
+                if (session.active) {
+                    // 재트리거에서는 origin을 SCHED_RETRIGGER로 변경
+                    session.origin = RingReason.SCHED_RETRIGGER;
+                    executeRingOnce(session);
+                }
+            };
+            
+            mainHandler.postDelayed(session.pendingRetrigger, 
+                session.ringTimeMs + GUARD_INTERVAL_MS);
+            
+            Log.v(TAG, String.format("[RING-EXEC] Retrigger scheduled: mac=%s, delay=%dms", 
+                session.mac, session.ringTimeMs + GUARD_INTERVAL_MS));
+        }
+    }
+    
+    /**
+     * Ring 세션 정리 (helper)
+     */
+    private void stopRingSession(String mac) {
+        RingSession session = ringSessions.get(mac);
+        if (session != null) {
+            session.active = false;
+            if (session.pendingRetrigger != null) {
+                mainHandler.removeCallbacks(session.pendingRetrigger);
+                session.pendingRetrigger = null;
+            }
+            ringSessions.remove(mac);
+            Log.d(TAG, "[RING-CLEANUP] Session removed: " + mac);
+        }
+    }
+    
+    /**
+     * STOP 명령 전송 (helper)
+     */
+    private void sendStopCommandToBeacon(String mac, RingReason reason) {
+        BeaconState state = beaconStates.get(mac);
+        if (state != null) {
+            state.desiredRing = false;
+            reconcileDesiredStateUnified(mac, reason);
+        }
+    }
+    
+    /**
+     * 통합된 reconcileDesiredState (origin 정보 포함)
+     */
+    private void reconcileDesiredStateUnified(String mac, RingReason origin) {
+        // 기존 reconcileDesiredState 로직 재사용하되 브로드캐스트에 origin 포함
+        reconcileDesiredState(mac, origin);
     }
     
     /**
@@ -2016,7 +2158,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         if (state == null) return;
 
         // 자동 OFF는 금지(사용자 OFF만 허용)
-        if (!state.desiredRing && reason != RingReason.USER_TAP_OFF) {
+        if (!state.desiredRing && reason != RingReason.MANUAL_STOP) {
             Log.d(TAG, String.format("reconcileDesiredState: auto OFF blocked for %s, reason=%s", mac, reason));
             return;
         }
@@ -2150,14 +2292,17 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             public void onActionComplete(boolean success, KBException error) {
                 if (success) {
                     Log.i(TAG, successMsg + " for MAC: " + beacon.getMac());
-                    // [ACK] 성공 브로드캐스트 + 상태 반영
+                    // [ACK] 성공 브로드캐스트 + 상태 반영 (origin 정보 포함)
+                    RingSession currentSession = ringSessions.get(macForAck);
+                    RingReason origin = currentSession != null ? currentSession.origin : RingReason.AUTO_START;
+                    
                     if (_ringType == 0x0 || _ringTime == 0) {
                         // STOP 성공
-                        broadcastRingStateChanged(macForAck, "알람");
+                        broadcastRingStateChanged(macForAck, "알람", origin);
                         ringInProgress.remove(macForAck);
                     } else {
                         // START 성공
-                        broadcastRingStateChanged(macForAck, "알람중");
+                        broadcastRingStateChanged(macForAck, "알람중", origin);
                         ringInProgress.put(macForAck, true);
                         // ringTime 후 자동 해제(장치가 알아서 꺼지더라도, inProgress 플래그는 안전하게 내려준다)
                         int safeMs = (_ringTime > 0 ? _ringTime : 3000) + 600;
@@ -2359,12 +2504,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 해당 MAC의 모든 링 스케줄 취소
      */
     private void cancelAllRingSchedules(String mac) {
-        // 기존 스케줄된 링 작업 취소
-        ScheduledFuture<?> existingTask = activeRingTasks.get(mac);
-        if (existingTask != null && !existingTask.isDone()) {
-            existingTask.cancel(true);
-            activeRingTasks.remove(mac);
-            Log.d(TAG, "Cancelled existing ring task for: " + mac);
+        // 단일 스케줄러로 교체됨 - RingSession에서 처리
+        RingSession session = ringSessions.get(mac);
+        if (session != null) {
+            session.active = false;
+            if (session.pendingRetrigger != null) {
+                mainHandler.removeCallbacks(session.pendingRetrigger);
+                session.pendingRetrigger = null;
+                Log.d(TAG, "Cancelled existing ring session for: " + mac);
+            }
         }
         
         // 진행 중인 링 상태 정리
