@@ -1,7 +1,8 @@
-  fix(critical): 사용자 보고 4가지 핵심 반응성 문제 완전 해결
+  fix(calibration): RSSI 샘플 전달 누락으로 인한 진행률 표시 불가 문제 완전 해결
 
-  • 중복 리시버/STOP 이중경로 → 토스트 중복/연결실패 메시지 해결
-  • 연결 타임아웃 20초→7초 + commandInFlight 개선 → 3번 터치 문제 해결
-  • DataStore 동기화 + resolveDisplayName() → 캘리브레이션 Unknown 해결
-  • 주기적 스캔 재시작 + 광고 타임스탬프 갱신 → 장기 안정성 확보
+  구조 개선을 통한 실시간 샘플 브로드캐스트 시스템 구축:
+  • BleService에 calibTargetMac 설정/해제 API 추가
+  • processBeaconAdvertisement에서 타겟 MAC 체크하여 실시간 브로드캐스트
+  • DeviceScanActivity에서 ACTION_CALIBRATION_SAMPLE을 세션으로 전달
+  • 캘리브레이션 시작/종료 시점에서 타겟 설정/해제 자동 연동
 

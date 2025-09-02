@@ -274,16 +274,31 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
 
 
                 case BleService.ACTION_CALIBRATION_SAMPLE: {
-                    // extras: mac, stage(1|2|3 또는 "1m"등), rssi(int), done(boolean)
+                    // extras: mac, stage, rssi(int), done(boolean)
                     String calibMac = intent.getStringExtra("mac");
                     int calibRssi = intent.getIntExtra("rssi", Integer.MIN_VALUE);
                     String calibStage = intent.getStringExtra("stage");
                     boolean calibDone = intent.getBooleanExtra("done", false);
-                    String calibKey = calibMac + "/" + (calibStage != null ? calibStage : "?");
+                    
+                    // 캘리브레이션 진행 중이고 세션이 활성화되어 있을 때만 처리
+                    if (isCalibrating && activeCalibrationSession != null && calibMac != null) {
+                        String sessionMac = activeCalibrationSession.getMac();
+                        // 타겟 MAC이 일치하고 RSSI가 유효할 때 세션에 전달
+                        if (calibMac.equalsIgnoreCase(sessionMac) && 
+                            calibRssi != Integer.MIN_VALUE && calibRssi != 0) {
+                            
+                            activeCalibrationSession.onRssiSample(calibRssi);
+                            Log.v(TAG, String.format("[CALIB-FEED] %s: %d dBm → session", 
+                                resolveDisplayName(calibMac), calibRssi));
+                        }
+                    }
+                    
+                    // 기존 로깅 유지
+                    String calibKey = calibMac + "/" + (calibStage != null ? calibStage : "sampling");
                     calibStageRssi.put(calibKey, (calibRssi == Integer.MIN_VALUE ? "N/A" : (calibRssi + " dBm")));
-                    Log.i(TAG, String.format("CALIB SAMPLE %s [%s] = %s, done=%s", resolveDisplayName(calibMac), calibStage, calibStageRssi.get(calibKey), calibDone));
-                    // 필요 시: 진행 중인 다이얼로그에 반영하는 훅을 추가하세요.
-                    // 예: if (mCalibDialog != null) mCalibDialog.onSample(calibMac, calibStage, calibRssi, calibDone, resolveDisplayName(calibMac));
+                    Log.d(TAG, String.format("CALIB SAMPLE %s [%s] = %s, active=%s", 
+                        resolveDisplayName(calibMac), calibStage, calibStageRssi.get(calibKey), 
+                        (activeCalibrationSession != null)));
                     break;
                 }
                     
@@ -1613,14 +1628,25 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             public void onCalibrationFinished(boolean saved) {
                 isCalibrating = false;
                 activeCalibrationSession = null;
+                
+                // 캘리브레이션 종료 시 타겟 MAC 해제
+                if (mServiceBound && mBleService != null) {
+                    mBleService.clearCalibrationTarget();
+                }
+                
                 Log.i(TAG, "Calibration finished - alarm guard deactivated, saved=" + saved);
             }
             
             @Override
             public void onSampleNeeded(CalibrationSession session) {
                 activeCalibrationSession = session;
-                // 현재 스캔에서 해당 MAC의 RSSI를 세션에 전달하는 것은 
-                // onBeaconDiscovered 콜백에서 처리됨
+                
+                // 캘리브레이션 시작 시 타겟 MAC 설정 (RSSI 샘플 브로드캐스트 활성화)
+                if (mServiceBound && mBleService != null && session != null) {
+                    String targetMac = session.getMac();
+                    mBleService.setCalibrationTarget(targetMac);
+                    Log.d(TAG, "Calibration target set: " + targetMac);
+                }
             }
             
             @Override

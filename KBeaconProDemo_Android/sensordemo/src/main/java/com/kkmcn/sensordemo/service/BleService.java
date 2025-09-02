@@ -166,6 +166,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     // 자동 알람 활성화 상태
     private volatile boolean autoAlarmEnabled = true;
     
+    // 캘리브레이션 타겟 MAC (실시간 RSSI 샘플 브로드캐스트용)
+    private volatile String calibTargetMac = null;
+    
     @Override
     public void onCreate() {
         super.onCreate();
@@ -733,8 +736,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // 온라인 판정 근거 타임스탬프 갱신
         state.setUpdatedAt(System.currentTimeMillis());
         
-        // 캘리브레이션 샘플 브로드캐스트는 실제 캘리브레이션 진행 시에만 호출
-        // (현재는 부하를 줄이기 위해 비활성화, 필요 시 캘리브레이션 세션에서 직접 호출)
+        // 캘리브레이션 타겟 MAC이면 실시간 RSSI 샘플 브로드캐스트
+        if (calibTargetMac != null && calibTargetMac.equalsIgnoreCase(mac)) {
+            broadcastCalibrationSample(mac, "sampling", currentRssi, false);
+            Log.v(TAG, String.format("[CALIB-SAMPLE] %s: %d dBm", mac, currentRssi));
+        }
         
         // 디버깅 로그: 하이브리드 스캔 상태 (FORCE LOG)
         if (advName != null && NAME_REGEX.matcher(advName).matches()) {
@@ -1090,6 +1096,23 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         intent.putExtra("rssi", rssi);
         intent.putExtra("done", done);
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+    }
+
+    /**
+     * 캘리브레이션 타겟 MAC 설정 (RSSI 샘플 브로드캐스트용)
+     */
+    public void setCalibrationTarget(String mac) {
+        calibTargetMac = mac;
+        Log.d(TAG, "Calibration target set: " + mac);
+    }
+
+    /**
+     * 캘리브레이션 타겟 MAC 해제
+     */
+    public void clearCalibrationTarget() {
+        String prev = calibTargetMac;
+        calibTargetMac = null;
+        Log.d(TAG, "Calibration target cleared: " + prev);
     }
 
     /**
