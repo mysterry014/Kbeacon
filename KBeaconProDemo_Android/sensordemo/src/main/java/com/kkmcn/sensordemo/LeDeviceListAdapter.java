@@ -22,6 +22,7 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 
@@ -254,20 +255,16 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			String.format("%d%%", batteryPercent) : "--%";
 		viewHolder.tvBattery.setText(batteryText);
 		
-		// 4. 거리 표시 - 보정 상태에 따라 분리 처리
-		double distanceFiltered = beaconState.getDistanceFiltered();
-		boolean hasValidCalibration = beaconState.getTxPowerAt1m() != 0.0 || beaconState.getPathLossExponent() != 0.0;
-		
-		// ★ 캘리브레이션 상태 반영 거리 표시
+		// 4. 거리 표시 - 보정 상태에 따라 분리 처리 (NaN 기반 유효성 검사)
 		String distanceText;
 		if (beaconState.isCalibrationInProgress()) {
 			// 캘리브레이션 진행 중인 경우
 			distanceText = beaconState.getCalibrationStatusMessage();
-		} else if (hasValidCalibration && distanceFiltered > 0.0) {
-			// 정상 거리 표시
-			distanceText = String.format("%.1f m", distanceFiltered);
+		} else if (beaconState.hasValidCalibration() && beaconState.hasValidDistance()) {
+			// 정상 거리 표시 (캘리브레이션 완료 + 유효한 거리값)
+			distanceText = String.format(Locale.US, "%.1f m", beaconState.getDistanceFiltered());
 		} else {
-			// 보정 미적용 시
+			// 보정 미적용 또는 거리 계산 안 됨
 			distanceText = "–";
 		}
 		viewHolder.tvDistance.setText(distanceText);

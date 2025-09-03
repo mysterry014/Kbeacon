@@ -1,5 +1,7 @@
-  fix(critical): String.format 포맷 불일치 크래시 완전 해결
+  fix(calibration): 3가지 핵심 캘리브레이션 이슈 완전 해결 - 사용자 분석 기반
 
-  • CalibrationSession: adaptiveTarget=%d → %s 변경으로 IllegalFormatConversion 제거
-  • Locale.US 고정 및 String.valueOf() 안전화로 로버스트성 강화
-  • 전수 점검으로 동일 유형 잠재 위험 139개 지점 검증 완료
+  - 전체 샘플 기반 MAD 이상치 제거로 중앙값 계산 정확도 대폭 개선
+  - 실제 사용/총 샘플 수 정확 표시로 UI 정보 신뢰성 향상
+  - 캘리브레이션 완료 후 NaN 기반 거리값 즉시 재계산으로 표시 문제 해결
+  - 통계학적 outlier removal (MAD 2.5σ + 7dB 상한) 적용
+  - BeaconState 초기값 NaN 처리로 0.0과 실제 측정값 명확 구분

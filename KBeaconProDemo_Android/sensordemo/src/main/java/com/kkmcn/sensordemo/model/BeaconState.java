@@ -44,16 +44,17 @@ public class BeaconState {
     
     /**
      * 기본 생성자
+     * 초기값을 NaN으로 설정하여 0.0과 실제 측정값 구분
      */
     public BeaconState() {
         this.name = "";
         this.mac = "";
         this.lastRssi = 0;
-        this.rssiFiltered = 0.0;
-        this.distanceFiltered = 0.0;
-        this.batteryPercent = 0;
-        this.txPowerAt1m = -59.0; // 기본값
-        this.pathLossExponent = 2.0; // 기본값
+        this.rssiFiltered = Double.NaN;
+        this.distanceFiltered = Double.NaN;
+        this.batteryPercent = -1; // -1은 알 수 없음 의미
+        this.txPowerAt1m = Double.NaN; // 캘리브레이션 안 됨 상태
+        this.pathLossExponent = Double.NaN; // 캘리브레이션 안 됨 상태
         this.distanceThresholdMeters = 50.0; // 기본 50m
         this.updatedAt = System.currentTimeMillis();
     }
@@ -434,6 +435,38 @@ public class BeaconState {
         } else {
             return "보정 준비 중";
         }
+    }
+    
+    /**
+     * 캘리브레이션 유효성 검사
+     * @return 캘리브레이션이 완료되어 유효한 값을 가지고 있는지 여부
+     */
+    public boolean hasValidCalibration() {
+        return Double.isFinite(txPowerAt1m) && Double.isFinite(pathLossExponent) && pathLossExponent > 0.0;
+    }
+    
+    /**
+     * RSSI 값 유효성 검사
+     * @return RSSI 값이 유효한지 여부
+     */
+    public boolean hasValidRssi() {
+        return Double.isFinite(rssiFiltered);
+    }
+    
+    /**
+     * 거리 값 유효성 검사
+     * @return 거리 값이 유효한지 여부
+     */
+    public boolean hasValidDistance() {
+        return Double.isFinite(distanceFiltered) && distanceFiltered > 0.0;
+    }
+    
+    /**
+     * 배터리 정보 유효성 검사
+     * @return 배터리 정보가 유효한지 여부
+     */
+    public boolean hasValidBattery() {
+        return batteryPercent >= 0 && batteryPercent <= 100;
     }
     
     // TODO: 추후 확장 포인트

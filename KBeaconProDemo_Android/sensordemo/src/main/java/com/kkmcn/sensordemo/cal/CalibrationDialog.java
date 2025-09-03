@@ -243,8 +243,9 @@ public class CalibrationDialog {
             public void onStageProgress(int stageIndex, int sampleCount, int maxSamples, long remainingMs) {
                 runOnUiThread(() -> {
                     if (stageIndex >= 0 && stageIndex < stageStatusTexts.length) {
-                        stageStatusTexts[stageIndex].setText(String.format("%.0fm: 수집중... (%d/%d개)", 
-                                distancesFromStage(stageIndex), sampleCount, maxSamples));
+                        // 진행 중에는 수집된 샘플 수만 표시 (권장 최소 40개 안내)
+                        stageStatusTexts[stageIndex].setText(String.format("%.0fm: 수집중... (%d개, 권장≥40개)", 
+                                distancesFromStage(stageIndex), sampleCount));
                     }
                 });
             }
@@ -253,7 +254,7 @@ public class CalibrationDialog {
             public void onStageCompleted(int stageIndex, double medianRssi) {
                 Log.d(TAG, String.format("Stage %d completed: median RSSI = %.1f dBm", stageIndex + 1, medianRssi));
                 
-                // 샘플 개수 정보 가져오기 (session에서)
+                // 샘플 개수 정보 가져오기 (session에서) - 하위 호환용
                 int keptSamples = session != null ? session.getCurrentStageSampleCount() : 0;
                 
                 // 상위로 단계 완료 신호 전달
@@ -265,6 +266,25 @@ public class CalibrationDialog {
                     if (stageIndex >= 0 && stageIndex < stageStatusTexts.length) {
                         stageStatusTexts[stageIndex].setText(String.format("%.0fm: 완료 (RSSI: %.1f dBm)", 
                                 distancesFromStage(stageIndex), medianRssi));
+                    }
+                });
+            }
+            
+            @Override
+            public void onStageCompletedWithSampleInfo(int stageIndex, double medianRssi, int usedSamples, int totalSamples) {
+                Log.d(TAG, String.format("Stage %d completed: median RSSI = %.1f dBm, samples used/total: %d/%d", 
+                       stageIndex + 1, medianRssi, usedSamples, totalSamples));
+                
+                // 상위로 단계 완료 신호 전달 (정확한 샘플 수 정보 포함)
+                if (callback != null) {
+                    callback.onStageCompleted(mac, stageIndex, medianRssi, usedSamples);
+                }
+                
+                runOnUiThread(() -> {
+                    if (stageIndex >= 0 && stageIndex < stageStatusTexts.length) {
+                        // 실제 사용/총 샘플 수 표시
+                        stageStatusTexts[stageIndex].setText(String.format("%.0fm: 완료 (%d/%d개, RSSI: %.1f)", 
+                                distancesFromStage(stageIndex), usedSamples, totalSamples, medianRssi));
                     }
                 });
                 

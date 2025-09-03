@@ -59,6 +59,9 @@ public class CalibrationSession {
         void onCalibrationError(String errorMessage);
         void onStageReadyToCollect(int stageIndex); // 카운트다운 완료 후 수집 준비 완료
         void resetBeaconFiltering(String mac); // 비콘 필터링 상태 리셋 (옵션)
+        
+        // 새로운 콜백: 실제 사용/총 샘플 수 정보 전달
+        void onStageCompletedWithSampleInfo(int stageIndex, double medianRssi, int usedSamples, int totalSamples);
     }
     
     public static class CalibrationResult {
@@ -439,35 +442,84 @@ public class CalibrationSession {
      * @param samples 원시 RSSI 샘플 리스트
      * @return 필터링된 중앙값
      */
+    /**
+     * 전체 샘플 기반 MAD(Median Absolute Deviation) 이상치 제거 후 중앙값 계산
+     * RssiWindow 대신 전체 샘플에 대해 정통 통계 방법 사용
+     * @param samples 캘리브레이션 스테이지에서 수집된 전체 RSSI 샘플
+     * @return 이상치 제거 후 중앙값, 샘플 부족 시 원시 중앙값으로 폴백
+     */
     private double calculateFilteredMedian(List<Integer> samples) {
-        if (samples.isEmpty()) {
-            return 0.0;
+        if (samples == null || samples.isEmpty()) {
+            return Double.NaN;
         }
         
-        // RssiWindow 로직 재사용
-        RssiWindow window = new RssiWindow(WINDOW_SIZE, OUTLIER_THRESHOLD_DB);
+        // 1) 원시 중앙값 계산
+        double rawMedian = medianOfInts(samples);
         
-        for (Integer rssi : samples) {
-            window.addSample(rssi);
+        // 2) 절대편차들의 중앙값(MAD) 계산
+        List<Double> absDeviations = new ArrayList<>(samples.size());
+        for (int rssi : samples) {
+            absDeviations.add(Math.abs(rssi - rawMedian));
+        }
+        double mad = medianOfDoubles(absDeviations);
+        
+        // 3) 임계값: 통계적 기준(1.4826*MAD*2.5)과 실용적 상한(7.0dB) 동시 적용
+        double threshold = Math.min(1.4826 * mad * 2.5, 7.0);
+        
+        // 4) 이상치 제거
+        List<Integer> inliers = new ArrayList<>(samples.size());
+        for (int rssi : samples) {
+            if (Math.abs(rssi - rawMedian) <= threshold) {
+                inliers.add(rssi);
+            }
         }
         
-        List<Integer> validSamples = window.getFilteredSamples();
-        if (validSamples.isEmpty()) {
-            // 모든 샘플이 이상치인 경우, 원시 샘플의 중앙값 사용
-            List<Integer> sortedSamples = new ArrayList<>(samples);
-            Collections.sort(sortedSamples);
-            int midIndex = sortedSamples.size() / 2;
-            return sortedSamples.get(midIndex);
+        // 5) 유효 샘플 부족 시 원시 중앙값으로 폴백
+        if (inliers.size() < 10) {
+            Log.w(TAG, String.format("Too few inliers (%d/%d), using raw median: %.1f dBm", 
+                   inliers.size(), samples.size(), rawMedian));
+            return rawMedian;
         }
         
-        Collections.sort(validSamples);
-        int midIndex = validSamples.size() / 2;
-        double median = validSamples.get(midIndex);
+        // 6) 최종 중앙값 계산
+        double finalMedian = medianOfInts(inliers);
         
-        Log.v(TAG, String.format("Filtered median: %d raw samples → %d valid samples → %.1f dBm", 
-               samples.size(), validSamples.size(), median));
+        Log.v(TAG, String.format("MAD filtered median: %d total → %d inliers → %.1f dBm (MAD=%.1f, thr=%.1f)", 
+               samples.size(), inliers.size(), finalMedian, mad, threshold));
         
-        return median;
+        return finalMedian;
+    }
+    
+    /**
+     * 정수 리스트의 중앙값 계산
+     * @param arr 정수 리스트
+     * @return 중앙값
+     */
+    private double medianOfInts(List<Integer> arr) {
+        int n = arr.size();
+        if (n == 0) return Double.NaN;
+        List<Integer> copy = new ArrayList<>(arr);
+        Collections.sort(copy);
+        if (n % 2 == 1) {
+            return copy.get(n / 2);
+        }
+        return (copy.get(n/2 - 1) + copy.get(n/2)) / 2.0;
+    }
+    
+    /**
+     * 실수 리스트의 중앙값 계산
+     * @param arr 실수 리스트
+     * @return 중앙값
+     */
+    private double medianOfDoubles(List<Double> arr) {
+        int n = arr.size();
+        if (n == 0) return Double.NaN;
+        List<Double> copy = new ArrayList<>(arr);
+        Collections.sort(copy);
+        if (n % 2 == 1) {
+            return copy.get(n / 2);
+        }
+        return (copy.get(n/2 - 1) + copy.get(n/2)) / 2.0;
     }
     
     /**
@@ -600,8 +652,27 @@ public class CalibrationSession {
             double medianRssi = calculateFilteredMedian(samples);
             stageMedianRssi[stageIndex] = medianRssi;
             
-            Log.d(TAG, String.format("Stage %d complete: %d samples → median RSSI: %.1f dBm (timeout=%s)", 
-                   stageIndex + 1, samples.size(), medianRssi, completedByTimeout));
+            // MAD 필터링 결과 세부 정보 로깅
+            int totalSamples = samples.size();
+            
+            // 이상치 제거 후 inliers 수 계산 (로깅용)
+            double rawMedian = medianOfInts(samples);
+            List<Double> absDeviations = new ArrayList<>();
+            for (int rssi : samples) {
+                absDeviations.add(Math.abs(rssi - rawMedian));
+            }
+            double mad = medianOfDoubles(absDeviations);
+            double threshold = Math.min(1.4826 * mad * 2.5, 7.0);
+            
+            int inlierCount = 0;
+            for (int rssi : samples) {
+                if (Math.abs(rssi - rawMedian) <= threshold) {
+                    inlierCount++;
+                }
+            }
+            
+            Log.d(TAG, String.format("Stage %d complete: %d total → %d inliers → %.1f dBm (MAD=%.1f, thr=%.1f)", 
+                   stageIndex + 1, totalSamples, inlierCount, medianRssi, mad, threshold));
             
             // ★ 강화된 로깅: 콜백 호출 직전
             Log.w(TAG, String.format("[CALLBACK] Stage %d: CALLING onStageCompleted(stageIndex=%d, medianRssi=%.1f)", 
@@ -609,8 +680,14 @@ public class CalibrationSession {
             
             // 단계 완료 콜백 (반드시 호출)
             if (listener != null) {
+                // 기존 콜백 (하위 호환)
                 listener.onStageCompleted(stageIndex, medianRssi);
-                Log.w(TAG, String.format("[CALLBACK] Stage %d: onStageCompleted CALLED SUCCESSFULLY", stageIndex + 1));
+                
+                // 새로운 콜백: 실제 샘플 수 정보 포함
+                listener.onStageCompletedWithSampleInfo(stageIndex, medianRssi, inlierCount, totalSamples);
+                
+                Log.w(TAG, String.format("[CALLBACK] Stage %d: onStageCompleted CALLED SUCCESSFULLY (used/total: %d/%d)", 
+                       stageIndex + 1, inlierCount, totalSamples));
             } else {
                 Log.e(TAG, String.format("[CALLBACK] Stage %d: onStageCompleted NOT CALLED - listener is null!", stageIndex + 1));
             }

@@ -1872,7 +1872,17 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                            mac, result.txPowerAt1m, result.pathLossExponent));
                 }
                 
-                // 4. UI 즉시 반영을 위한 어댑터 알림
+                // ★ 4. 캘리브레이션 완료 후 현재 RSSI로 즉시 거리 재계산
+                if (beaconState != null && beaconState.hasValidRssi() && beaconState.hasValidCalibration()) {
+                    double currentRssi = beaconState.getRssiFiltered();
+                    double newDistance = calculateDistance(currentRssi, result.txPowerAt1m, result.pathLossExponent);
+                    beaconState.setDistanceFiltered(newDistance);
+                    
+                    Log.i(TAG, String.format("Immediate distance recalculation: MAC=%s, RSSI=%.1f → distance=%.1fm", 
+                           mac, currentRssi, newDistance));
+                }
+                
+                // 5. UI 즉시 반영을 위한 어댑터 알림
                 runOnUiThread(() -> {
                     if (mDevListAdapter != null) {
                         mDevListAdapter.notifyDataSetChanged();
@@ -2078,5 +2088,30 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             }
         }
         return mac != null && mac.length() > 6 ? mac.substring(mac.length() - 6) : "Unknown";
+    }
+    
+    /**
+     * RSSI를 거리로 변환하는 헬퍼 메서드
+     * @param rssiFiltered 필터링된 RSSI 값 (dBm)
+     * @param txPowerAt1m 1미터 거리에서의 RSSI (dBm)
+     * @param pathLossExponent 경로 손실 지수 (n)
+     * @return 계산된 거리 (미터)
+     */
+    private double calculateDistance(double rssiFiltered, double txPowerAt1m, double pathLossExponent) {
+        if (!Double.isFinite(rssiFiltered) || !Double.isFinite(txPowerAt1m) || 
+            !Double.isFinite(pathLossExponent) || pathLossExponent <= 0.0) {
+            return Double.NaN;
+        }
+        
+        if (rssiFiltered >= txPowerAt1m) {
+            return 0.1; // 최소 거리 0.1m
+        }
+        
+        // distance = 10^((txPowerAt1m - rssiFiltered)/(10 * n))
+        double exponent = (txPowerAt1m - rssiFiltered) / (10.0 * pathLossExponent);
+        double distance = Math.pow(10, exponent);
+        
+        // 합리적 범위로 제한 (0.1m ~ 200m)
+        return Math.max(0.1, Math.min(200.0, distance));
     }
 }
