@@ -16,7 +16,8 @@
       "Bash(gradlew:*)",
       "Bash(.gradlew:*)",
       "Bash(cmd /c:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(rg:*)"
     ],
     "deny": [],
     "ask": [],

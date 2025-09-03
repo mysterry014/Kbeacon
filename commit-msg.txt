@@ -1,5 +1,5 @@
-fix(critical): 측정 시작 버튼 크래시 완전 해결 - 3가지 핵심 원인 동시 수정 
+  fix(critical): String.format 포맷 불일치 크래시 완전 해결
 
- • CalibrationDialog: UI Handler 메인 루퍼 고정 및 NPE 방지 강화    
- • DeviceScanActivity: 캘리브레이션 시작 전 4단계 권한/상태 검증 추가 
- • BleService: 스캔 예외 처리 개선 및 오류 브로드캐스트 시스템 구축
+  • CalibrationSession: adaptiveTarget=%d → %s 변경으로 IllegalFormatConversion 제거
+  • Locale.US 고정 및 String.valueOf() 안전화로 로버스트성 강화
+  • 전수 점검으로 동일 유형 잠재 위험 139개 지점 검증 완료

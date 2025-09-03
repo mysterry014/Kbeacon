@@ -9,6 +9,7 @@ import com.kkmcn.sensordemo.data.Prefs;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 특정 MAC에 대한 캘리브레이션 세션
@@ -267,9 +268,10 @@ public class CalibrationSession {
             }
         }
         
-        Log.w(TAG, String.format("[STAGE-INIT] Stage %d initialized: stageComplete=%s, adaptiveTarget=%d, intakeEnabled=%s, bufferSize=%d", 
-               stageIndex + 1, stageComplete, "fixed40+20s", intakeEnabled, 
-               stageRssiSamples.get(stageIndex).size()));
+        Log.w(TAG, String.format(Locale.US,
+                "[STAGE-INIT] Stage %d initialized: stageComplete=%s, adaptiveTarget=%s, intakeEnabled=%s, bufferSize=%d",
+                stageIndex + 1, String.valueOf(stageComplete), "fixed40+20s",
+                String.valueOf(intakeEnabled), stageRssiSamples.get(stageIndex).size()));
         
         // ★ 단계 시작 콜백 (카운트다운 시작 신호)
         if (listener != null) {
