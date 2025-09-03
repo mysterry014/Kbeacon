@@ -3,6 +3,7 @@ package com.kkmcn.sensordemo.cal;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -81,7 +82,7 @@ public class CalibrationDialog {
         this.context = context;
         this.mac = mac;
         this.callback = callback;
-        this.uiHandler = new Handler();
+        this.uiHandler = new Handler(Looper.getMainLooper());
     }
     
     private void show() {
@@ -176,12 +177,20 @@ public class CalibrationDialog {
     private void resetCalibrationUI() {
         Log.d(TAG, "Resetting calibration UI for fresh start");
         
+        // NPE 방지를 위한 UI 컴포넌트 null 체크
+        if (stageStatusTexts == null || tvInstructions == null || btnAction == null || layoutResult == null) {
+            Log.e(TAG, "UI components not initialized yet; defer reset");
+            return;
+        }
+        
         // BleService의 비콘 필터링 상태 완전 리셋
         callback.resetBeaconFiltering(mac);
         
         // 단계별 상태 텍스트 초기화
         for (int i = 0; i < stageStatusTexts.length; i++) {
-            stageStatusTexts[i].setText(String.format("%dm: 대기", i + 1));
+            if (stageStatusTexts[i] != null) {
+                stageStatusTexts[i].setText(String.format("%dm: 대기", i + 1));
+            }
         }
         
         // 결과 레이아웃 숨기기
@@ -340,7 +349,10 @@ public class CalibrationDialog {
     }
     
     private void runOnUiThread(Runnable action) {
-        if (uiHandler != null) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action.run();
+        } else {
+            if (uiHandler == null) uiHandler = new Handler(Looper.getMainLooper());
             uiHandler.post(action);
         }
     }
@@ -354,7 +366,7 @@ public class CalibrationDialog {
         tvInstructions.setText(String.format("%dm 지점으로 이동하여 대기해주세요", stageIndex + 1));
         stageStatusTexts[stageIndex].setText(String.format("%dm: 준비중... %d", stageIndex + 1, countdownRemaining));
         
-        Handler countdownHandler = new Handler();
+        Handler countdownHandler = new Handler(Looper.getMainLooper());
         Runnable countdownRunnable = new Runnable() {
             @Override
             public void run() {

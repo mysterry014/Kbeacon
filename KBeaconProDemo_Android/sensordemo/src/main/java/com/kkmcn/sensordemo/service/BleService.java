@@ -94,6 +94,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public static final String ACTION_CALIB_RSSI_SAMPLE = "com.kkmcn.sensordemo.CALIB_RSSI_SAMPLE";
     public static final String ACTION_CALIB_STAGE_COMPLETE = "com.kkmcn.sensordemo.CALIB_STAGE_COMPLETE";
     public static final String ACTION_CALIB_STAGE_STARTED = "com.kkmcn.sensordemo.CALIB_STAGE_STARTED";
+    public static final String ACTION_CALIBRATION_ERROR = "com.kkmcn.sensordemo.CALIBRATION_ERROR";
     
     // 스캔 결과 감시
     private volatile long lastAdvTs = 0L;
@@ -1288,6 +1289,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
+     * 캘리브레이션 오류 브로드캐스트
+     */
+    private void sendCalibrationError(String mac, String message) {
+        Intent intent = new Intent(ACTION_CALIBRATION_ERROR);
+        intent.putExtra("mac", mac);
+        intent.putExtra("message", message);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        
+        Log.e(TAG, String.format("[BROADCAST] Calibration error: mac=%s, message=%s", mac, message));
+    }
+
+    /**
      * 캘리브레이션 단계 시작 브로드캐스트 (public 접근)
      */
     public void broadcastCalibrationStageStartedPublic(String mac, int stageIndex, double distanceMeters) {
@@ -1412,8 +1425,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             
         } catch (SecurityException e) {
             Log.e(TAG, "[CALIB-SCAN] Permission denied: " + e.getMessage());
+            sendCalibrationError(targetMac, "권한 없음: BLUETOOTH_SCAN");
         } catch (Exception e) {
             Log.e(TAG, "[CALIB-SCAN] Failed to start scan: " + e.getMessage(), e);
+            sendCalibrationError(targetMac, "스캔 시작 실패: " + e.getMessage());
         }
     }
     

@@ -343,6 +343,36 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     // 단계 시작 브로드캐스트 (CalibrationDialog가 카운트다운을 시작함)
                     break;
                 }
+                
+                case BleService.ACTION_CALIBRATION_ERROR: {
+                    // extras: mac, message
+                    String errorMac = intent.getStringExtra("mac");
+                    String errorMessage = intent.getStringExtra("message");
+                    
+                    Log.e(TAG, String.format("[CALIB-ERROR] MAC: %s, Error: %s", errorMac, errorMessage));
+                    
+                    runOnUiThread(() -> {
+                        toastShow("캘리브레이션 오류: " + errorMessage);
+                        isCalibrating = false;
+                        activeCalibrationSession = null;
+                        
+                        // 캘리브레이션 모드 해제
+                        if (mServiceBound && mBleService != null) {
+                            mBleService.setCalibrationMode(false, null);
+                            mBleService.clearCalibrationTarget();
+                        }
+                        
+                        // UI 업데이트
+                        BeaconState beaconState = mBeaconDataStore.get(errorMac);
+                        if (beaconState != null) {
+                            beaconState.setCalibrationInProgress(false);
+                            if (mDevListAdapter != null) {
+                                mDevListAdapter.notifyDataSetChanged();
+                            }
+                        }
+                    });
+                    break;
+                }
                     
                 case BleService.ACTION_SCAN_NO_RESULTS:
                     boolean locEnabled = intent.getBooleanExtra("location_enabled", false);
@@ -1170,6 +1200,7 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         filter.addAction(BleService.ACTION_CALIB_RSSI_SAMPLE);
         filter.addAction(BleService.ACTION_CALIB_STAGE_COMPLETE);
         filter.addAction(BleService.ACTION_CALIB_STAGE_STARTED);
+        filter.addAction(BleService.ACTION_CALIBRATION_ERROR);
         filter.addAction("com.kkmcn.sensordemo.NEED_PERMISSIONS");
         LocalBroadcastManager.getInstance(this).registerReceiver(mServiceBroadcastReceiver, filter);
         receiverRegistered = true;
@@ -1657,13 +1688,45 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         CalibrationDialog.show(this, mac, new CalibrationDialog.CalibrationCallback() {
             @Override
             public void onCalibrationStarted() {
+                // 1) BT ON 확인
+                BluetoothAdapter ba = BluetoothAdapter.getDefaultAdapter();
+                if (ba == null || !ba.isEnabled()) {
+                    toastShow("블루투스가 꺼져 있습니다. 켜고 다시 시도하세요.");
+                    isCalibrating = false;
+                    return;
+                }
+
+                // 2) Android 12+ 권한 체크 (BLUETOOTH_SCAN)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (ContextCompat.checkSelfPermission(DeviceScanActivity.this, Manifest.permission.BLUETOOTH_SCAN)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        requestPermsOnce(new String[]{Manifest.permission.BLUETOOTH_SCAN}, PERMISSION_SCAN);
+                        isCalibrating = false;
+                        return;
+                    }
+                } else {
+                    // 위치 권한 필요(스캔용)
+                    if (ContextCompat.checkSelfPermission(DeviceScanActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        requestPermsOnce(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_FINE_LOCATION);
+                        isCalibrating = false;
+                        return;
+                    }
+                }
+
+                // 3) Service 바인드/널 가드
+                if (!(mServiceBound && mBleService != null)) {
+                    toastShow("서비스 연결 대기 중입니다. 잠시 후 다시 시도하세요.");
+                    isCalibrating = false;
+                    return;
+                }
+
+                // 4) OK → 캘리브레이션 모드로 진입
                 isCalibrating = true;
                 Log.i(TAG, "Calibration started - alarm guard activated");
                 
                 // BleService에 캘리브레이션 모드 설정 (3중 게이트 활성화)
-                if (mServiceBound && mBleService != null) {
-                    mBleService.setCalibrationMode(true, mac);
-                }
+                mBleService.setCalibrationMode(true, mac);
                 
                 // ★ UI 즉시 업데이트: 캘리브레이션 시작 상태 표시
                 runOnUiThread(() -> {
