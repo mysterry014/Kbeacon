@@ -1,6 +1,12 @@
-fix(distance): 거리 계산 3가지 핵심 이슈 완전 해결
+  fix(calibration): 캘리브레이션 다이얼로그 자동시작 및 저장 버튼 문제 해결
 
-  - UI 렌더링: 0.0 대신 '–' 표시로 시각적 개선
-  - 방어적 계산: NaN/무한값 안전 처리 강화  
-  - EMA 시딩: 캘리브레이션 후 즉시 재계산 보장
-  - 디버그 로그: 캘리브레이션 상태 추적 확충
+  - CalibrationDialog showExistingResult() 자동시작 방지
+    - showPreviousCalibrationResult() 메서드 분리 추가
+    - 기존 결과 표시 시 "재측정" 버튼 고정 유지
+  - 저장 버튼 콜백 미실행 문제 수정
+    - showCalibrationResult()와 기존 결과 표시 로직 분리
+    - saveAndFinish() 정상 호출 보장
+  - BleService 캘리브레이션 저장/로드 메서드 구현
+    - CalibrationSession import 및 SharedPreferences 추가
+    - public 필드 직접 접근으로 수정
+    - QualityRating 매개변수 지원

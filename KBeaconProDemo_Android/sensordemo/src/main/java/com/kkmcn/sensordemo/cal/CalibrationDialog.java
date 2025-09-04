@@ -155,6 +155,8 @@ public class CalibrationDialog {
     }
     
     private void showExistingResult(CalibrationSession.CalibrationResult result) {
+        Log.d(TAG, "showExistingResult: Showing existing calibration result");
+        
         tvInstructions.setText("이전 보정 결과:");
         
         // 단계들을 완료로 표시
@@ -162,9 +164,12 @@ public class CalibrationDialog {
             stageStatusTexts[i].setText(String.format("%dm: 완료", i + 1));
         }
         
-        showCalibrationResult(result);
+        // 기존 결과만 표시 (버튼은 재측정으로 유지)
+        showPreviousCalibrationResult(result);
         
+        // 버튼은 재측정으로 고정
         btnAction.setText("재측정");
+        btnAction.setEnabled(true);
         btnAction.setOnClickListener(v -> startCalibration());
     }
     
@@ -468,6 +473,56 @@ public class CalibrationDialog {
     }
     
     // onCalibrationComplete() 메서드 제거 - 콜백으로 대체됨
+    
+    /**
+     * 이전 캘리브레이션 결과를 표시 (버튼 변경 없이)
+     */
+    private void showPreviousCalibrationResult(CalibrationSession.CalibrationResult result) {
+        layoutResult.setVisibility(View.VISIBLE);
+        
+        String ratingText;
+        String ratingColor;
+        String recommendation;
+        
+        switch (result.rating) {
+            case GOOD:
+                ratingText = "우수 (GOOD)";
+                ratingColor = "#4CAF50"; // 녹색
+                recommendation = "이미 저장된 보정 결과입니다.";
+                break;
+            case BORDERLINE:
+                ratingText = "보통 (BORDERLINE)";
+                ratingColor = "#FF9800"; // 주황색
+                recommendation = "이미 저장된 보정 결과입니다.";
+                break;
+            case BAD:
+            default:
+                ratingText = "불량 (BAD)";
+                ratingColor = "#F44336"; // 빨간색
+                recommendation = "이미 저장된 보정 결과입니다.";
+                break;
+        }
+        
+        String resultText = String.format(
+            "보정 상수:\n" +
+            "• 1m 기준 RSSI: %.2f dBm\n" +
+            "• 경로 손실 지수: %.2f\n\n" +
+            "품질 평가:\n" +
+            "• R² (결정계수): %.2f\n" +
+            "• RMSE: %.2f dB\n" +
+            "• 최대잔차: %.2f dB\n" +
+            "• 판정: %s\n\n" +
+            "%s",
+            result.txPowerAt1m, result.pathLossExponent,
+            result.rSquared, result.rmse, result.maxResidual,
+            ratingText, recommendation
+        );
+        
+        tvResult.setText(resultText);
+        tvInstructions.setText("이전 보정 결과");
+        
+        // 버튼은 변경하지 않음 - 호출하는 쪽에서 관리
+    }
     
     private void showCalibrationResult(CalibrationSession.CalibrationResult result) {
         layoutResult.setVisibility(View.VISIBLE);

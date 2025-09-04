@@ -16,6 +16,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Binder;
@@ -38,6 +39,7 @@ import com.kkmcn.sensordemo.R;
 import com.kkmcn.sensordemo.model.BeaconState;
 import com.kkmcn.sensordemo.utils.RssiWindow;
 import com.kkmcn.sensordemo.data.Prefs;
+import com.kkmcn.sensordemo.cal.CalibrationSession;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -3161,4 +3163,77 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     
     
     // ==================== 기존 메서드 래핑 (하위 호환성) ====================
+    
+    /**
+     * 켈리브레이션 결과를 SharedPreferences에 저장
+     * @param deviceMac 장치 MAC 주소
+     * @param deviceName 장치 이름 (저장 키로 사용)
+     * @param result 켈리브레이션 결과
+     */
+    public void saveCalibrationResultToPrefs(String deviceMac, String deviceName, CalibrationSession.CalibrationResult result) {
+        Log.i(TAG, String.format(Locale.US, "[SAVE-CALIBRATION] Saving for device: %s (mac=%s)", deviceName, deviceMac));
+        Log.i(TAG, String.format(Locale.US, "[SAVE-CALIBRATION] Values: tx1m=%.2f, n=%.2f, R²=%.3f, RMSE=%.2f", 
+               result.txPowerAt1m, result.pathLossExponent, result.rSquared, result.rmse));
+        
+        try {
+            SharedPreferences prefs = getSharedPreferences("BeaconCalibration", Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            
+            String keyPrefix = "cal_" + deviceName;
+            editor.putFloat(keyPrefix + "_txPower", (float) result.txPowerAt1m);
+            editor.putFloat(keyPrefix + "_pathLoss", (float) result.pathLossExponent);
+            editor.putFloat(keyPrefix + "_rSquared", (float) result.rSquared);
+            editor.putFloat(keyPrefix + "_rmse", (float) result.rmse);
+            editor.putLong(keyPrefix + "_timestamp", System.currentTimeMillis());
+            
+            boolean saved = editor.commit();
+            Log.i(TAG, String.format(Locale.US, "[SAVE-CALIBRATION] SharedPreferences save result: %b", saved));
+            
+            if (saved) {
+                Log.i(TAG, String.format(Locale.US, "[SAVE-CALIBRATION] Successfully saved calibration for %s", deviceName));
+            } else {
+                Log.e(TAG, String.format(Locale.US, "[SAVE-CALIBRATION] Failed to save calibration for %s", deviceName));
+            }
+        } catch (Exception e) {
+            Log.e(TAG, String.format(Locale.US, "[SAVE-CALIBRATION] Exception saving calibration for %s: %s", deviceName, e.getMessage()), e);
+        }
+    }
+    
+    /**
+     * SharedPreferences에서 켈리브레이션 결과 로드
+     * @param deviceMac 장치 MAC 주소  
+     * @return 켈리브레이션 결과 또는 null
+     */
+    public CalibrationSession.CalibrationResult loadCalibrationResultFromPrefs(String deviceMac) {
+        BeaconState state = beaconStates.get(deviceMac);
+        if (state == null) {
+            return null;
+        }
+        
+        String deviceName = state.getDisplayName();
+        SharedPreferences prefs = getSharedPreferences("BeaconCalibration", Context.MODE_PRIVATE);
+        String keyPrefix = "cal_" + deviceName;
+        
+        if (prefs.contains(keyPrefix + "_txPower") && prefs.contains(keyPrefix + "_pathLoss")) {
+            float txPower = prefs.getFloat(keyPrefix + "_txPower", Float.NaN);
+            float pathLoss = prefs.getFloat(keyPrefix + "_pathLoss", Float.NaN);
+            float rSquared = prefs.getFloat(keyPrefix + "_rSquared", Float.NaN);
+            float rmse = prefs.getFloat(keyPrefix + "_rmse", Float.NaN);
+            
+            Log.i(TAG, String.format(Locale.US, "[LOAD-CALIBRATION] Loaded for %s: tx1m=%.2f, n=%.2f, R²=%.3f, RMSE=%.2f", 
+                   deviceName, txPower, pathLoss, rSquared, rmse));
+            
+            // QualityRating을 기본값으로 설정 (저장된 값에서는 정확한 평가가 어렵기 때문)
+            CalibrationSession.QualityRating defaultRating = CalibrationSession.QualityRating.GOOD;
+            if (rSquared < 0.80 || rmse > 3.0) {
+                defaultRating = CalibrationSession.QualityRating.BAD;
+            } else if (rSquared < 0.90 || rmse > 2.0) {
+                defaultRating = CalibrationSession.QualityRating.BORDERLINE;
+            }
+            
+            return new CalibrationSession.CalibrationResult(txPower, pathLoss, rSquared, rmse, 0.0, defaultRating);
+        }
+        
+        return null;
+    }
 }
