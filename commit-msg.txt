@@ -1,7 +1,6 @@
-  fix(distance): 김철수 비콘 거리 0.1m 고정 문제 완전 해결
+fix(distance): 거리 계산 3가지 핵심 이슈 완전 해결
 
-  - EMA 시딩 로직 개선: Double.isFinite() 검증 및 강제 재시딩
-  - 거리 재계산 통합 함수 추가: applyCalibrationAndRecompute()
-  - 캘리브레이션 저장 후 즉시 BleService 재계산 연결
-  - 상세 디버그 로그 추가 (Locale.US 고정)
-  - 무효한 EMA 캐시값 감지 및 자동 복구
+  - UI 렌더링: 0.0 대신 '–' 표시로 시각적 개선
+  - 방어적 계산: NaN/무한값 안전 처리 강화  
+  - EMA 시딩: 캘리브레이션 후 즉시 재계산 보장
+  - 디버그 로그: 캘리브레이션 상태 추적 확충

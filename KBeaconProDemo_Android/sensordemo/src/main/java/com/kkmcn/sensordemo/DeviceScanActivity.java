@@ -1853,32 +1853,43 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             
             @Override
             public void saveCalibrationResult(String mac, CalibrationSession.CalibrationResult result) {
+                Log.e(TAG, "★★★ [CALLBACK-TRACE] saveCalibrationResult CALLED ★★★");
+                Log.e(TAG, String.format(Locale.US, "[CALLBACK-TRACE] MAC=%s, tx1m=%.2f, n=%.2f, R²=%.2f", 
+                       mac, result.txPowerAt1m, result.pathLossExponent, result.rSquared));
+                
                 // 1. Prefs에 캘리브레이션 결과 저장
                 mPrefs.saveCalibration(mac, result.txPowerAt1m, result.pathLossExponent, 
                                      result.rSquared, result.rmse, result.maxResidual, result.timestampMs);
+                Log.e(TAG, "[CALLBACK-TRACE] Step 1: Saved to preferences");
                 
                 // 2. BeaconState 업데이트
                 BeaconState beaconState = mBeaconDataStore.get(mac);
                 if (beaconState != null) {
                     beaconState.setTxPowerAt1m(result.txPowerAt1m);
                     beaconState.setPathLossExponent(result.pathLossExponent);
+                    Log.e(TAG, "[CALLBACK-TRACE] Step 2: Updated BeaconState");
+                } else {
+                    Log.e(TAG, "[CALLBACK-TRACE] Step 2: BeaconState NOT FOUND for MAC: " + mac);
                 }
                 
                 // 3. DistanceEstimator에 새 캘리브레이션 적용
                 DistanceEstimator estimator = mDistanceEstimators.get(mac);
                 if (estimator != null) {
                     estimator.setCalibration(result.txPowerAt1m, result.pathLossExponent);
-                    Log.i(TAG, String.format("Applied calibration to estimator: MAC=%s, tx1m=%.2f, n=%.2f", 
+                    Log.e(TAG, String.format(Locale.US, "[CALLBACK-TRACE] Step 3: Applied calibration to estimator: MAC=%s, tx1m=%.2f, n=%.2f", 
                            mac, result.txPowerAt1m, result.pathLossExponent));
+                } else {
+                    Log.e(TAG, "[CALLBACK-TRACE] Step 3: DistanceEstimator NOT FOUND for MAC: " + mac);
                 }
                 
                 // ★ 4. BleService에 캘리브레이션 적용 및 즉시 거리 재계산 요청 (EMA 캐시 포함)
                 if (mBleService != null) {
+                    Log.e(TAG, "[CALLBACK-TRACE] Step 4: About to call BleService.applyCalibrationAndRecompute()");
                     mBleService.applyCalibrationAndRecompute(mac, result.txPowerAt1m, result.pathLossExponent);
-                    Log.i(TAG, String.format(Locale.US, "Requested BleService calibration apply: MAC=%s, tx1m=%.2f, n=%.2f", 
+                    Log.e(TAG, String.format(Locale.US, "[CALLBACK-TRACE] Step 4: Requested BleService calibration apply: MAC=%s, tx1m=%.2f, n=%.2f", 
                            mac, result.txPowerAt1m, result.pathLossExponent));
                 } else {
-                    Log.w(TAG, "BleService not available for immediate calibration apply");
+                    Log.e(TAG, "[CALLBACK-TRACE] Step 4: BleService is NULL - cannot apply calibration!");
                 }
                 
                 // 5. UI 즉시 반영을 위한 어댑터 알림

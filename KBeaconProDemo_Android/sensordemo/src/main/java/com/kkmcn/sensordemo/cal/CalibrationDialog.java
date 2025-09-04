@@ -526,12 +526,26 @@ public class CalibrationDialog {
     }
     
     private void saveAndFinish(CalibrationSession.CalibrationResult result) {
-        Log.d(TAG, "Saving calibration result for MAC: " + mac);
+        Log.e(TAG, "★★★ [SAVE-AND-FINISH] saveAndFinish() CALLED ★★★");
+        Log.e(TAG, String.format(java.util.Locale.US, "[SAVE-AND-FINISH] MAC: %s", mac));
+        Log.e(TAG, String.format(java.util.Locale.US, "[SAVE-AND-FINISH] Result: tx1m=%.2f, n=%.2f, R²=%.2f", 
+               result.txPowerAt1m, result.pathLossExponent, result.rSquared));
         
-        callback.saveCalibrationResult(mac, result);
-        callback.onCalibrationFinished(true);
+        if (callback != null) {
+            Log.e(TAG, "[SAVE-AND-FINISH] About to call callback.saveCalibrationResult()");
+            callback.saveCalibrationResult(mac, result);
+            Log.e(TAG, "[SAVE-AND-FINISH] callback.saveCalibrationResult() completed");
+            
+            Log.e(TAG, "[SAVE-AND-FINISH] About to call callback.onCalibrationFinished(true)");
+            callback.onCalibrationFinished(true);
+            Log.e(TAG, "[SAVE-AND-FINISH] callback.onCalibrationFinished(true) completed");
+        } else {
+            Log.e(TAG, "[SAVE-AND-FINISH] CRITICAL: callback is NULL!");
+        }
         
+        Log.e(TAG, "[SAVE-AND-FINISH] About to dismiss dialog");
         dialog.dismiss();
+        Log.e(TAG, "[SAVE-AND-FINISH] Dialog dismissed - saveAndFinish() DONE");
     }
     
     private void cancelCalibration() {

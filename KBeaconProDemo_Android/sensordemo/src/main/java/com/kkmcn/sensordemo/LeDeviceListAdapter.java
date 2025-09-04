@@ -240,9 +240,10 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		int lastRssi = beaconState.getLastRssi();
 		
 		String rssiText;
-		if (rssiFiltered != 0.0) {
+		// [4단계] 0.0 표시 방지: 유효한 rssiFiltered 우선, 없으면 lastRssi, 둘 다 없으면 '–'
+		if (Double.isFinite(rssiFiltered) && rssiFiltered < -10.0) { // RSSI는 일반적으로 -30~-100 dBm 범위
 			rssiText = String.format("%.0f dBm", rssiFiltered);
-		} else if (lastRssi != 0) {
+		} else if (lastRssi < -10) { // 유효한 RSSI 범위 체크
 			rssiText = String.format("%d dBm", lastRssi);
 		} else {
 			rssiText = "–";
@@ -262,7 +263,13 @@ public class LeDeviceListAdapter extends BaseAdapter {
 			distanceText = beaconState.getCalibrationStatusMessage();
 		} else if (beaconState.hasValidCalibration() && beaconState.hasValidDistance()) {
 			// 정상 거리 표시 (캘리브레이션 완료 + 유효한 거리값)
-			distanceText = String.format(Locale.US, "%.1f m", beaconState.getDistanceFiltered());
+			double distance = beaconState.getDistanceFiltered();
+			// [4단계] 0.0 표시 방지: 거리가 0.1 미만이거나 비정상인 경우 '–' 표시
+			if (Double.isFinite(distance) && distance >= 0.1) {
+				distanceText = String.format(Locale.US, "%.1f m", distance);
+			} else {
+				distanceText = "–";
+			}
 		} else {
 			// 보정 미적용 또는 거리 계산 안 됨
 			distanceText = "–";
