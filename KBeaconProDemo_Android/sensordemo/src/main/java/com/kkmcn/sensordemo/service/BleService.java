@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -961,14 +962,31 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 // 거리 계산 (DevicePrefs에서 캘리브레이션 값 사용)
                 double distance = calculateDistanceWithDevicePrefs(mac, rssiFiltered);
                 
-                // 거리 EMA 적용
+                // 거리 EMA 적용 (개선된 시딩 로직)
                 Double prevDistanceEma = distanceEmaCache.get(mac);
-                double distanceFiltered = prevDistanceEma == null ?
-                    distance :
-                    DISTANCE_EMA_ALPHA * distance + (1 - DISTANCE_EMA_ALPHA) * prevDistanceEma;
+                double distanceFiltered;
+                
+                if (prevDistanceEma == null || !Double.isFinite(prevDistanceEma)) {
+                    // 첫 업데이트 또는 무효한 값 - 시딩
+                    distanceFiltered = distance;
+                    Log.d(TAG, String.format("[DISTANCE-EMA-SEED] Seeding distance EMA for %s: %.3fm", mac, distanceFiltered));
+                } else {
+                    // 기존 EMA 적용
+                    distanceFiltered = DISTANCE_EMA_ALPHA * distance + (1 - DISTANCE_EMA_ALPHA) * prevDistanceEma;
+                }
                 
                 distanceEmaCache.put(mac, distanceFiltered);
                 state.setDistanceFiltered(distanceFiltered);
+                
+                // [DIST] 상세 로그 (사용자 요청)
+                if (mac != null && (mac.toLowerCase().contains("561976") || mac.toLowerCase().contains("김철수"))) {
+                    Log.i(TAG, String.format(Locale.US, "[DIST-DETAIL] MAC=%s, name=%s, rssi=%.1f, tx1m=%.2f, n=%.2f, rawDist=%.3fm, prevEma=%s, filteredDist=%.3fm", 
+                          mac, state.getName(), rssiFiltered, 
+                          state.getTxPowerAt1m(), state.getPathLossExponent(),
+                          distance, 
+                          (prevDistanceEma != null) ? String.format(Locale.US, "%.3f", prevDistanceEma) : "null",
+                          distanceFiltered));
+                }
                 
                 // 자동 알람 거리 초과 감지
                 checkAutoAlarmTrigger(mac, state, distanceFiltered);
@@ -998,9 +1016,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // distance(m) = 10^((txPowerAt1m - rssiFiltered)/(10 * n))
         double distance = Math.pow(10, (txPowerAt1m - rssiFiltered) / (10.0 * pathLossN));
         
-        // [Issue 3 Debug] 문제의 비콘에 대한 거리 계산 상세 로깅
+        // [Issue 3 Debug] 문제의 비콘에 대한 거리 계산 상세 로깅 (Locale 고정)
         if (mac != null && mac.toLowerCase().contains("561976")) {
-            Log.e(TAG, String.format("[561976_DISTANCE] MAC=%s, name=%s, rssi=%.1f, txPower=%.2f, n=%.2f, distance=%.3fm", 
+            Log.e(TAG, String.format(Locale.US, "[561976_DISTANCE] MAC=%s, name=%s, rssi=%.1f, txPower=%.2f, n=%.2f, distance=%.3fm", 
                 mac, name, rssiFiltered, txPowerAt1m, pathLossN, distance));
         }
         
@@ -2985,6 +3003,108 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private void resumeAutoRingSchedulers() {
         // 현재는 특별한 재개 로직이 필요하지 않음 (거리 초과 시 자동으로 다시 시작됨)
         Log.d(TAG, "[CALIB-GATE2] Auto ring schedulers resumed");
+    }
+    
+    // ==================== 거리 재계산 함수 (Issue 수정용) ====================
+    
+    /**
+     * 특정 MAC에 대해 캘리브레이션 적용 후 즉시 거리 재계산
+     * @param mac 대상 MAC 주소
+     * @param txPowerAt1m 1m 기준 RSSI (dBm)
+     * @param pathLossN 경로 손실 지수 (n)
+     */
+    public void applyCalibrationAndRecompute(String mac, double txPowerAt1m, double pathLossN) {
+        if (mac == null || mac.trim().isEmpty()) {
+            Log.e(TAG, "[RECOMPUTE] Invalid MAC address");
+            return;
+        }
+        
+        BeaconState state = beaconStates.get(mac);
+        if (state == null) {
+            Log.w(TAG, String.format("[RECOMPUTE] BeaconState not found for MAC: %s", mac));
+            return;
+        }
+        
+        Log.d(TAG, String.format(Locale.US, "[RECOMPUTE] Applying calibration for MAC=%s: tx1m=%.2f, n=%.2f", 
+               mac, txPowerAt1m, pathLossN));
+        
+        // 1. BeaconState에 캘리브레이션 값 업데이트
+        state.updateCalibration(txPowerAt1m, pathLossN);
+        
+        // 2. 현재 유효한 RSSI가 있으면 즉시 거리 재계산
+        if (state.hasValidRssi()) {
+            recomputeDistance(mac);
+        } else {
+            Log.w(TAG, String.format("[RECOMPUTE] No valid RSSI for immediate recompute: %s", mac));
+        }
+        
+        // 3. UI 업데이트 브로드캐스트
+        broadcastBeaconUpdated(mac);
+    }
+    
+    /**
+     * 특정 MAC의 거리값을 현재 RSSI와 캘리브레이션 값으로 재계산
+     * @param mac 대상 MAC 주소
+     */
+    public void recomputeDistance(String mac) {
+        if (mac == null || mac.trim().isEmpty()) {
+            Log.e(TAG, "[RECOMPUTE] Invalid MAC address for recompute");
+            return;
+        }
+        
+        BeaconState state = beaconStates.get(mac);
+        if (state == null) {
+            Log.w(TAG, String.format("[RECOMPUTE] BeaconState not found for recompute: %s", mac));
+            return;
+        }
+        
+        // 유효한 캘리브레이션과 RSSI가 있는지 확인
+        if (!state.hasValidCalibration() || !state.hasValidRssi()) {
+            Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Missing calibration or RSSI data for %s (calib=%b, rssi=%b)", 
+                   mac, state.hasValidCalibration(), state.hasValidRssi()));
+            return;
+        }
+        
+        double rssiFiltered = state.getRssiFiltered();
+        
+        // 거리 계산
+        double rawDistance = calculateDistanceWithDevicePrefs(mac, rssiFiltered);
+        
+        // EMA 적용 (개선된 시딩 로직)
+        Double prevDistanceEma = distanceEmaCache.get(mac);
+        double distanceFiltered;
+        
+        if (prevDistanceEma == null || !Double.isFinite(prevDistanceEma)) {
+            // 첫 업데이트 또는 무효한 값 - 시딩
+            distanceFiltered = rawDistance;
+            Log.d(TAG, String.format(Locale.US, "[RECOMPUTE-EMA] Seeding distance EMA for %s: %.3fm", mac, distanceFiltered));
+        } else {
+            // 기존 EMA 적용
+            distanceFiltered = DISTANCE_EMA_ALPHA * rawDistance + (1 - DISTANCE_EMA_ALPHA) * prevDistanceEma;
+            Log.d(TAG, String.format(Locale.US, "[RECOMPUTE-EMA] Applied distance EMA for %s: raw=%.3fm, prev=%.3fm, filtered=%.3fm", 
+                   mac, rawDistance, prevDistanceEma, distanceFiltered));
+        }
+        
+        // 캐시와 BeaconState 업데이트
+        distanceEmaCache.put(mac, distanceFiltered);
+        state.setDistanceFiltered(distanceFiltered);
+        
+        Log.i(TAG, String.format(Locale.US, "[RECOMPUTE] Distance recomputed for %s: rssi=%.1f → distance=%.3fm", 
+               mac, rssiFiltered, distanceFiltered));
+        
+        // 자동 알람 체크 (필요시)
+        checkAutoAlarmTrigger(mac, state, distanceFiltered);
+    }
+    
+    /**
+     * 비콘 업데이트 브로드캐스트 발송 (UI 새로고침용)
+     * @param mac 업데이트된 MAC 주소
+     */
+    private void broadcastBeaconUpdated(String mac) {
+        Intent intent = new Intent(ACTION_BEACON_UPDATE);
+        intent.putExtra("updated_mac", mac);
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        Log.d(TAG, String.format(Locale.US, "[BROADCAST] Beacon update sent for: %s", mac));
     }
     
     

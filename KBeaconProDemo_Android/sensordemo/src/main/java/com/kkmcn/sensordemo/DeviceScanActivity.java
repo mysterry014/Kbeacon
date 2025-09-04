@@ -1872,14 +1872,13 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                            mac, result.txPowerAt1m, result.pathLossExponent));
                 }
                 
-                // ★ 4. 캘리브레이션 완료 후 현재 RSSI로 즉시 거리 재계산
-                if (beaconState != null && beaconState.hasValidRssi() && beaconState.hasValidCalibration()) {
-                    double currentRssi = beaconState.getRssiFiltered();
-                    double newDistance = calculateDistance(currentRssi, result.txPowerAt1m, result.pathLossExponent);
-                    beaconState.setDistanceFiltered(newDistance);
-                    
-                    Log.i(TAG, String.format("Immediate distance recalculation: MAC=%s, RSSI=%.1f → distance=%.1fm", 
-                           mac, currentRssi, newDistance));
+                // ★ 4. BleService에 캘리브레이션 적용 및 즉시 거리 재계산 요청 (EMA 캐시 포함)
+                if (mBleService != null) {
+                    mBleService.applyCalibrationAndRecompute(mac, result.txPowerAt1m, result.pathLossExponent);
+                    Log.i(TAG, String.format(Locale.US, "Requested BleService calibration apply: MAC=%s, tx1m=%.2f, n=%.2f", 
+                           mac, result.txPowerAt1m, result.pathLossExponent));
+                } else {
+                    Log.w(TAG, "BleService not available for immediate calibration apply");
                 }
                 
                 // 5. UI 즉시 반영을 위한 어댑터 알림
