@@ -1,12 +1,8 @@
-  fix(calibration): 캘리브레이션 다이얼로그 자동시작 및 저장 버튼 문제 해결
+  feat(calibration): 3가지 핵심 캘리브레이션 이슈 완전 해결 - 사용자 분석 기반
 
-  - CalibrationDialog showExistingResult() 자동시작 방지
-    - showPreviousCalibrationResult() 메서드 분리 추가
-    - 기존 결과 표시 시 "재측정" 버튼 고정 유지
-  - 저장 버튼 콜백 미실행 문제 수정
-    - showCalibrationResult()와 기존 결과 표시 로직 분리
-    - saveAndFinish() 정상 호출 보장
-  - BleService 캘리브레이션 저장/로드 메서드 구현
-    - CalibrationSession import 및 SharedPreferences 추가
-    - public 필드 직접 접근으로 수정
-    - QualityRating 매개변수 지원
+  - 캘리브레이션 자동시작 문제: showPreviousCalibrationResult() 분리로 해결
+  - Prefs↔BeaconState 동기화: MAC 정규화, Locale.US 포맷팅, 즉시 sync 구현
+  - 거리 재계산 파이프라인: applyCalibrationAndRecompute() 통합, [RECOMPUTE] 로깅
+  - 신규 비콘 캘리브레이션 로딩: processBeaconAdvertisement()에 자동 로딩 로직 추가
+  - RSSI 업데이트 후 거리 재계산: recomputeDistance() 호출 경로 보장
+  - 포괄적 로깅 시스템: [CAL-SAVE], [CAL-LOAD], [CAL-APPLY] 태그로 추적 가능

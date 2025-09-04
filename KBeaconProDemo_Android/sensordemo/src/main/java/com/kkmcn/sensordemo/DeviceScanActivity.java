@@ -1882,15 +1882,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     Log.e(TAG, "[CALLBACK-TRACE] Step 3: DistanceEstimator NOT FOUND for MAC: " + mac);
                 }
                 
-                // ★ 4. BleService에 캘리브레이션 적용 및 즉시 거리 재계산 요청 (EMA 캐시 포함)
-                if (mBleService != null) {
-                    Log.e(TAG, "[CALLBACK-TRACE] Step 4: About to call BleService.applyCalibrationAndRecompute()");
-                    mBleService.applyCalibrationAndRecompute(mac, result.txPowerAt1m, result.pathLossExponent);
-                    Log.e(TAG, String.format(Locale.US, "[CALLBACK-TRACE] Step 4: Requested BleService calibration apply: MAC=%s, tx1m=%.2f, n=%.2f", 
-                           mac, result.txPowerAt1m, result.pathLossExponent));
-                } else {
-                    Log.e(TAG, "[CALLBACK-TRACE] Step 4: BleService is NULL - cannot apply calibration!");
-                }
+                // ★ 4. BleService에서 자동으로 캘리브레이션 적용 및 거리 재계산됨 (saveCalibrationResultToPrefs에서 처리)
+                Log.e(TAG, String.format(Locale.US, "[CALLBACK-TRACE] Step 4: Calibration auto-applied in BleService: MAC=%s, tx1m=%.2f, n=%.2f", 
+                       mac, result.txPowerAt1m, result.pathLossExponent));
                 
                 // 5. UI 즉시 반영을 위한 어댑터 알림
                 runOnUiThread(() -> {
