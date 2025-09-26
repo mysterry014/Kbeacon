@@ -108,7 +108,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private static final int RSSI_WINDOW_SIZE = 10;
     private static final double RSSI_OUTLIER_THRESHOLD = 7.0;
     private static final double RSSI_EMA_ALPHA = 0.25;
-    private static final double DISTANCE_EMA_ALPHA = 0.30;
+    private static final double DISTANCE_EMA_ALPHA = 0.65;
     
     // 타이밍 상수 (ms)
     private static final long BEACON_UPDATE_INTERVAL = 500;
