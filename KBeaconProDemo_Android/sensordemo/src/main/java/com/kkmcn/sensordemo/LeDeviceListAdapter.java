@@ -261,17 +261,20 @@ public class LeDeviceListAdapter extends BaseAdapter {
 		if (beaconState.isCalibrationInProgress()) {
 			// 캘리브레이션 진행 중인 경우
 			distanceText = beaconState.getCalibrationStatusMessage();
-		} else if (beaconState.hasValidCalibration() && beaconState.hasValidDistance()) {
-			// 정상 거리 표시 (캘리브레이션 완료 + 유효한 거리값)
+		} else if (beaconState.hasValidDistance()) {
+			// 유효한 거리값이 있으면 표시 (캘리브레이션 없어도 기본값으로 계산된 거리 표시)
 			double distance = beaconState.getDistanceFiltered();
+			
 			// [4단계] 0.0 표시 방지: 거리가 0.1 미만이거나 비정상인 경우 '–' 표시
 			if (Double.isFinite(distance) && distance >= 0.1) {
-				distanceText = String.format(Locale.US, "%.1f m", distance);
+				// 캘리브레이션 상태 지시자 추가 (선택적)
+				String calibIndicator = beaconState.hasValidCalibration() ? "" : " (기본)";
+				distanceText = String.format(Locale.US, "%.1f m%s", distance, calibIndicator);
 			} else {
 				distanceText = "–";
 			}
 		} else {
-			// 보정 미적용 또는 거리 계산 안 됨
+			// 거리 계산 안 됨 또는 유효하지 않음
 			distanceText = "–";
 		}
 		viewHolder.tvDistance.setText(distanceText);

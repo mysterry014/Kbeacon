@@ -12,6 +12,11 @@ import java.util.Objects;
  * Note: 광고 RSSI 기반 데이터, 연결 중 RSSI 미사용
  */
 public class BeaconState {
+    
+    // 기본 캘리브레이션 값 상수
+    public static final double DEFAULT_TX_POWER_AT_1M = -59.0;
+    public static final double DEFAULT_PATH_LOSS_N = 2.0;
+    
     // 식별 정보
     private String name;        // 광고 이름 (비콘에서 브로드캠스트된 이름)
     private String aliasName;   // 별칭 (사용자 로컬 이름, nullable)
@@ -54,8 +59,9 @@ public class BeaconState {
         this.rssiFiltered = Double.NaN;
         this.distanceFiltered = Double.NaN;
         this.batteryPercent = -1; // -1은 알 수 없음 의미
-        this.txPowerAt1m = Double.NaN; // 캘리브레이션 안 됨 상태
-        this.pathLossExponent = Double.NaN; // 캘리브레이션 안 됨 상태
+        this.txPowerAt1m = DEFAULT_TX_POWER_AT_1M; // 기본값 사용
+        this.pathLossExponent = DEFAULT_PATH_LOSS_N; // 기본값 사용
+        this.hasCalibration = false; // 캘리브레이션 없음
         this.distanceThresholdMeters = 50.0; // 기본 50m
         this.updatedAt = System.currentTimeMillis();
     }

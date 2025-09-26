@@ -874,16 +874,21 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             // 캘리브레이션 값 로드 (신규 비콘 발견 시)
             CalibrationSession.CalibrationResult calibResult = loadCalibrationResultFromPrefs(normalizedMac);
             if (calibResult != null) {
+                // 캘리브레이션 값을 BeaconState에 적용
+                newState.setTxPowerAt1m(calibResult.txPowerAt1m);
+                newState.setPathLossExponent(calibResult.pathLossExponent);
+                newState.setHasCalibration(true);
                 Log.i(TAG, String.format(Locale.US, "[CAL-LOAD] Loaded calibration for new beacon %s: tx1m=%.5f, n=%.5f", 
-                       mac, calibResult.txPowerAt1m, calibResult.pathLossExponent));
+                       normalizedMac, calibResult.txPowerAt1m, calibResult.pathLossExponent));
             } else {
-                Log.i(TAG, String.format("[CAL-LOAD] No calibration found for new beacon %s - will use defaults", mac));
+                // 기본값은 이미 생성자에서 설정됨
+                Log.i(TAG, String.format(Locale.US, "[CAL-LOAD] No calibration found for new beacon %s - using defaults: tx1m=%.1f, n=%.1f", 
+                       normalizedMac, newState.getTxPowerAt1m(), newState.getPathLossExponent()));
             }
             
-            Log.d(TAG, "New beacon discovered: " + mac + 
-                     ", distance threshold: " + newState.getDistanceThreshold() + 
-                     ", saved battery: " + savedBattery + 
-                     ", calibrated: " + newState.hasValidCalibration());
+            Log.d(TAG, String.format(Locale.US, "New beacon discovered: %s, threshold: %.1fm, battery: %d%%, calibrated: %b, tx1m: %.1f, n: %.1f",
+                     normalizedMac, newState.getDistanceThreshold(), savedBattery, newState.hasValidCalibration(),
+                     newState.getTxPowerAt1m(), newState.getPathLossExponent()));
             return newState;
         });
         
@@ -988,16 +993,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 Log.e(TAG, String.format(Locale.US, "[RSSI] MAC=%s, raw=%d, filtered=%.1f", 
                        normalizedMac, currentRssi, rssiFiltered));
                 
-                // 캘리브레이션이 있으면 거리 재계산
-                if (state.hasValidCalibration()) {
-                    recomputeDistance(normalizedMac);
-                } else {
-                    Log.w(TAG, String.format("[RSSI] No valid calibration for distance computation: %s", normalizedMac));
+                // 기본값 또는 캘리브레이션 값으로 거리 재계산 (항상 실행)
+                recomputeDistance(normalizedMac);
+                
+                // 기본값 사용 시 로그
+                if (!state.hasValidCalibration()) {
+                    Log.w(TAG, String.format(Locale.US, "[RSSI] Using default values for distance computation: %s (tx1m=%.1f, n=%.1f)", 
+                           normalizedMac, state.getTxPowerAt1m(), state.getPathLossExponent()));
                 }
                 
                 
-                // 자동 알람 거리 초과 감지 (캘리브레이션이 있을 때만)
-                if (state.hasValidCalibration() && Double.isFinite(state.getDistanceFiltered())) {
+                // 자동 알람 거리 초과 감지 (기본값 또는 캘리브레이션 값으로 계산된 거리 사용)
+                if (Double.isFinite(state.getDistanceFiltered())) {
                     checkAutoAlarmTrigger(normalizedMac, state, state.getDistanceFiltered());
                 }
             }
@@ -1046,14 +1053,22 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // MAC 정규화
         String normalizedMac = normalizeMac(mac);
         
-        // BeaconState에서 이름 정보 가져오기
+        // BeaconState에서 캘리브레이션 값 가져오기
         BeaconState state = beaconStates.get(normalizedMac);
-        String name = (state != null) ? state.getName() : null;
+        if (state == null) {
+            Log.w(TAG, String.format("[DISTANCE-CALC] BeaconState not found for MAC: %s", normalizedMac));
+            return Double.NaN;
+        }
         
-        // Prefs 인스턴스 생성하여 캘리브레이션 값 로드
-        Prefs prefs = new Prefs(getApplicationContext());
-        double txPowerAt1m = prefs.getTxPowerAt1m(normalizedMac, name, DEFAULT_TX_POWER_AT_1M);
-        double pathLossN = prefs.getN(normalizedMac, name, DEFAULT_PATH_LOSS_EXPONENT);
+        double txPowerAt1m = state.getTxPowerAt1m();
+        double pathLossN = state.getPathLossExponent();
+        boolean hasCalibration = state.hasValidCalibration();
+        
+        // 기본값 사용 여부 로그
+        if (!hasCalibration) {
+            Log.w(TAG, String.format(Locale.US, "[DISTANCE-CALC] No calibration for %s → using defaults: tx1m=%.1f, n=%.1f",
+                normalizedMac, txPowerAt1m, pathLossN));
+        }
         
         // 방어적 거리 계산 사용
         double distance = computeDistance(rssiFiltered, txPowerAt1m, pathLossN);
@@ -3108,17 +3123,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             }
         }
         
-        // 캘리브레이션 값 검증
-        if (!state.hasValidCalibration()) {
-            Log.w(TAG, String.format("[RECOMPUTE] No valid calibration for %s", normalizedMac));
-            return;
-        }
-        
-        // 방어적 거리 계산 (새로운 computeDistance 사용)
+        // 방어적 거리 계산 (캘리브레이션 없어도 기본값으로 계산)
         double rawDistance = computeDistance(rssi, state.getTxPowerAt1m(), state.getPathLossExponent());
         
-        Log.e(TAG, String.format(Locale.US, "[RECOMPUTE] MAC=%s, rssi=%.1f (%s), tx1m=%.5f, n=%.5f, rawDist=%.3f", 
-               normalizedMac, rssi, rssiSource, state.getTxPowerAt1m(), state.getPathLossExponent(), rawDistance));
+        // 기본값 사용 여부 로그
+        String calibrationStatus = state.hasValidCalibration() ? "calibrated" : "defaults";
+        
+        Log.e(TAG, String.format(Locale.US, "[RECOMPUTE] MAC=%s, rssi=%.1f (%s), tx1m=%.5f, n=%.5f (%s), rawDist=%.3f", 
+               normalizedMac, rssi, rssiSource, state.getTxPowerAt1m(), state.getPathLossExponent(), calibrationStatus, rawDistance));
         
         if (!Double.isFinite(rawDistance) || rawDistance <= 0.0) {
             Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Invalid distance computed for %s: rssi=%.1f, tx1m=%.2f, n=%.2f", 
