@@ -1,14 +1,6 @@
-● fix(alarm): 알람 시작 시 "비콘을 찾을 수 없습니다" 오류 및 거리 표시 "-" 문제 해결
+  fix(alarm): 알람 중지 버튼 10초+ 지연 문제 해결 및 BLE 타임아웃 단축
 
-  주요 수정사항:
-  • MAC 정규화 통일: setDesiredRingPublic에서 정규화된 MAC 사용
-  • 로스트 판정 완화: 7초 그레이스 타임 적용, 토스트 최소화
-  • 거리 붕괴 방지: RSSI 폴백 로직 보강 (filtered → lastRssi → 윈도 중앙값)
-  • 로그 추가: [ALARM-ARM], [ALARM-CHECK], [ALARM-LOST] 디버깅 로그
-  • findBeaconByMac 개선: denormalizeMac 유틸리티로 콜론 형태 변환
-
-  해결된 문제:
-  - 2m 거리에서도 "비콘을 찾을 수 없다" 토스트 발생
-  - 거리 초과 시 폰 알람이 울리지 않음
-  - 거리 표시가 "-"로 변경되는 현상
-  - 1-2초마다 반복되는 오류 토스트
+  - 알람 중지시 즉시 폰 알람 중지 및 UI 업데이트로 사용자 반응성 개선
+  - 비콘 STOP 명령을 백그라운드 비동기 처리로 분리하여 UI 블로킹 방지
+  - BleService.clearRingScheduler() 메서드 추가로 즉시 스케줄러 정리
+  - 모든 BLE 연결 타임아웃을 7초에서 2초로 단축하여 전체 응답성 향상

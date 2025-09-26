@@ -103,7 +103,9 @@
       "Read(/C:\\work_DJ\\KBeacon\\KBeaconProDemo_Android\\sensordemo\\src\\main\\java\\com\\kkmcn\\sensordemo\\cal/**)",
       "Read(/C:\\work_DJ\\KBeacon\\KBeaconProDemo_Android\\sensordemo\\src\\main\\java\\com\\kkmcn\\sensordemo\\cal/**)",
       "Read(/C:\\work_DJ\\KBeacon\\KBeaconProDemo_Android\\sensordemo\\src\\main\\java\\com\\kkmcn\\sensordemo\\cal/**)",
-      "Read(/C:\\work_DJ\\KBeacon\\KBeaconProDemo_Android\\sensordemo\\src\\main\\java\\com\\kkmcn\\sensordemo\\cal/**)"
+      "Read(/C:\\work_DJ\\KBeacon\\KBeaconProDemo_Android\\sensordemo\\src\\main\\java\\com\\kkmcn\\sensordemo\\cal/**)",
+      "Bash(gradlew.bat sensordemo:compileDebugJava:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": [],

@@ -1584,23 +1584,40 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             Log.d(TAG, "Ring stop blocked - calibration in progress");
             return;
         }
-        
-        // 즉시 버튼 상태 업데이트 (사용자 피드백)
-        updateButtonState(mac, "동작중");
-        
-        Log.d("RING", String.format("UI onRingStop: MAC=%s", mac));
-        
+
+        Log.d("RING", String.format("UI onRingStop: MAC=%s - immediate stop processing", mac));
+
         // [터치디바운스] 클릭 직후 100ms 프리즈로 리스너 재설정 레이스 추가 차단 (250ms → 100ms 단축)
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 100;
-        
-        // 즉시 STOP 처리: 모든 대기 명령보다 우선
+
+        // 1. 즉시 폰 알람 중지 처리 (사용자 반응성 최우선)
+        stopPhoneAlarm();
+        Log.i("RING", "Phone alarm stopped immediately for MAC: " + mac);
+
+        // 2. 즉시 UI 상태 업데이트 (알람 → 알람 중지 복원)
+        updateButtonState(mac, "알람");
+
+        // 3. 즉시 스케줄러 정리 (서비스를 통해)
         if (mServiceBound && mBleService != null) {
-            mBleService.setDesiredRingPublic(mac, false, BleService.RingReason.MANUAL_STOP);
-            Log.i("RING", "BleService.setDesiredRingPublic(false) called for MAC: " + mac);
+            mBleService.clearRingScheduler(mac);
+            Log.i("RING", "Ring scheduler cleared immediately for MAC: " + mac);
+        }
+
+        // 4. 비콘 STOP 명령을 백그라운드로 비동기 처리 (블로킹 방지)
+        if (mServiceBound && mBleService != null) {
+            // 별도 스레드에서 비콘 명령 처리 (UI 블로킹 방지)
+            new Thread(() -> {
+                try {
+                    Log.i("RING", "Starting async beacon STOP command for MAC: " + mac);
+                    mBleService.setDesiredRingPublic(mac, false, BleService.RingReason.MANUAL_STOP);
+                    Log.i("RING", "Async beacon STOP command completed for MAC: " + mac);
+                } catch (Exception e) {
+                    Log.e("RING", "Error in async beacon STOP command for MAC: " + mac, e);
+                }
+            }).start();
         } else {
-            // 서비스 준비 중 - UI 피드백만 제공, 명령 호출 금지
-            Log.w("RING", "Service not bound - waiting for service initialization");
-            updateButtonState(mac, "서비스 준비 중");
+            // 서비스 준비 중 - 이미 폰 알람은 중지했으므로 로그만
+            Log.w("RING", "Service not bound - beacon command skipped for MAC: " + mac);
         }
     }
     

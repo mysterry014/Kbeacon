@@ -1686,7 +1686,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 broadcastRingStateChanged(mac, "연결됨");
                 
                 // 패스워드를 사용한 인증된 연결 (기본 패스워드)
-                beacon.connect("0000000000000000", 7000, new KBeacon.ConnStateDelegate() {
+                beacon.connect("0000000000000000", 2000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
                         Log.i(TAG, "Connection state changed: " + state + ", reason: " + nReason);
@@ -1741,7 +1741,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 Log.d(TAG, "Connecting to beacon for stop command: " + mac);
                 
                 // 패스워드를 사용한 인증된 연결 (기본 패스워드)
-                beacon.connect("0000000000000000", 7000, new KBeacon.ConnStateDelegate() {
+                beacon.connect("0000000000000000", 2000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
                         if (state == KBConnState.Connected) {
@@ -2532,7 +2532,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             stopRingWithScheduler(normalizedMac, reason);
         }
     }
-    
+
+    /**
+     * Ring 스케줄러만 즉시 정리 (UI 응답성을 위한 별도 메서드)
+     */
+    public void clearRingScheduler(String mac) {
+        String normalizedMac = normalizeMac(mac);
+        Log.d(TAG, String.format("[RING-CLEAR] Clearing scheduler: mac=%s→%s", mac, normalizedMac));
+        stopRingSession(normalizedMac);
+    }
+
     /**
      * Ring 시작 with 단일 스케줄러
      */
@@ -2759,7 +2768,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 
                 // 기본 패스워드로 연결 시도
                 final String defaultPassword = "0000000000000000";
-                beacon.connect(defaultPassword, 7000, new KBeacon.ConnStateDelegate() {
+                beacon.connect(defaultPassword, 2000, new KBeacon.ConnStateDelegate() {
                     @Override
                     public void onConnStateChange(KBeacon beacon, KBConnState state, int nReason) {
                         if (state == KBConnState.Connected) {
@@ -3069,7 +3078,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 빠른 연결 후 STOP 전송
      */
     private void connectThenStop(String mac, org.json.JSONObject cmd) {
-        final int STOP_CONNECT_TIMEOUT = 5000; // 5초 타임아웃
+        final int STOP_CONNECT_TIMEOUT = 2000; // 2초 타임아웃
         
         KBeacon beacon = findBeaconByMac(mac);
         if (beacon == null) return;
