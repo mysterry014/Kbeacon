@@ -972,7 +972,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         String normalizedMac = normalizeMac(mac);
         
         // RSSI 윈도우 업데이트
-        RssiWindow rssiWindow = rssiWindows.get(mac);
+        RssiWindow rssiWindow = rssiWindows.get(normalizedMac);
         if (rssiWindow != null) {
             rssiWindow.addSample(currentRssi);
             
@@ -982,12 +982,12 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 double avgFiltered = filteredSamples.stream().mapToInt(Integer::intValue).average().orElse(0.0);
                 
                 // RSSI EMA 적용
-                Double prevRssiEma = rssiEmaCache.get(mac);
+                Double prevRssiEma = rssiEmaCache.get(normalizedMac);
                 double rssiFiltered = prevRssiEma == null ? 
                     avgFiltered : 
                     RSSI_EMA_ALPHA * avgFiltered + (1 - RSSI_EMA_ALPHA) * prevRssiEma;
                 
-                rssiEmaCache.put(mac, rssiFiltered);
+                rssiEmaCache.put(normalizedMac, rssiFiltered);
                 state.setRssiFiltered(rssiFiltered);
                 
                 // RSSI 업데이트 로그
@@ -1946,14 +1946,15 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             
             // 저장된 BeaconState 복원 (거리 설정값, 배터리 정보, 별칭)
             for (String mac : savedMacs.keySet()) {
-                BeaconState state = beaconStates.computeIfAbsent(mac, k -> {
-                    BeaconState newState = new BeaconState(mac);
-                    rssiWindows.put(mac, new RssiWindow(RSSI_WINDOW_SIZE, RSSI_OUTLIER_THRESHOLD));
+                String normalizedMac = normalizeMac(mac);
+                BeaconState state = beaconStates.computeIfAbsent(normalizedMac, k -> {
+                    BeaconState newState = new BeaconState(normalizedMac);
+                    rssiWindows.put(normalizedMac, new RssiWindow(RSSI_WINDOW_SIZE, RSSI_OUTLIER_THRESHOLD));
                     return newState;
                 });
                 
                 // 거리 설정값 복원 (Prefs 사용)
-                double threshold = mPrefs.getDistanceThreshold(mac, "default", 50.0);
+                double threshold = mPrefs.getDistanceThreshold(normalizedMac, "default", 50.0);
                 state.setDistanceThreshold(threshold);
                 
                 // 배터리 정보 복원 (Prefs 사용)

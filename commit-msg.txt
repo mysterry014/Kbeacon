@@ -1,6 +1,6 @@
-● feat(distance): 기본값 거리 계산 및 캘리브레이션 MAC 정규화 수정
+● fix(distance): MAC 키 정규화 불일치로 인한 거리 표시 "-" 고정 문제 해결
 
-  - 기본값 거리 강제 폴백 로직 구현 (txPower=-59.0, n=2.0)
-  - 캘리브레이션 없어도 거리 표시 가능하도록 개선
-  - 캘리브레이션 스캔/브로드캐스트 MAC 정규화 통일
-  - 일반 스캔 게이트 MAC 비교 정규화
+  - processPairedBeacon에서 rssiWindows/rssiEmaCache 키를 정규화된 MAC으로 통일
+  - 앱 시작 직후에도 기본값(-59.0 dBm, n=2.0)으로 거리 계산/표시 가능
+  - RSSI 파이프라인 단절 해소로 필터링→EMA→거리계산 정상 동작
+  - restoreBeaconStatesFromPrefs에서도 MAC 정규화 일관성 적용
