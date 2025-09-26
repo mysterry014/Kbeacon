@@ -914,7 +914,13 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         }
         
         // 캘리브레이션 중 일반 RSSI 피드 차단 (게이트 2: 이중 스캔 방지, 정규화 비교)
-        if (isCalibrating && normalizeMac(mac).equalsIgnoreCase(normalizeMac(calibTargetMac))) {
+        String normalizedTarget = calibTargetMac != null ? normalizeMac(calibTargetMac) : null;
+        boolean shouldDrop = isCalibrating && normalizedTarget != null && normalizedMac.equalsIgnoreCase(normalizedTarget);
+        
+        Log.v(TAG, String.format("[GATE] isCal=%s macN=%s targetN=%s drop=%s", 
+               isCalibrating, normalizedMac, normalizedTarget, shouldDrop));
+        
+        if (shouldDrop) {
             Log.v(TAG, String.format("[CALIB-GATE2] Normal RSSI feed blocked during calibration: mac=%s, rssi=%d", mac, currentRssi));
             return; // 캘리브레이션 타깃은 전용 스캐너에서만 처리
         }
@@ -3205,8 +3211,27 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         state.setPathLossExponent(BeaconState.DEFAULT_PATH_LOSS_N);
         state.setHasCalibration(false);
         
-        Log.w(TAG, String.format("[CAL-CANCEL] Reset to defaults for %s: tx1m=%.1f, n=%.1f", 
-               normalizedMac, BeaconState.DEFAULT_TX_POWER_AT_1M, BeaconState.DEFAULT_PATH_LOSS_N));
+        // RSSI 폴백 보장 (중요!)
+        double rssiF = state.getRssiFiltered();
+        int lastRssi = state.getLastRssi();
+        RssiWindow window = rssiWindows.get(normalizedMac);
+        String rssiStatus = String.format("rssiF=%.1f last=%d winMed=%.1f", 
+                rssiF, lastRssi, window != null ? window.getMedian() : Double.NaN);
+        
+        // rssiFiltered가 NaN이면 가능한 폴백 수행
+        if (!Double.isFinite(rssiF)) {
+            if (lastRssi != 0) {
+                state.setRssiFiltered(lastRssi);
+                Log.w(TAG, String.format("[CAL-CANCEL] RSSI fallback to lastRssi: %d for %s", lastRssi, normalizedMac));
+            } else if (window != null && window.size() > 0) {
+                double median = window.getMedian();
+                state.setRssiFiltered(median);
+                Log.w(TAG, String.format("[CAL-CANCEL] RSSI fallback to window median: %.1f for %s", median, normalizedMac));
+            }
+        }
+        
+        Log.w(TAG, String.format("[CAL-CANCEL] macN=%s set defaults tx1m=%.1f n=%.1f %s", 
+               normalizedMac, BeaconState.DEFAULT_TX_POWER_AT_1M, BeaconState.DEFAULT_PATH_LOSS_N, rssiStatus));
         
         // 즉시 기본값으로 거리 다시 계산
         recomputeDistance(normalizedMac);
