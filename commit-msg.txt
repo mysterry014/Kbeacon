@@ -1,6 +1,6 @@
-● fix(calibration): 캘리브레이션 취소 시 거리 "-" 표시 문제 해결
+● fix(calibration): 캘리브레이션 취소 시 RSSI 부족으로 인한 거리 계산 실패 해결
 
-  - BleService에 resetCalibrationToDefaults 메소드 추가
-  - 취소 시 BeaconState를 기본값(-59.0, n=2.0)으로 즉시 복구
-  - CalibrationDialog 취소 버튼에서 자동 기본값 복구 호출
-  - 중간 상태 잔존으로 인한 거리 계산 실패 방지
+  - recomputeDistance에서 RSSI 없을 때 기본 RSSI(-50.0) 폴백 추가
+  - 캘리브레이션 취소 후에도 항상 거리 계산 실행 보장
+  - 로그 강화로 거리 계산 결과 및 상태 추적 개선
+  - RSSI 조기 리턴으로 인한 거리 "-" 고정 문제 완전 해결

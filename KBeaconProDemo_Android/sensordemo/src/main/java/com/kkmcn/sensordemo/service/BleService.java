@@ -3124,8 +3124,10 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     rssiSource = "window-median-fallback";
                     Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Using window median fallback for %s: rssi=%.1f", normalizedMac, rssi));
                 } else {
-                    Log.w(TAG, String.format("[RECOMPUTE] No valid RSSI available for %s", normalizedMac));
-                    return;
+                    // 캘리브레이션 취소 등으로 RSSI가 전혀 없는 경우 기본 RSSI 사용
+                    rssi = -50.0; // 일반적인 중간 거리 RSSI 값
+                    rssiSource = "default-rssi-fallback";
+                    Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] No RSSI available, using default RSSI for %s: rssi=%.1f", normalizedMac, rssi));
                 }
             }
         }
@@ -3208,6 +3210,12 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // 즉시 기본값으로 거리 다시 계산
         recomputeDistance(normalizedMac);
+        
+        // 거리 계산 결과 확인 로그
+        double finalDistance = state.getDistanceFiltered();
+        boolean hasValidDist = state.hasValidDistance();
+        Log.w(TAG, String.format("[CAL-CANCEL] After recompute: distance=%.3f, hasValidDistance=%s, hasCalibration=%s", 
+               finalDistance, hasValidDist, state.hasValidCalibration()));
         
         // UI 업데이트
         broadcastBeaconUpdated(normalizedMac);
