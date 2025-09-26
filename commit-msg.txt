@@ -1,6 +1,5 @@
-  fix(alarm): 알람 중지 버튼 10초+ 지연 문제 해결 및 BLE 타임아웃 단축
+  fix(alarm): 수동/자동 알람 폰 알람 동작 분리 및 BLE 타임아웃 조정
 
-  - 알람 중지시 즉시 폰 알람 중지 및 UI 업데이트로 사용자 반응성 개선
-  - 비콘 STOP 명령을 백그라운드 비동기 처리로 분리하여 UI 블로킹 방지
-  - BleService.clearRingScheduler() 메서드 추가로 즉시 스케줄러 정리
-  - 모든 BLE 연결 타임아웃을 7초에서 2초로 단축하여 전체 응답성 향상
+  - 수동 알람시 부저만 울리도록 onRingStart()에서 폰 알람 호출 제거
+  - 자동 알람시 부저+폰 알람 동시 동작하도록 ACTION_AUTO_ALARM_TRIGGERED에 startPhoneAlarm() 추가
+  - BLE 연결 타임아웃을 2초에서 3초로 확대하여 연결 안정성 개선

@@ -300,6 +300,11 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     
                 case BleService.ACTION_AUTO_ALARM_TRIGGERED: {
                     String triggerMac = intent.getStringExtra("mac");
+
+                    // 자동 알람 시 폰 알람도 함께 시작 (부저 + 폰 알람)
+                    startPhoneAlarm();
+                    Log.i("RING", "Phone alarm started for auto alarm: " + triggerMac);
+
                     toastShow("자동 알람 시작: " + resolveDisplayName(triggerMac));
                     break;
                 }
@@ -1557,15 +1562,15 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             Log.d(TAG, "Ring alarm blocked - calibration in progress");
             return;
         }
-        
-        Log.d("RING", String.format("UI onRingStart: MAC=%s", mac));
-        
+
+        Log.d("RING", String.format("UI onRingStart: MAC=%s (수동 알람 - 부저만)", mac));
+
         // 즉시 버튼 상태 업데이트 (사용자 피드백)
         updateButtonState(mac, "동작중");
-        
+
         // [터치디바운스] 클릭 직후 100ms 프리즈로 리스너 재설정 레이스 추가 차단 (250ms → 100ms 단축)
         uiFreezeUntilMs = SystemClock.uptimeMillis() + 100;
-        
+
         // Command Gate 패턴: 플래그만 설정, 실제 명령은 게이트에서 처리
         if (mServiceBound && mBleService != null) {
             mBleService.setDesiredRingPublic(mac, true, BleService.RingReason.MANUAL_START);
