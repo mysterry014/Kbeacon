@@ -44,6 +44,7 @@ public class CalibrationDialog {
         void saveCalibrationResult(String mac, CalibrationSession.CalibrationResult result);
         CalibrationSession.CalibrationResult loadCalibrationResult(String mac);
         void resetBeaconFiltering(String mac);
+        void resetCalibrationToDefaults(String mac);
     }
     
     /**
@@ -613,6 +614,9 @@ public class CalibrationDialog {
         // 네이티브 캘리브레이션 스캔 중지
         Log.i(TAG, "Stopping native calibration scan due to cancellation");
         callback.onNativeCalibrationScanStop();
+        
+        // 기본값으로 복구 (취소 시 거리 "-" 방지)
+        callback.resetCalibrationToDefaults(mac);
         
         stopUiUpdates();
         

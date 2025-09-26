@@ -3182,6 +3182,38 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
+     * 캘리브레이션 취소 시 기본값으로 복구
+     * @param mac 대상 MAC 주소
+     */
+    public void resetCalibrationToDefaults(String mac) {
+        if (mac == null || mac.trim().isEmpty()) {
+            Log.e(TAG, "[CAL-CANCEL] Invalid MAC address for reset");
+            return;
+        }
+        
+        String normalizedMac = normalizeMac(mac);
+        BeaconState state = beaconStates.get(normalizedMac);
+        if (state == null) {
+            Log.w(TAG, String.format("[CAL-CANCEL] BeaconState not found for reset: %s", mac));
+            return;
+        }
+        
+        // 기본값으로 복구
+        state.setTxPowerAt1m(BeaconState.DEFAULT_TX_POWER_AT_1M);
+        state.setPathLossExponent(BeaconState.DEFAULT_PATH_LOSS_N);
+        state.setHasCalibration(false);
+        
+        Log.w(TAG, String.format("[CAL-CANCEL] Reset to defaults for %s: tx1m=%.1f, n=%.1f", 
+               normalizedMac, BeaconState.DEFAULT_TX_POWER_AT_1M, BeaconState.DEFAULT_PATH_LOSS_N));
+        
+        // 즉시 기본값으로 거리 다시 계산
+        recomputeDistance(normalizedMac);
+        
+        // UI 업데이트
+        broadcastBeaconUpdated(normalizedMac);
+    }
+    
+    /**
      * 비콘 업데이트 브로드캐스트 발송 (UI 새로고침용)
      * @param mac 업데이트된 MAC 주소
      */

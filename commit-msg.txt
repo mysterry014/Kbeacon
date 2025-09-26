@@ -1,6 +1,6 @@
-● fix(distance): MAC 키 정규화 불일치로 인한 거리 표시 "-" 고정 문제 해결
+● fix(calibration): 캘리브레이션 취소 시 거리 "-" 표시 문제 해결
 
-  - processPairedBeacon에서 rssiWindows/rssiEmaCache 키를 정규화된 MAC으로 통일
-  - 앱 시작 직후에도 기본값(-59.0 dBm, n=2.0)으로 거리 계산/표시 가능
-  - RSSI 파이프라인 단절 해소로 필터링→EMA→거리계산 정상 동작
-  - restoreBeaconStatesFromPrefs에서도 MAC 정규화 일관성 적용
+  - BleService에 resetCalibrationToDefaults 메소드 추가
+  - 취소 시 BeaconState를 기본값(-59.0, n=2.0)으로 즉시 복구
+  - CalibrationDialog 취소 버튼에서 자동 기본값 복구 호출
+  - 중간 상태 잔존으로 인한 거리 계산 실패 방지

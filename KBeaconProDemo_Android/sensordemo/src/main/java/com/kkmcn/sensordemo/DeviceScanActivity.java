@@ -1972,6 +1972,13 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     mBleService.resetBeaconFiltering(mac);
                 }
             }
+            
+            @Override
+            public void resetCalibrationToDefaults(String mac) {
+                if (mServiceBound && mBleService != null) {
+                    mBleService.resetCalibrationToDefaults(mac);
+                }
+            }
         });
     }
     
