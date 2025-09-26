@@ -212,6 +212,16 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private volatile boolean calibrationScanActive = false;
     
     /**
+     * MAC 주소 정규화 - 모든 MAC 처리에 일관되게 사용
+     * 콜론 제거, 공백 제거, 대문자 변환
+     * @param mac 원본 MAC 주소
+     * @return 정규화된 MAC (예: "BC57291424DA")
+     */
+    static String normalizeMac(String mac) {
+        return mac == null ? "" : mac.replace(":", "").trim().toUpperCase(Locale.US);
+    }
+    
+    /**
      * 무효 RSSI 샘플 판정 - Service단에서 조기 차단
      * Activity까지 올리지 말고 여기서 필터링
      * @param rssi RSSI 값
@@ -755,7 +765,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     public void resetBeaconFiltering(String mac) {
         if (mac == null || mac.isEmpty()) return;
         
-        String normalizedMac = mac.toUpperCase();
+        String normalizedMac = normalizeMac(mac);
         
         // RSSI 윈도우 제거
         rssiWindows.remove(normalizedMac);
@@ -843,23 +853,26 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return;
         }
         
+        // MAC 정규화
+        String normalizedMac = normalizeMac(mac);
+        
         // 워치독용 마지막 광고 시각 갱신
         onAnyAdvertisementObserved();
         
         // BeaconState 조회/생성 (모든 MAC에 대해)
-        BeaconState state = beaconStates.computeIfAbsent(mac, k -> {
-            BeaconState newState = new BeaconState(mac);
-            rssiWindows.put(mac, new RssiWindow(RSSI_WINDOW_SIZE, RSSI_OUTLIER_THRESHOLD));
+        BeaconState state = beaconStates.computeIfAbsent(normalizedMac, k -> {
+            BeaconState newState = new BeaconState(normalizedMac);
+            rssiWindows.put(normalizedMac, new RssiWindow(RSSI_WINDOW_SIZE, RSSI_OUTLIER_THRESHOLD));
             
             // DevicePrefs에서 저장된 값들 복원
-            newState.setDistanceThreshold(DevicePrefs.getDistanceThreshold(getApplicationContext(), mac, 50.0f));
-            int savedBattery = DevicePrefs.getBattery(getApplicationContext(), mac, -1);
+            newState.setDistanceThreshold(DevicePrefs.getDistanceThreshold(getApplicationContext(), normalizedMac, 50.0f));
+            int savedBattery = DevicePrefs.getBattery(getApplicationContext(), normalizedMac, -1);
             if (savedBattery >= 0) {
                 newState.setBatteryPercent(savedBattery);
             }
             
             // 캘리브레이션 값 로드 (신규 비콘 발견 시)
-            CalibrationSession.CalibrationResult calibResult = loadCalibrationResultFromPrefs(mac);
+            CalibrationSession.CalibrationResult calibResult = loadCalibrationResultFromPrefs(normalizedMac);
             if (calibResult != null) {
                 Log.i(TAG, String.format(Locale.US, "[CAL-LOAD] Loaded calibration for new beacon %s: tx1m=%.5f, n=%.5f", 
                        mac, calibResult.txPowerAt1m, calibResult.pathLossExponent));
@@ -968,24 +981,24 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     avgFiltered : 
                     RSSI_EMA_ALPHA * avgFiltered + (1 - RSSI_EMA_ALPHA) * prevRssiEma;
                 
-                rssiEmaCache.put(mac, rssiFiltered);
+                rssiEmaCache.put(normalizedMac, rssiFiltered);
                 state.setRssiFiltered(rssiFiltered);
                 
                 // RSSI 업데이트 로그
                 Log.e(TAG, String.format(Locale.US, "[RSSI] MAC=%s, raw=%d, filtered=%.1f", 
-                       mac, currentRssi, rssiFiltered));
+                       normalizedMac, currentRssi, rssiFiltered));
                 
                 // 캘리브레이션이 있으면 거리 재계산
                 if (state.hasValidCalibration()) {
-                    recomputeDistance(mac);
+                    recomputeDistance(normalizedMac);
                 } else {
-                    Log.w(TAG, String.format("[RSSI] No valid calibration for distance computation: %s", mac));
+                    Log.w(TAG, String.format("[RSSI] No valid calibration for distance computation: %s", normalizedMac));
                 }
                 
                 
                 // 자동 알람 거리 초과 감지 (캘리브레이션이 있을 때만)
                 if (state.hasValidCalibration() && Double.isFinite(state.getDistanceFiltered())) {
-                    checkAutoAlarmTrigger(mac, state, state.getDistanceFiltered());
+                    checkAutoAlarmTrigger(normalizedMac, state, state.getDistanceFiltered());
                 }
             }
         }
@@ -1030,22 +1043,25 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * Prefs를 사용한 거리 계산 (캘리브레이션 결과 반영)
      */
     private double calculateDistanceWithDevicePrefs(String mac, double rssiFiltered) {
+        // MAC 정규화
+        String normalizedMac = normalizeMac(mac);
+        
         // BeaconState에서 이름 정보 가져오기
-        BeaconState state = beaconStates.get(mac);
+        BeaconState state = beaconStates.get(normalizedMac);
         String name = (state != null) ? state.getName() : null;
         
         // Prefs 인스턴스 생성하여 캘리브레이션 값 로드
         Prefs prefs = new Prefs(getApplicationContext());
-        double txPowerAt1m = prefs.getTxPowerAt1m(mac, name, DEFAULT_TX_POWER_AT_1M);
-        double pathLossN = prefs.getN(mac, name, DEFAULT_PATH_LOSS_EXPONENT);
+        double txPowerAt1m = prefs.getTxPowerAt1m(normalizedMac, name, DEFAULT_TX_POWER_AT_1M);
+        double pathLossN = prefs.getN(normalizedMac, name, DEFAULT_PATH_LOSS_EXPONENT);
         
         // 방어적 거리 계산 사용
         double distance = computeDistance(rssiFiltered, txPowerAt1m, pathLossN);
         
         // [Issue 3 Debug] 문제의 비콘에 대한 거리 계산 상세 로깅 (Locale 고정)
-        if (mac != null && mac.toLowerCase().contains("561976")) {
+        if (normalizedMac != null && normalizedMac.toLowerCase().contains("561976")) {
             Log.e(TAG, String.format(Locale.US, "[561976_DISTANCE] MAC=%s, name=%s, rssi=%.1f, txPower=%.2f, n=%.2f, distance=%.3fm", 
-                mac, name, rssiFiltered, txPowerAt1m, pathLossN, distance));
+                normalizedMac, name, rssiFiltered, txPowerAt1m, pathLossN, distance));
         }
         
         return distance;
@@ -1193,7 +1209,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 거리 임계값 조회 (BeaconState 우선, 없으면 DevicePrefs에서)
      */
     public float getDistanceThreshold(String mac) {
-        BeaconState state = beaconStates.get(mac);
+        String normalizedMac = normalizeMac(mac);
+        BeaconState state = beaconStates.get(normalizedMac);
         if (state != null && state.getDistanceThresholdMeters() > 0) {
             return (float)state.getDistanceThresholdMeters();
         }
@@ -3050,7 +3067,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return;
         }
         
-        BeaconState state = beaconStates.get(mac);
+        String normalizedMac = normalizeMac(mac);
+        BeaconState state = beaconStates.get(normalizedMac);
         if (state == null) {
             Log.w(TAG, String.format("[RECOMPUTE] BeaconState not found for recompute: %s", mac));
             return;
@@ -3065,16 +3083,24 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             if (lastRssi != 0) {
                 rssi = lastRssi;
                 rssiSource = "lastRssi-fallback";
-                Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Using lastRssi fallback for %s: rssi=%.1f", mac, rssi));
+                Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Using lastRssi fallback for %s: rssi=%.1f", normalizedMac, rssi));
             } else {
-                Log.w(TAG, String.format("[RECOMPUTE] No valid RSSI available for %s", mac));
-                return;
+                // RSSI 윈도우에서 중앙값 폴백 시도
+                RssiWindow window = rssiWindows.get(normalizedMac);
+                if (window != null && window.getSampleCount() > 0) {
+                    rssi = window.getMedian();
+                    rssiSource = "window-median-fallback";
+                    Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Using window median fallback for %s: rssi=%.1f", normalizedMac, rssi));
+                } else {
+                    Log.w(TAG, String.format("[RECOMPUTE] No valid RSSI available for %s", normalizedMac));
+                    return;
+                }
             }
         }
         
         // 캘리브레이션 값 검증
         if (!state.hasValidCalibration()) {
-            Log.w(TAG, String.format("[RECOMPUTE] No valid calibration for %s", mac));
+            Log.w(TAG, String.format("[RECOMPUTE] No valid calibration for %s", normalizedMac));
             return;
         }
         
@@ -3082,11 +3108,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         double rawDistance = computeDistance(rssi, state.getTxPowerAt1m(), state.getPathLossExponent());
         
         Log.e(TAG, String.format(Locale.US, "[RECOMPUTE] MAC=%s, rssi=%.1f (%s), tx1m=%.5f, n=%.5f, rawDist=%.3f", 
-               mac, rssi, rssiSource, state.getTxPowerAt1m(), state.getPathLossExponent(), rawDistance));
+               normalizedMac, rssi, rssiSource, state.getTxPowerAt1m(), state.getPathLossExponent(), rawDistance));
         
-        if (!Double.isFinite(rawDistance)) {
+        if (!Double.isFinite(rawDistance) || rawDistance <= 0.0) {
             Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Invalid distance computed for %s: rssi=%.1f, tx1m=%.2f, n=%.2f", 
-                   mac, rssi, state.getTxPowerAt1m(), state.getPathLossExponent()));
+                   normalizedMac, rssi, state.getTxPowerAt1m(), state.getPathLossExponent()));
             return;
         }
         
@@ -3098,26 +3124,26 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             // 시딩: 첫 번째 유효한 값으로 초기화
             distanceFiltered = rawDistance;
             Log.e(TAG, String.format(Locale.US, "[DISTANCE-EMA] SEED distance EMA for %s: %.3fm (source: %s)", 
-                   mac, distanceFiltered, rssiSource));
+                   normalizedMac, distanceFiltered, rssiSource));
         } else {
             // EMA 적용
             distanceFiltered = DISTANCE_EMA_ALPHA * rawDistance + (1 - DISTANCE_EMA_ALPHA) * prevDistance;
             Log.e(TAG, String.format(Locale.US, "[DISTANCE-EMA] EMA distance for %s: raw=%.3f, prev=%.3f, filtered=%.3fm (source: %s)", 
-                   mac, rawDistance, prevDistance, distanceFiltered, rssiSource));
+                   normalizedMac, rawDistance, prevDistance, distanceFiltered, rssiSource));
         }
         
         // BeaconState 및 캐시 업데이트
         state.setDistanceFiltered(distanceFiltered);
-        distanceEmaCache.put(mac, distanceFiltered);
+        distanceEmaCache.put(normalizedMac, distanceFiltered);
         
         Log.i(TAG, String.format(Locale.US, "[RECOMPUTE] Distance recomputed for %s: rssi=%.1f(%s), tx1m=%.2f, n=%.2f → distance=%.3fm", 
-               mac, rssi, rssiSource, state.getTxPowerAt1m(), state.getPathLossExponent(), distanceFiltered));
+               normalizedMac, rssi, rssiSource, state.getTxPowerAt1m(), state.getPathLossExponent(), distanceFiltered));
         
         // UI 업데이트 브로드캐스트
-        broadcastBeaconUpdated(mac);
+        broadcastBeaconUpdated(normalizedMac);
         
         // 자동 알람 체크 (필요시)
-        checkAutoAlarmTrigger(mac, state, distanceFiltered);
+        checkAutoAlarmTrigger(normalizedMac, state, distanceFiltered);
     }
     
     /**
@@ -3142,7 +3168,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      */
     public void saveCalibrationResultToPrefs(String deviceMac, String deviceName, CalibrationSession.CalibrationResult result) {
         // MAC 키 정규화
-        String normalizedMac = deviceMac.replace(":", "").toUpperCase(Locale.US);
+        String normalizedMac = normalizeMac(deviceMac);
         
         Log.e(TAG, String.format(Locale.US, "[CAL-SAVE] Starting save for device: %s (mac=%s→%s)", 
                deviceName, deviceMac, normalizedMac));
@@ -3165,17 +3191,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             Log.e(TAG, String.format(Locale.US, "[CAL-SAVE] SharedPreferences save result: %b", saved));
             
             // 2. BeaconState에 즉시 동기화
-            BeaconState state = beaconStates.get(deviceMac);
+            BeaconState state = beaconStates.get(normalizedMac);
             if (state != null) {
                 state.setTxPowerAt1m(result.txPowerAt1m);
                 state.setPathLossExponent(result.pathLossExponent);
+                state.setHasCalibration(true); // 캘리브레이션 상태 설정
                 Log.e(TAG, String.format(Locale.US, "[CAL-SAVE] BeaconState updated: tx1m=%.5f, n=%.5f", 
                        state.getTxPowerAt1m(), state.getPathLossExponent()));
                 
                 // 3. 즉시 거리 재계산
-                applyCalibrationAndRecompute(deviceMac, result.txPowerAt1m, result.pathLossExponent);
+                applyCalibrationAndRecompute(normalizedMac, result.txPowerAt1m, result.pathLossExponent);
             } else {
-                Log.w(TAG, String.format("[CAL-SAVE] WARNING: BeaconState not found for MAC: %s", deviceMac));
+                Log.w(TAG, String.format("[CAL-SAVE] WARNING: BeaconState not found for MAC: %s", normalizedMac));
             }
             
         } catch (Exception e) {
@@ -3187,17 +3214,18 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 캘리브레이션 적용 후 즉시 거리 재계산
      */
     private void applyCalibrationAndRecompute(String deviceMac, double txPowerAt1m, double pathLossExponent) {
-        Log.e(TAG, String.format(Locale.US, "[CAL-APPLY] Applying calibration and recomputing for MAC: %s", deviceMac));
+        String normalizedMac = normalizeMac(deviceMac);
+        Log.e(TAG, String.format(Locale.US, "[CAL-APPLY] Applying calibration and recomputing for MAC: %s", normalizedMac));
         
-        BeaconState state = beaconStates.get(deviceMac);
+        BeaconState state = beaconStates.get(normalizedMac);
         if (state != null && state.hasValidCalibration()) {
-            recomputeDistance(deviceMac);
+            recomputeDistance(normalizedMac);
             
             // UI 브로드캐스트
             broadcastBeaconUpdate();
-            Log.e(TAG, String.format(Locale.US, "[CAL-APPLY] Calibration applied and distance recomputed for: %s", deviceMac));
+            Log.e(TAG, String.format(Locale.US, "[CAL-APPLY] Calibration applied and distance recomputed for: %s", normalizedMac));
         } else {
-            Log.w(TAG, String.format("[CAL-APPLY] Cannot recompute - state invalid for MAC: %s", deviceMac));
+            Log.w(TAG, String.format("[CAL-APPLY] Cannot recompute - state invalid for MAC: %s", normalizedMac));
         }
     }
     
@@ -3208,13 +3236,13 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      */
     public CalibrationSession.CalibrationResult loadCalibrationResultFromPrefs(String deviceMac) {
         // MAC 키 정규화 
-        String normalizedMac = deviceMac.replace(":", "").toUpperCase(Locale.US);
+        String normalizedMac = normalizeMac(deviceMac);
         
         Log.e(TAG, String.format(Locale.US, "[CAL-LOAD] Loading calibration for MAC: %s→%s", deviceMac, normalizedMac));
         
-        BeaconState state = beaconStates.get(deviceMac);
+        BeaconState state = beaconStates.get(normalizedMac);
         if (state == null) {
-            Log.w(TAG, String.format("[CAL-LOAD] BeaconState not found for MAC: %s", deviceMac));
+            Log.w(TAG, String.format("[CAL-LOAD] BeaconState not found for MAC: %s", normalizedMac));
             return null;
         }
         
@@ -3230,7 +3258,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 String rmseStr = prefs.getString(keyPrefix + "_rmse", null);
                 
                 if (txPowerStr == null || pathLossStr == null || rSquaredStr == null || rmseStr == null) {
-                    Log.w(TAG, String.format("[CAL-LOAD] Incomplete calibration data for MAC: %s", deviceMac));
+                    Log.w(TAG, String.format("[CAL-LOAD] Incomplete calibration data for MAC: %s", normalizedMac));
                     return null;
                 }
                 
@@ -3245,6 +3273,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 // BeaconState에 즉시 동기화
                 state.setTxPowerAt1m(txPower);
                 state.setPathLossExponent(pathLoss);
+                state.setHasCalibration(true); // 캘리브레이션 상태 설정
                 Log.e(TAG, String.format(Locale.US, "[CAL-LOAD] BeaconState updated: tx1m=%.5f, n=%.5f", 
                        state.getTxPowerAt1m(), state.getPathLossExponent()));
                 
@@ -3258,11 +3287,11 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 
                 return new CalibrationSession.CalibrationResult(txPower, pathLoss, rSquared, rmse, 0.0, defaultRating);
             } else {
-                Log.i(TAG, String.format("[CAL-LOAD] No calibration data found for MAC: %s", deviceMac));
+                Log.i(TAG, String.format("[CAL-LOAD] No calibration data found for MAC: %s", normalizedMac));
                 return null;
             }
         } catch (Exception e) {
-            Log.e(TAG, String.format("[CAL-LOAD] Exception loading calibration for MAC %s: %s", deviceMac, e.getMessage()), e);
+            Log.e(TAG, String.format("[CAL-LOAD] Exception loading calibration for MAC %s: %s", normalizedMac, e.getMessage()), e);
             return null;
         }
     }

@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # Claude Code 작업 지시서 (KR) — KBeacon 기반 배회방지 앱 (sensordemo 개조)
 
 이 문서는 **Claude Code**가 본 저장소에서 코드를 수정·생성할 때 따를 **단일 기준(Single Source of Truth)** 입니다.  
@@ -148,6 +152,67 @@
 - 라이브러리 버전/권한/스캔·연결·설정 워크플로우
 - ringDevice 파라미터와 예제 코드
 - 장치 이름 길이 제한(≤18자)
+
+---
+
+## 9) 개발 환경 및 기술 정보 (Technical Development Guide)
+
+### 9.1 프로젝트 구조
+- **Main Project**: `KBeaconProDemo_Android/` - Android Gradle 프로젝트
+- **Target Module**: `sensordemo/` - 이 모듈만 사용하고 개조
+- **Unused Modules**: `ibeacondemo/`, `eddystonedemo/` - 사용하지 않음
+- **Main Activity**: `DeviceScanActivity.java` - 단일 화면 구성
+- **Service**: `BleService.java` - Foreground 서비스로 BLE 백그라운드 동작
+
+### 9.2 빌드 및 개발 명령어
+```bash
+# Android 프로젝트 빌드 (Windows)
+cd KBeaconProDemo_Android
+gradlew sensordemo:build
+
+# 디버그 빌드
+gradlew sensordemo:assembleDebug
+
+# APK 설치 (디바이스/에뮬레이터)
+adb install sensordemo/build/outputs/apk/debug/sensordemo-debug.apk
+
+# 로그 확인
+adb logcat -s "KBeaconDemo"
+```
+
+### 9.3 핵심 의존성 및 라이브러리
+- **KBeacon SDK**: `com.kkmcn.kbeaconlib2:kbeaconlib2:1.3.3`
+- **Android SDK**: minSdk 26, targetSdk 34, compileSdk 34
+- **Required Permissions**: Bluetooth, Location (manifest에 정의됨)
+- **Foreground Service**: `android:foregroundServiceType="connectedDevice"`
+
+### 9.4 주요 컴포넌트 아키텍처
+- **BleService.java**: 핵심 백그라운드 서비스
+  - BLE 스캔/연결/명령 송신 통합 관리
+  - Foreground 서비스로 구현되어 백그라운드 동작 보장
+  - 비콘 상태 Repository 패턴으로 데이터 관리
+- **DeviceScanActivity.java**: 메인 UI 액티비티
+  - 서비스 바인딩으로 BleService와 통신
+  - 비콘 목록 표시 및 사용자 인터랙션 처리
+- **데이터 저장**: 
+  - `Prefs.java`: SharedPreferences 기반 설정 저장
+  - `BeaconDataStore.java`: 비콘별 데이터 저장소
+- **캘리브레이션**: 
+  - `CalibrationSession.java`: RSSI-거리 변환 캘리브레이션
+  - `CalibrationDialog.java`: 캘리브레이션 UI
+
+### 9.5 개발 시 주의사항
+- **권한 처리**: Android 12+ BLE 권한 (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`) 필수
+- **Foreground Service**: 백그라운드 BLE 동작을 위해 필수
+- **RSSI 필터링**: 6자리 숫자 시작 장치명 필터링 (`^\d{6}_.*`)
+- **동시 연결**: BLE 동시 연결 수 제한 고려한 큐잉 구현
+- **UI 접근성**: 저시력자를 위한 큰 폰트 및 버튼 크기
+
+### 9.6 디버깅 및 테스트
+- **로그 태그**: `"KBeaconDemo"`, `"BleService"` 등으로 필터링
+- **ADB 명령어**: `adb logcat -s "KBeaconDemo"` 로그 모니터링
+- **BLE 테스트**: 실제 KBeacon 디바이스 필요 (nRF528XX 칩셋)
+- **거리 캘리브레이션**: 1m/2m/3m 거리에서 테스트
 
 ---
 

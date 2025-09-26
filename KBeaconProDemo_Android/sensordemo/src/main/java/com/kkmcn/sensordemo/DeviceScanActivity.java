@@ -134,6 +134,21 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
     // BleService 바인딩
     private BleService mBleService;
     private boolean mServiceBound = false;
+    
+    // 캘리브레이션 저장 보류 큐 (서비스 연결 전 요청 처리)
+    private java.util.Queue<PendingCalibrationSave> pendingCalibrationSaves = new java.util.LinkedList<>();
+    
+    private static class PendingCalibrationSave {
+        String mac;
+        String displayName;
+        CalibrationSession.CalibrationResult result;
+        
+        PendingCalibrationSave(String mac, String displayName, CalibrationSession.CalibrationResult result) {
+            this.mac = mac;
+            this.displayName = displayName;
+            this.result = result;
+        }
+    }
 
 
     private Button mBtnFilterTotal, mBtnRmvAllFilter, mBtnFilterArrow, mBtnRmvNameFilter;
@@ -220,6 +235,9 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
             if (mBleService != null) {
                 // Activity의 UI를 Service 상태와 동기화
                 invalidateOptionsMenu();
+                
+                // 보류된 캘리브레이션 저장 요청들 처리
+                processPendingCalibrationSaves();
             }
         }
 
@@ -1882,9 +1900,21 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
                     Log.e(TAG, "[CALLBACK-TRACE] Step 3: DistanceEstimator NOT FOUND for MAC: " + mac);
                 }
                 
-                // ★ 4. BleService에서 자동으로 캘리브레이션 적용 및 거리 재계산됨 (saveCalibrationResultToPrefs에서 처리)
-                Log.e(TAG, String.format(Locale.US, "[CALLBACK-TRACE] Step 4: Calibration auto-applied in BleService: MAC=%s, tx1m=%.2f, n=%.2f", 
-                       mac, result.txPowerAt1m, result.pathLossExponent));
+                // ★ 4. BleService에 캘리브레이션 저장 및 거리 재계산 요청
+                if (mServiceBound && mBleService != null) {
+                    Log.e(TAG, String.format(Locale.US, "[CALLBACK-TRACE] Step 4: Calling BleService.saveCalibrationResultToPrefs: MAC=%s, tx1m=%.5f, n=%.5f", 
+                           mac, result.txPowerAt1m, result.pathLossExponent));
+                    mBleService.saveCalibrationResultToPrefs(mac, getBeaconDisplayName(mac), result);
+                    Log.e(TAG, "[CALLBACK-TRACE] Step 4: BleService.saveCalibrationResultToPrefs completed");
+                } else {
+                    Log.e(TAG, "[ERROR] BleService is null on save - adding to pending queue");
+                    Log.e(TAG, String.format(Locale.US, "[CAL-APPLY] Adding to pending queue: mac=%s, tx1m=%.5f, n=%.5f", 
+                           mac, result.txPowerAt1m, result.pathLossExponent));
+                    
+                    // 보류 큐에 등록
+                    pendingCalibrationSaves.offer(new PendingCalibrationSave(mac, getBeaconDisplayName(mac), result));
+                    Log.e(TAG, String.format("[CAL-APPLY] Pending queue size: %d", pendingCalibrationSaves.size()));
+                }
                 
                 // 5. UI 즉시 반영을 위한 어댑터 알림
                 runOnUiThread(() -> {
@@ -2117,5 +2147,31 @@ public class DeviceScanActivity extends AppBaseActivity implements View.OnClickL
         
         // 합리적 범위로 제한 (0.1m ~ 200m)
         return Math.max(0.1, Math.min(200.0, distance));
+    }
+    
+    /**
+     * 보류된 캘리브레이션 저장 요청들을 처리
+     */
+    private void processPendingCalibrationSaves() {
+        if (pendingCalibrationSaves.isEmpty()) {
+            Log.d(TAG, "[CAL-APPLY] No pending calibration saves to process");
+            return;
+        }
+        
+        Log.e(TAG, String.format("[CAL-APPLY] Processing %d pending calibration saves", pendingCalibrationSaves.size()));
+        
+        while (!pendingCalibrationSaves.isEmpty()) {
+            PendingCalibrationSave pending = pendingCalibrationSaves.poll();
+            if (pending != null && mBleService != null) {
+                Log.e(TAG, String.format(Locale.US, "[CAL-APPLY] Processing pending save: mac=%s, tx1m=%.5f, n=%.5f", 
+                       pending.mac, pending.result.txPowerAt1m, pending.result.pathLossExponent));
+                
+                mBleService.saveCalibrationResultToPrefs(pending.mac, pending.displayName, pending.result);
+                
+                Log.e(TAG, String.format("[CAL-APPLY] Completed pending save for MAC: %s", pending.mac));
+            }
+        }
+        
+        Log.e(TAG, "[CAL-APPLY] All pending calibration saves processed");
     }
 }

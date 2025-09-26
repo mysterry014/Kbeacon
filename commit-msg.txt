@@ -1,8 +1,7 @@
-  feat(calibration): 3가지 핵심 캘리브레이션 이슈 완전 해결 - 사용자 분석 기반
+  fix(calibration): MAC 정규화 통일화 및 캘리브레이션 로드/저장 완전 수정
 
-  - 캘리브레이션 자동시작 문제: showPreviousCalibrationResult() 분리로 해결
-  - Prefs↔BeaconState 동기화: MAC 정규화, Locale.US 포맷팅, 즉시 sync 구현
-  - 거리 재계산 파이프라인: applyCalibrationAndRecompute() 통합, [RECOMPUTE] 로깅
-  - 신규 비콘 캘리브레이션 로딩: processBeaconAdvertisement()에 자동 로딩 로직 추가
-  - RSSI 업데이트 후 거리 재계산: recomputeDistance() 호출 경로 보장
-  - 포괄적 로깅 시스템: [CAL-SAVE], [CAL-LOAD], [CAL-APPLY] 태그로 추적 가능
+  - normalizeMac() 유틸 함수로 모든 MAC 처리 통일
+  - 캘리브레이션 로드/저장시 정규화된 MAC 사용
+  - BeaconState에 hasCalibration 플래그 추가
+  - RSSI 폴백 체인 강화 (filtered→lastRssi→window median)
+  - 저장 직후 즉시 거리 재계산 및 UI 업데이트

@@ -28,6 +28,7 @@ public class BeaconState {
     // 캘리브레이션 매개변수
     private double txPowerAt1m;
     private double pathLossExponent; // n 값
+    private boolean hasCalibration = false; // 캘리브레이션 로드/저장 성공 플래그
     
     // 사용자 설정
     private double distanceThresholdMeters;
@@ -442,7 +443,15 @@ public class BeaconState {
      * @return 캘리브레이션이 완료되어 유효한 값을 가지고 있는지 여부
      */
     public boolean hasValidCalibration() {
-        return Double.isFinite(txPowerAt1m) && Double.isFinite(pathLossExponent) && pathLossExponent > 0.0;
+        return hasCalibration && Double.isFinite(txPowerAt1m) && Double.isFinite(pathLossExponent) && pathLossExponent > 0.0;
+    }
+    
+    /**
+     * 캘리브레이션 상태 설정
+     * @param hasCalibration 캘리브레이션 여부
+     */
+    public void setHasCalibration(boolean hasCalibration) {
+        this.hasCalibration = hasCalibration;
     }
     
     /**
