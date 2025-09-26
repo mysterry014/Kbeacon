@@ -1,3 +1,5 @@
-  perf(distance): 거리 필터링 EMA 상수 α=0.30→0.65로 조정
+  fix(auto-alarm): 중복 알람 시작 방지로 거리 업데이트 개선
 
-  - distanceFiltered 지수이동평균 알파값을 0.65로 증가하여 거리 변화에 더 민감한 반응 구현
+  - checkAutoAlarmTrigger에서 ringSessions 체크로 이미 알람 중인 MAC 중복 방지
+  - 중복 "자동 알람 시작" 토스트 및 폰 알람 차단으로 사용자 경험 개선
+  - 불필요한 BLE 연결 시도 감소로 RSSI 취득 및 거리 업데이트 속도 향상

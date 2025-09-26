@@ -1635,13 +1635,20 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         // 거리 초과 감지
         if (distanceFiltered > thresholdDistance) {
-            Log.w(TAG, String.format("Auto alarm triggered: MAC=%s, name=%s, distance=%.1fm > threshold=%.1fm", 
+            // [중복 방지] 이미 해당 MAC에 대해 알람이 진행중인지 확인
+            if (ringSessions.containsKey(mac)) {
+                Log.d(TAG, String.format("Auto alarm already active for MAC=%s, skipping duplicate trigger (distance=%.1fm > threshold=%.1fm)",
+                    mac, distanceFiltered, thresholdDistance));
+                return; // 중복 알람 방지
+            }
+
+            Log.w(TAG, String.format("Auto alarm triggered: MAC=%s, name=%s, distance=%.1fm > threshold=%.1fm",
                 mac, beaconName, distanceFiltered, thresholdDistance));
-            
+
             // 비콘 부저 알람 시작 (Command Gate 패턴 사용)
             setDesiredRingPublic(mac, true, RingReason.AUTO_START);
-            
-            // 태블릿 알람 브로드캐스트
+
+            // 태블릿 알람 브로드캐스트 (최초 1회만)
             Intent intent = new Intent(ACTION_AUTO_ALARM_TRIGGERED);
             intent.putExtra("mac", mac);
             intent.putExtra("distance", distanceFiltered);
