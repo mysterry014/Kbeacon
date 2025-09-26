@@ -2477,7 +2477,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             beacon -> {
                 // 명령 완료 후 플래그 해제
                 commandInFlight.put(mac, false);
-                scheduleIdleDisconnect(beacon);
+                // [옵션2] scheduleIdleDisconnect 제거 - ActionCallback에서 즉시 disconnect만 사용
             }
         );
     }

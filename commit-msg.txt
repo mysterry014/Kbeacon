@@ -1,5 +1,5 @@
-  fix(auto-alarm): 중복 알람 시작 방지로 거리 업데이트 개선
+  fix(ble): 즉시 디스커넥트로 알람 중 거리 업데이트 속도 개선
 
-  - checkAutoAlarmTrigger에서 ringSessions 체크로 이미 알람 중인 MAC 중복 방지
-  - 중복 "자동 알람 시작" 토스트 및 폰 알람 차단으로 사용자 경험 개선
-  - 불필요한 BLE 연결 시도 감소로 RSSI 취득 및 거리 업데이트 속도 향상
+  - scheduleIdleDisconnect() 호출 제거하고 ActionCallback 즉시 disconnect만 사용
+  - Ring/Stop 명령 완료 즉시 디스커넥트하여 광고 모드 빠른 복구
+  - 알람 중에도 RSSI 즉시 취득 가능으로 거리 업데이트 속도 최대화
