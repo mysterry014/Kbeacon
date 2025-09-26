@@ -121,6 +121,9 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     
     // TTL 관련 상수 (Issue 4)
     private static final long BEACON_TTL_MS = 30000; // 30초 후 오프라인 비콘 제거
+
+    // 알람 관련 로스트 판정 그레이스 타임 (사용자 요청: 5-10초)
+    private static final long LOST_GRACE_MS = 7000; // 7초 그레이스 (권장)
     
     // Watchdog 관련 상수
     private static final long WATCHDOG_PERIOD_MS = 5 * 60 * 1000L;  // 5분마다 체크
@@ -219,6 +222,21 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      */
     static String normalizeMac(String mac) {
         return mac == null ? "" : mac.replace(":", "").trim().toUpperCase(Locale.US);
+    }
+
+    /**
+     * 정규화된 MAC을 콜론 포함 형태로 변환 - BLE API 호출용
+     * @param normalizedMac 정규화된 MAC (예: "BC57291424DA")
+     * @return 콜론 포함 MAC (예: "BC:57:29:14:24:DA")
+     */
+    static String denormalizeMac(String normalizedMac) {
+        if (normalizedMac == null || normalizedMac.length() != 12) {
+            return normalizedMac;
+        }
+        if (normalizedMac.contains(":")) {
+            return normalizedMac; // 이미 콜론 형태
+        }
+        return normalizedMac.replaceAll("(.{2})(?!$)", "$1:");
     }
     
     /**
@@ -1821,27 +1839,43 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     /**
      * MAC 주소로 KBeacon 인스턴스 찾기
      * RingManager 패턴을 따라 KBeaconsMgr.getBeacon() 사용
+     * @param mac 정규화된 MAC 또는 콜론 포함 MAC 모두 지원
      */
     private KBeacon findBeaconByMac(String mac) {
         if (kBeaconsMgr == null || mac == null) {
             Log.w(TAG, "findBeaconByMac: kBeaconsMgr or mac is null");
             return null;
         }
-        
+
         try {
-            // KBeaconsMgr.getBeacon()으로 MAC 기반 KBeacon 인스턴스 조회
-            KBeacon beacon = kBeaconsMgr.getBeacon(mac);
+            // MAC 형태 정규화 후 SDK 호출용으로 콜론 형태로 변환
+            String normalizedMac = normalizeMac(mac);
+            String macWithColons = denormalizeMac(normalizedMac);
+
+            Log.d(TAG, String.format("findBeaconByMac: %s → %s → %s", mac, normalizedMac, macWithColons));
+
+            // KBeaconsMgr.getBeacon()으로 MAC 기반 KBeacon 인스턴스 조회 (콜론 형태 사용)
+            KBeacon beacon = kBeaconsMgr.getBeacon(macWithColons);
             if (beacon != null) {
-                Log.d(TAG, String.format("Found existing beacon: %s, name=%s, state=%s", 
+                Log.d(TAG, String.format("Found existing beacon: %s, name=%s, state=%s",
+                    macWithColons, beacon.getName(), beacon.getState()));
+                return beacon;
+            }
+
+            // 콜론 형태로도 안되면 원본 형태로 한 번 더 시도
+            beacon = kBeaconsMgr.getBeacon(mac);
+            if (beacon != null) {
+                Log.d(TAG, String.format("Found existing beacon (original): %s, name=%s, state=%s",
                     mac, beacon.getName(), beacon.getState()));
                 return beacon;
             }
-            
+
             // 매니저에서 찾을 수 없는 경우 - null 반환 (SDK 정책 준수)
-            Log.w(TAG, "Beacon not found in KBeaconsMgr for MAC: " + mac);
+            Log.w(TAG, String.format("Beacon not found in KBeaconsMgr for MAC: %s (tried %s and %s)",
+                mac, macWithColons, mac));
             Log.w(TAG, "Cannot create KBeacon object directly - must be discovered through scanning");
             return null;
-            
+
         } catch (Exception e) {
             Log.e(TAG, "Error in findBeaconByMac for " + mac + ": " + e.getMessage());
             return null;
@@ -2442,14 +2476,29 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     }
     
     /**
-     * 비콘이 온라인 상태인지 확인
+     * 비콘이 온라인 상태인지 확인 (완화된 로스트 판정)
      */
     private boolean isOnline(String mac) {
         BeaconState state = beaconStates.get(mac);
-        if (state == null) return false;
-        
-        long timeSinceLastSeen = System.currentTimeMillis() - state.getUpdatedAt();
-        return timeSinceLastSeen <= BEACON_TTL_MS;
+        if (state == null) {
+            Log.d(TAG, String.format("[ALARM-CHECK] isOnline: state=null for MAC=%s", mac));
+            return false;
+        }
+
+        long now = System.currentTimeMillis();
+        long timeSinceLastSeen = now - state.getUpdatedAt();
+        boolean isOnline = timeSinceLastSeen <= BEACON_TTL_MS;
+
+        // [ALARM-CHECK] 로그 추가 (사용자 요청)
+        Log.d(TAG, String.format("[ALARM-CHECK] macN=%s lastSeen=%dms dist=%.2fm hasCal=%s online=%s",
+               mac, timeSinceLastSeen, state.getDistanceFiltered(), state.hasValidCalibration(), isOnline));
+
+        // 로스트 판정시 [ALARM-LOST] 로그 (사용자 요청)
+        if (!isOnline) {
+            Log.i(TAG, String.format("[ALARM-LOST] macN=%s lastSeen=%dms (> %dms)", mac, timeSinceLastSeen, BEACON_TTL_MS));
+        }
+
+        return isOnline;
     }
     
     /**
@@ -2467,12 +2516,20 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      * 공개 API: 플래그만 바꾸고, reconcile에서 커맨드 게이트 호출
      */
     public void setDesiredRingPublic(String mac, boolean on, RingReason reason) {
-        Log.d(TAG, String.format("[RING-UNIFIED] setDesiredRingPublic: mac=%s, on=%s, reason=%s", mac, on, reason));
-        
+        // MAC 정규화 - 일관된 키 사용을 위해
+        String normalizedMac = normalizeMac(mac);
+        Log.d(TAG, String.format("[RING-UNIFIED] setDesiredRingPublic: mac=%s→%s, on=%s, reason=%s",
+               mac, normalizedMac, on, reason));
+
+        // [ALARM-ARM] 로그 추가
         if (on) {
-            startRingWithScheduler(mac, reason);
+            BeaconState state = beaconStates.get(normalizedMac);
+            float threshold = getDistanceThreshold(normalizedMac);
+            Log.i(TAG, String.format("[ALARM-ARM] macN=%s threshold=%.2f", normalizedMac, threshold));
+
+            startRingWithScheduler(normalizedMac, reason);
         } else {
-            stopRingWithScheduler(mac, reason);
+            stopRingWithScheduler(normalizedMac, reason);
         }
     }
     
@@ -2652,7 +2709,28 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         if (beacon == null) {
             Log.e(TAG, "performConnectAndCommand: KBeacon object not found for " + mac);
             commandInFlight.put(mac, false); // 명령 플래그 해제
-            broadcastToast("비콘을 찾을 수 없습니다. 조금만 가까이 접근한 뒤 다시 시도하세요.");
+
+            // 더 관대한 "비콘을 찾을 수 없습니다" 처리: BeaconState가 있고 최근에 본 경우에만 안내
+            if (state != null) {
+                long timeSinceLastSeen = System.currentTimeMillis() - state.getUpdatedAt();
+                if (timeSinceLastSeen <= LOST_GRACE_MS) {
+                    // 최근에 봤지만 KBeacon 객체를 못찾는 경우: SDK 재스캔 필요 안내만
+                    Log.w(TAG, String.format("Recent beacon but KBeacon object missing: MAC=%s, lastSeen=%dms",
+                           mac, timeSinceLastSeen));
+                    // 토스트를 최소화하고 사용자에게 부담을 주지 않도록 가끔만 표시
+                    if (timeSinceLastSeen <= 2000) { // 2초 이내에만 토스트
+                        broadcastToast("비콘 재연결 중... 잠시만 기다려 주세요.");
+                    }
+                } else {
+                    // 정말 오래 안 본 경우에만 "비콘을 찾을 수 없습니다" 표시
+                    Log.i(TAG, String.format("[ALARM-LOST] Beacon truly lost: MAC=%s, lastSeen=%dms",
+                           mac, timeSinceLastSeen));
+                    broadcastToast("비콘을 찾을 수 없습니다. 조금만 가까이 접근한 뒤 다시 시도하세요.");
+                }
+            } else {
+                Log.w(TAG, "BeaconState not found for MAC: " + mac);
+            }
+
             broadcastRingStateChanged(mac, "알람");
             return;
         }
