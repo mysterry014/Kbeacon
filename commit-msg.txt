@@ -1,7 +1,5 @@
-  fix(calibration): MAC 정규화 통일화 및 캘리브레이션 로드/저장 완전 수정
+  fix(calibration): 네이티브 BLE API용 MAC 주소 콜론 형식 변환 수정
 
-  - normalizeMac() 유틸 함수로 모든 MAC 처리 통일
-  - 캘리브레이션 로드/저장시 정규화된 MAC 사용
-  - BeaconState에 hasCalibration 플래그 추가
-  - RSSI 폴백 체인 강화 (filtered→lastRssi→window median)
-  - 저장 직후 즉시 거리 재계산 및 UI 업데이트
+  - startCalibrationScan()에서 정규화된 MAC을 콜론 형식으로 올바르게 변환
+  - 네이티브 Android BLE ScanFilter는 콜론 포함 MAC 필요
+  - 정규표현식 수정: (.{2})(?!$)로 마지막 그룹 제외하고 콜론 추가

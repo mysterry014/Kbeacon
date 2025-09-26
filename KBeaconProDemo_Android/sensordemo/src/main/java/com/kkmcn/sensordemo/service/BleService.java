@@ -1415,9 +1415,19 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 return;
             }
             
-            // MAC 주소 정규화 (대문자, 콜론 포함 형태)
-            String normalizedTargetMac = targetMac.toUpperCase().replaceAll("[^0-9A-F]", "");
-            String macWithColons = normalizedTargetMac.replaceAll("(.{2})", "$1:").replaceAll(":$", "");
+            // MAC 주소 처리: 정규화된 MAC을 네이티브 API용 콜론 형식으로 변환
+            // targetMac는 이미 정규화된 형태 ("BC57291424DA")로 들어옴
+            String normalizedMac = normalizeMac(targetMac);
+            
+            // 네이티브 BLE API는 콜론 포함 MAC 필요 ("BC:57:29:14:24:DA")
+            String macWithColons;
+            if (normalizedMac.contains(":")) {
+                // 이미 콜론이 있는 경우
+                macWithColons = normalizedMac;
+            } else {
+                // 콜론이 없는 경우 추가
+                macWithColons = normalizedMac.replaceAll("(.{2})(?!$)", "$1:");
+            }
             
             // ScanFilter: 정확한 MAC 매칭만 허용
             ScanFilter scanFilter = new ScanFilter.Builder()
