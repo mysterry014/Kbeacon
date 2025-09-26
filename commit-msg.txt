@@ -1,6 +1,6 @@
-● fix(calibration): 캘리브레이션 취소 시 스캔 게이트 오작동 및 RSSI 부족 문제 해결
+● fix(calibration): 캘리브레이션 취소 시 rssiWindows 제거로 인한 RSSI 폴백 실패 해결
 
-  - 스캔 드롭 게이트에서 null 처리 안전성 강화 및 진단 로그 추가
-  - resetCalibrationToDefaults에서 RSSI 다단계 폴백 보장
-  - 취소 후 새로운 광고 샘플 유입 차단 문제 완전 해결
-  - 캘리브레이션 중단 시에도 기본값 거리 계산 보장
+  - resetBeaconFiltering에서 rssiWindows 완전 제거 대신 내용만 클리어
+  - resetCalibrationToDefaults에서 rssiWindows 복구 로직 추가
+  - 캘리브레이션 취소 후 RSSI 히스토리 보존으로 폴백 보장
+  - 사용자 제안사항 완전 반영으로 거리 "-" 표시 근본 해결

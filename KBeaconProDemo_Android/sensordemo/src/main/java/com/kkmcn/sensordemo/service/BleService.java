@@ -767,8 +767,12 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         
         String normalizedMac = normalizeMac(mac);
         
-        // RSSI 윈도우 제거
-        rssiWindows.remove(normalizedMac);
+        // RSSI 윈도우 내용만 클리어 (윈도우 자체는 유지)
+        RssiWindow window = rssiWindows.get(normalizedMac);
+        if (window != null) {
+            window.clear();
+            Log.d(TAG, "[RESET-FILTERING] RSSI window cleared for: " + normalizedMac);
+        }
         
         // EMA 캐시 제거
         rssiEmaCache.remove(normalizedMac);
@@ -3214,9 +3218,17 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
         // RSSI 폴백 보장 (중요!)
         double rssiF = state.getRssiFiltered();
         int lastRssi = state.getLastRssi();
+        
+        // rssiWindows 복구 (캘리브레이션으로 제거되었을 수 있음)
         RssiWindow window = rssiWindows.get(normalizedMac);
+        if (window == null) {
+            window = new RssiWindow(RSSI_WINDOW_SIZE, RSSI_OUTLIER_THRESHOLD);
+            rssiWindows.put(normalizedMac, window);
+            Log.w(TAG, "[CAL-CANCEL] RSSI window restored for: " + normalizedMac);
+        }
+        
         String rssiStatus = String.format("rssiF=%.1f last=%d winMed=%.1f", 
-                rssiF, lastRssi, window != null ? window.getMedian() : Double.NaN);
+                rssiF, lastRssi, window.size() > 0 ? window.getMedian() : Double.NaN);
         
         // rssiFiltered가 NaN이면 가능한 폴백 수행
         if (!Double.isFinite(rssiF)) {
