@@ -134,7 +134,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     private static final long MANUAL_STOP_COOLDOWN_MS = 30 * 1000L; // 30초
     
     // Ring 스케줄러 관련 상수
-    private static final int RING_TIME_MS = 3000; // 3초 부저
+    private static final int RING_TIME_MS = 60000; // 60초 부저
     private static final int GUARD_INTERVAL_MS = 1000; // 1초 대기 후 재트리거
     
     // Ring 세션 관리 클래스
@@ -548,18 +548,33 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
     /**
      * Issue 4: TTL 기반 스테일(오프라인) 비콘 정리
      * 마지막 업데이트로부터 BEACON_TTL_MS 이상 경과된 비콘을 제거
+     * Option C: 연결 중인 비콘은 TTL 갱신
      */
     private void removeStaleBeacons() {
         long currentTime = System.currentTimeMillis();
         List<String> staleBeacons = new ArrayList<>();
-        
+
         for (Map.Entry<String, BeaconState> entry : beaconStates.entrySet()) {
             String mac = entry.getKey();
             BeaconState state = entry.getValue();
-            
+
+            // Option C: 연결 중인 비콘은 updatedAt 갱신하여 TTL 제거 방지
+            KBeacon beacon = findBeaconByMac(mac);
+            if (beacon != null && beacon.getState() == KBConnState.Connected) {
+                state.setUpdatedAt(currentTime);
+                Log.d(TAG, String.format("TTL refreshed for connected beacon: %s", mac));
+                continue; // 연결 중인 비콘은 TTL 체크 건너뜀
+            }
+
+            // Option D: Ring 진행 중인 MAC은 TTL 제거 대상에서 제외
+            if (ringSessions.containsKey(mac)) {
+                Log.d(TAG, String.format("TTL check skipped for ringing beacon: %s", mac));
+                continue; // Ring 중인 비콘은 TTL 체크 건너뜀
+            }
+
             if (currentTime - state.getUpdatedAt() > BEACON_TTL_MS) {
                 staleBeacons.add(mac);
-                Log.i(TAG, String.format("Removing stale beacon: MAC=%s, name=%s, offline=%.1fs", 
+                Log.i(TAG, String.format("Removing stale beacon: MAC=%s, name=%s, offline=%.1fs",
                     mac, state.getDisplayName(), (currentTime - state.getUpdatedAt()) / 1000.0));
             }
         }

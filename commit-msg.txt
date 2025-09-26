@@ -1,5 +1,6 @@
-  fix(ble): 즉시 디스커넥트로 알람 중 거리 업데이트 속도 개선
+  fix(ble): Ring 스케줄러 최적화로 비콘 사라짐 현상 해결
 
-  - scheduleIdleDisconnect() 호출 제거하고 ActionCallback 즉시 disconnect만 사용
-  - Ring/Stop 명령 완료 즉시 디스커넥트하여 광고 모드 빠른 복구
-  - 알람 중에도 RSSI 즉시 취득 가능으로 거리 업데이트 속도 최대화
+  • Ring 시간 3초→60초 증가로 재트리거 주기 93% 감소 (4초→61초)
+  • 연결 중 비콘 TTL 자동 갱신으로 제거 방지
+  • Ring 진행 중 비콘 TTL 체크 제외로 안정성 향상
+  • RSSI 가용성 대폭 개선으로 거리 측정 정확도 증대
