@@ -913,8 +913,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return; // 무효 샘플은 모든 처리 중단
         }
         
-        // 캘리브레이션 중 일반 RSSI 피드 차단 (게이트 2: 이중 스캔 방지)
-        if (isCalibrating && mac.equalsIgnoreCase(calibTargetMac)) {
+        // 캘리브레이션 중 일반 RSSI 피드 차단 (게이트 2: 이중 스캔 방지, 정규화 비교)
+        if (isCalibrating && normalizeMac(mac).equalsIgnoreCase(normalizeMac(calibTargetMac))) {
             Log.v(TAG, String.format("[CALIB-GATE2] Normal RSSI feed blocked during calibration: mac=%s, rssi=%d", mac, currentRssi));
             return; // 캘리브레이션 타깃은 전용 스캐너에서만 처리
         }
@@ -969,6 +969,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      */
     private void processPairedBeacon(KBeacon beacon, BeaconState state, int currentRssi) {
         String mac = beacon.getMac();
+        String normalizedMac = normalizeMac(mac);
         
         // RSSI 윈도우 업데이트
         RssiWindow rssiWindow = rssiWindows.get(mac);
@@ -986,7 +987,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                     avgFiltered : 
                     RSSI_EMA_ALPHA * avgFiltered + (1 - RSSI_EMA_ALPHA) * prevRssiEma;
                 
-                rssiEmaCache.put(normalizedMac, rssiFiltered);
+                rssiEmaCache.put(mac, rssiFiltered);
                 state.setRssiFiltered(rssiFiltered);
                 
                 // RSSI 업데이트 로그
@@ -1060,9 +1061,13 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             return Double.NaN;
         }
         
-        double txPowerAt1m = state.getTxPowerAt1m();
-        double pathLossN = state.getPathLossExponent();
         boolean hasCalibration = state.hasValidCalibration();
+        
+        // 기본값 거리 강제 폴백 로직
+        double txPowerAt1m = hasCalibration ? state.getTxPowerAt1m() : BeaconState.DEFAULT_TX_POWER_AT_1M;
+        double pathLossN = hasCalibration ? state.getPathLossExponent() : BeaconState.DEFAULT_PATH_LOSS_N;
+        if (!Double.isFinite(txPowerAt1m)) txPowerAt1m = BeaconState.DEFAULT_TX_POWER_AT_1M;
+        if (!Double.isFinite(pathLossN) || pathLossN <= 0.0) pathLossN = BeaconState.DEFAULT_PATH_LOSS_N;
         
         // 기본값 사용 여부 로그
         if (!hasCalibration) {
@@ -1070,13 +1075,14 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                 normalizedMac, txPowerAt1m, pathLossN));
         }
         
-        // 방어적 거리 계산 사용
+        // 방어적 거리 계산 사용 (폴백된 기본값)
         double distance = computeDistance(rssiFiltered, txPowerAt1m, pathLossN);
         
         // [Issue 3 Debug] 문제의 비콘에 대한 거리 계산 상세 로깅 (Locale 고정)
         if (normalizedMac != null && normalizedMac.toLowerCase().contains("561976")) {
+            String deviceName = state.getName() != null ? state.getName() : "Unknown";
             Log.e(TAG, String.format(Locale.US, "[561976_DISTANCE] MAC=%s, name=%s, rssi=%.1f, txPower=%.2f, n=%.2f, distance=%.3fm", 
-                normalizedMac, name, rssiFiltered, txPowerAt1m, pathLossN, distance));
+                normalizedMac, deviceName, rssiFiltered, txPowerAt1m, pathLossN, distance));
         }
         
         return distance;
@@ -1321,7 +1327,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
      */
     private void broadcastCalibrationSample(String mac, String stage, int rssi, boolean done) {
         Intent intent = new Intent(ACTION_CALIBRATION_SAMPLE);
-        intent.putExtra("mac", mac);
+        intent.putExtra("mac", normalizeMac(mac)); // 정규화해서 보낸다
         intent.putExtra("stage", stage);  
         intent.putExtra("rssi", rssi);
         intent.putExtra("done", done);
@@ -1475,8 +1481,8 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
                         return;
                     }
                     
-                    // 타겟 MAC 이중 확인 (필터 + 콜백 검증)
-                    if (!targetMac.equalsIgnoreCase(mac)) {
+                    // 타겟 MAC 이중 확인 (필터 + 콜백 검증, 정규화하여 비교)
+                    if (!normalizeMac(targetMac).equalsIgnoreCase(normalizeMac(mac))) {
                         Log.w(TAG, String.format("[CALIB-SCAN] MAC mismatch: expected=%s, got=%s", targetMac, mac));
                         return;
                     }
@@ -3112,7 +3118,7 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             } else {
                 // RSSI 윈도우에서 중앙값 폴백 시도
                 RssiWindow window = rssiWindows.get(normalizedMac);
-                if (window != null && window.getSampleCount() > 0) {
+                if (window != null && window.size() > 0) {
                     rssi = window.getMedian();
                     rssiSource = "window-median-fallback";
                     Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Using window median fallback for %s: rssi=%.1f", normalizedMac, rssi));
@@ -3123,18 +3129,24 @@ public class BleService extends Service implements KBeaconsMgr.KBeaconMgrDelegat
             }
         }
         
-        // 방어적 거리 계산 (캘리브레이션 없어도 기본값으로 계산)
-        double rawDistance = computeDistance(rssi, state.getTxPowerAt1m(), state.getPathLossExponent());
+        // 기본값 거리 강제 폴백 로직
+        double tx = state.hasValidCalibration() ? state.getTxPowerAt1m() : BeaconState.DEFAULT_TX_POWER_AT_1M;
+        double n  = state.hasValidCalibration() ? state.getPathLossExponent() : BeaconState.DEFAULT_PATH_LOSS_N;
+        if (!Double.isFinite(tx)) tx = BeaconState.DEFAULT_TX_POWER_AT_1M;
+        if (!Double.isFinite(n) || n <= 0.0) n = BeaconState.DEFAULT_PATH_LOSS_N;
+        
+        // 방어적 거리 계산 (폴백된 기본값 사용)
+        double rawDistance = computeDistance(rssi, tx, n);
         
         // 기본값 사용 여부 로그
         String calibrationStatus = state.hasValidCalibration() ? "calibrated" : "defaults";
         
-        Log.e(TAG, String.format(Locale.US, "[RECOMPUTE] MAC=%s, rssi=%.1f (%s), tx1m=%.5f, n=%.5f (%s), rawDist=%.3f", 
-               normalizedMac, rssi, rssiSource, state.getTxPowerAt1m(), state.getPathLossExponent(), calibrationStatus, rawDistance));
+        Log.e(TAG, String.format(Locale.US, "[RECOMPUTE] MAC=%s, rssi=%.1f (%s), tx1m=%.2f, n=%.2f (%s), rawDist=%.3f", 
+               normalizedMac, rssi, rssiSource, tx, n, calibrationStatus, rawDistance));
         
         if (!Double.isFinite(rawDistance) || rawDistance <= 0.0) {
             Log.w(TAG, String.format(Locale.US, "[RECOMPUTE] Invalid distance computed for %s: rssi=%.1f, tx1m=%.2f, n=%.2f", 
-                   normalizedMac, rssi, state.getTxPowerAt1m(), state.getPathLossExponent()));
+                   normalizedMac, rssi, tx, n));
             return;
         }
         
